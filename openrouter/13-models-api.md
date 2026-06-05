@@ -127,14 +127,39 @@ curl "https://openrouter.ai/api/v1/models?supported_parameters=response_format"
 | 필드 | 타입 | 설명 |
 | --- | --- | --- |
 | `id` | string | 모델 고유 식별자 (예: `openai/gpt-5.2`) |
+| `canonical_slug` | string | 변경되지 않는 모델의 영구 슬러그 |
 | `name` | string | 모델 표시 이름 |
+| `created` | number | 모델이 OpenRouter에 추가된 Unix 타임스탬프 |
 | `description` | string | 모델 설명 |
 | `context_length` | number | 최대 컨텍스트 길이 (토큰) |
-| `architecture` | object | 모달리티, 토크나이저, 인스트럭트 타입 |
-| `pricing` | object | 토큰/요청/단위당 가격 정보 |
-| `top_provider` | object | 최대 완성 토큰 수 등 프로바이더 정보 |
+| `architecture` | Architecture | 입력/출력 모달리티, 토크나이저, 인스트럭트 타입 |
+| `pricing` | Pricing | 토큰/요청/단위당 최저 가격 정보 |
+| `top_provider` | TopProvider | 최대 완성 토큰 수 등 주 프로바이더 정보 |
+| `per_request_limits` | object \| null | 요청당 속도 제한 정보 (null이면 제한 없음) |
 | `supported_parameters` | string[] | 지원하는 API 파라미터 목록 |
-| `default_parameters` | object | 기본 파라미터 설정 |
+| `default_parameters` | object \| null | 기본 파라미터 설정 (null이면 없음) |
+| `expiration_date` | string \| null | 모델 엔드포인트 폐기 예정일 (null이면 폐기 아님) |
+
+### Architecture 객체
+
+```json
+{
+  "input_modalities": ["file", "image", "text"],
+  "output_modalities": ["text"],
+  "tokenizer": "o200k_base",
+  "instruct_type": null
+}
+```
+
+### TopProvider 객체
+
+```json
+{
+  "context_length": 128000,
+  "max_completion_tokens": 16384,
+  "is_moderated": false
+}
+```
 
 ---
 

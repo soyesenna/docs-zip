@@ -55,9 +55,10 @@ type Request = {
   min_p?: number;                    // 범위: [0.0, 1.0], 기본값: 0.0
   top_a?: number;                    // 범위: [0.0, 1.0], 기본값: 0.0
   logit_bias?: { [key: number]: number };
-  top_logprobs: number;              // 정수만
+  top_logprobs?: number;             // 정수만 (0~20, logprobs가 true일 때 필요)
+  logprobs?: boolean;                // 출력 토큰의 로그 확률 반환 여부
 
-  // 추론(Reasoning) 제어
+  // 추론(Reasoning) 제어 (자세한 내용은 본문 참조)
   reasoning?: {
     enabled?: boolean;               // 추론 활성화 여부
     effort?: 'xhigh' | 'high' | 'medium' | 'low' | 'minimal' | 'none';
@@ -66,6 +67,13 @@ type Request = {
   };
   reasoning_effort?: 'xhigh' | 'high' | 'medium' | 'low' | 'minimal' | 'none';
   include_reasoning?: boolean;       // deprecated: reasoning.exclude의 별칭
+
+  // 추가 생성 파라미터
+  max_completion_tokens?: number;    // max_tokens와 동일 (다른 명칭)
+  verbosity?: 'low' | 'medium' | 'high' | 'xhigh' | 'max'; // 응답 상세도 제어
+  structured_outputs?: boolean;      // 구조화된 출력 지원 여부
+  web_search_options?: object;       // 네이티브 웹 검색 옵션
+  parallel_tool_calls?: boolean;     // 병렬 툴 콜 활성화 (기본값: true)
 
   // 지연 시간 최적화 (predicted output)
   prediction?: { type: 'content'; content: string };
@@ -128,6 +136,7 @@ type Tool = {
 type ToolChoice =
   | 'none'
   | 'auto'
+  | 'required'   // 모델이 반드시 하나 이상의 툴을 호출해야 함
   | {
       type: 'function';
       function: {
@@ -282,6 +291,12 @@ type StreamingChoice = {
   error?: ErrorResponse;
 };
 
+type NonChatChoice = {
+  finish_reason: string | null;
+  text: string;
+  error?: ErrorResponse;
+};
+
 type ToolCall = {
   id: string;
   type: 'function';
@@ -315,7 +330,9 @@ OpenRouter는 각 모델의 `finish_reason`을 다음 값 중 하나로 정규�
 
 ## 비용 및 통계 조회
 
-반환된 `id`를 사용하여 요청 완료 후 `/api/v1/generation` 엔드포인트로 통계를 조회할 수 있습니다:
+반환된 `id`를 사용하여 요청 완료 후 `/api/v1/generation` 엔드포인트로 통계를 조회할 수 있습니다. 이는 과거 사용량 감사나 비동기 통계 조회에 유용합니다.
+
+> **참고**: 토큰 수는 비스트리밍 완성의 경우 응답 본문의 `usage` 필드에서도 확인할 수 있습니다. 토큰 수는 모델의 네이티브 토크나이저를 사용하여 계산됩니다.
 
 ```javascript
 const generation = await fetch(
@@ -324,6 +341,83 @@ const generation = await fetch(
 );
 const stats = await generation.json();
 ```
+
+### Generation 응답 주요 필드
+
+```typescript
+type GenerationResponse = {
+  id: string;
+  model: string;
+  streamed: boolean;
+  generation_time: number;           // 생성 소요 시간 (초)
+  created_at: string;                // ISO 타임스탬프
+  tokens_prompt: number;             // 입력 토큰 수
+  tokens_completion: number;         // 완성 토큰 수
+  native_tokens_prompt: number;      // 네이티브 입력 토큰 수
+  native_tokens_completion: number;  // 네이티브 완성 토큰 수
+  num_media_prompt: number;          // 입력 미디어 수
+  num_media_completion: number;      // 완성 미디어 수
+  origin: string;                    // 요청 출처
+  total_cost: number;                // 총 비용 (크레딧)
+  cache_discount: number;            // 캐시 할인액
+};
+```
+
+---
+
+## Reasoning (추론) 파라미터
+
+추론 토큰을 지원하는 모델에서 `reasoning` 객체로 추론 동작을 제어할 수 있습니다:
+
+```json
+{
+  "reasoning": {
+    "enabled": true,
+    "effort": "high",
+    "max_tokens": 10000,
+    "exclude": false
+  }
+}
+```
+
+| 필드 | 설명 |
+| --- | --- |
+| `reasoning.enabled` | 추론 기능 활성화 여부 |
+| `reasoning.effort` | 추론 노력 수준: `xhigh`, `high`, `medium`, `low`, `minimal`, `none` |
+| `reasoning.max_tokens` | 최대 추론 토큰 수 |
+| `reasoning.exclude` | `true`면 응답에서 추론 토큰 제외 |
+
+### 편의 필드
+
+| 필드 | 설명 |
+| --- | --- |
+| `reasoning_effort` | OpenAI 스타일 추론 노력 설정 (reasoning.effort와 동일) |
+| `include_reasoning` | **deprecated**: `reasoning.exclude`의 별칭. `true`면 추론 토큰이 응답에 포함됨 |
+
+---
+
+## Verbosity (상세도)
+
+모델 응답의 상세도를 제어합니다:
+
+```json
+{
+  "verbosity": "medium"
+}
+```
+
+| 값 | 설명 |
+| --- | --- |
+| `low` | 간결한 응답 |
+| `medium` | 일반적인 상세도 |
+| `high` | 상세한 응답 |
+| `xhigh` | 매우 상세한 응답 |
+| `max` | 최대 상세도 |
+
+- OpenAI Responses API에서 도입된 파라미터입니다
+- Anthropic 모델의 경우 `output_config.effort`로 매핑됩니다
+- `xhigh`는 Anthropic Claude 4.7 Opus 이상에서 지원됩니다
+- `max`는 Anthropic Claude 4.6 Opus 이상에서 지원됩니다
 
 ---
 

@@ -141,7 +141,35 @@ Exa 검색 사용 시 OpenRouter 크레딧으로 청구됩니다: **$4 / 1000 �
 
 ## 서버 툴 방식 (권장)
 
-Web Search 플러그인은 deprecated되었으며, 대신 `openrouter:web_search` 서버 툴 사용이 권장됩니다. 서버 툴은 모델이 필요에 따라 웹 검색을 0~N번 호출할 수 있는 반면, 플러그인은 항상 한 번 실행됩니다.
+Web Search 플러그인(`{ "id": "web" }`)은 deprecated 되었으며, 대신 `openrouter:web_search` 서버 툴 사용이 권장됩니다.
+
+### 차이점
+
+| 구분 | 서버 툴 (`openrouter:web_search`) | 플러그인 (`{ "id": "web" }`) |
+| --- | --- | --- |
+| 호출 횟수 | 0~N회 (모델이 결정) | 항상 1회 |
+| 컨트롤 | 모델이 필요시에만 검색 | 모든 요청에서 항상 검색 |
+| 비용 효율성 | 검색이 필요 없으면 비용 발생 안함 | 모든 요청에서 검색 비용 발생 |
+| 지정 위치 | `tools` 배열 | `plugins` 배열 |
+
+### 서버 툴 사용법
+
+```json
+{
+  "model": "openai/gpt-5.2",
+  "messages": [
+    { "role": "user", "content": "What are the latest AI news?" }
+  ],
+  "tools": [
+    {
+      "type": "openrouter:web_search",
+      "parameters": { "max_results": 3 }
+    }
+  ]
+}
+```
+
+서버 툴과 사용자 정의 툴을 같은 요청에 함께 사용할 수 있습니다. 자세한 내용은 [Server Tools 가이드](./16-server-tools.md)를 참조하세요.
 
 ---
 

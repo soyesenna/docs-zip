@@ -372,6 +372,40 @@ const completion = await openRouter.chat.send({
 
 ---
 
+## EU 데이터 레지던시 (Enterprise)
+
+OpenRouter는 엔터프라이즈 고객을 위해 EU 내 라우팅을 지원합니다. 활성화하면 프롬프트와 완성이 EU 내에서만 처리됩니다.
+
+자세한 내용은 [개인정보 및 데이터 처리](./15-privacy.md)를 참조하세요. 엔터프라이즈팀에 문의하려면 이 [양식](https://openrouter.ai)을 작성하세요.
+
+---
+
+## BYOK 우선 라우팅
+
+BYOK(Bring Your Own Key)를 사용하는 경우, API 키가 구성된 프로바이더의 엔드포인트가 자동으로 우선순위를 갖습니다. `partition: "none"`을 설정하면 이 우선순위가 모델 경계를 넘어 작동합니다.
+
+```typescript
+const completion = await openRouter.chat.send({
+  models: [
+    'anthropic/claude-sonnet-4.5',
+    'openai/gpt-5-mini',
+    'google/gemini-3-flash-preview',
+  ],
+  messages: [{ role: 'user', content: 'Hello' }],
+  provider: {
+    sort: {
+      by: 'price',
+      partition: 'none',
+    },
+  },
+  stream: false,
+});
+```
+
+예를 들어, OpenAI에 BYOK 키가 구성되어 있지만 Anthropic에는 없는 경우, Claude가 먼저 나열되어 있어도 OpenRouter가 자체 키를 사용하여 GPT 엔드포인트로 라우팅할 수 있습니다.
+
+---
+
 ## Anthropic 베타 기능
 
 Anthropic 모델(Claude) 사용 시 특정 베타 기능을 요청할 수 있습니다:
