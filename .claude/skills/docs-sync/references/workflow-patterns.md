@@ -2,6 +2,18 @@
 
 1·3·4단계에서 Workflow 도구에 넘길 스크립트 골격이다. 그대로 복붙하지 말고 대상 제품의 규모(문서 수, 공식 문서 구조)에 맞게 프롬프트와 항목을 조정한다. `args`는 Workflow 호출 시 실제 JSON 값으로 전달한다(문자열로 인코딩하지 않는다).
 
+이 템플릿들은 deep-research 플로우(Scope → Search → Fetch → Verify → Synthesize)를 docs-sync에 맞게 구현한 것이다. 병렬도를 줄이는 방향의 수정(앵글 축소, 검증 표 축소, 항목 묶어서 순차 처리)은 하지 않는다 — ultracode(dynamic workflow)의 병렬 에이전트를 최대한 활용하는 것이 이 스킬의 요구사항이다.
+
+## 사전 리서치 — 빌트인 deep-research 직접 호출
+
+제품 사전 이해가 필요할 때(신규 작성 모드, 모호한 제품명)는 커스텀 스크립트를 짜기 전에 빌트인 named workflow를 그대로 호출한다:
+
+```
+Workflow({ name: "deep-research", args: "<제품명> 공식 문서/개발자 문서의 전체 구조, 문서 사이트 URL, 최신 버전, 최근 6개월 주요 변경·신기능·폐기 기능" })
+```
+
+커스텀 워크플로 스크립트 안에서 `workflow('deep-research', args)`로 중첩 호출할 수도 있지만, 중첩은 1단계만 허용되므로 메인 루프에서 별도 호출하는 것을 기본으로 한다.
+
 ## Workflow 도구 제약사항 (위반 시 스크립트가 죽는다)
 
 - `export const meta = {...}`는 **순수 리터럴**: 변수, 함수 호출, 스프레드, 템플릿 보간 금지
@@ -151,22 +163,35 @@ return { pages: Object.values(byUrl), recentChanges }
 
 ## 3단계 — Audit 워크플로 (업데이트 모드)
 
-메인 루프가 2단계 매핑 결과를 `args.docs`로 전달한다. 문서당 에이전트 하나, 전부 병렬.
+메인 루프가 2단계 매핑 결과를 `args.docs`로 전달한다. 문서당 에이전트 하나로 전부 병렬 대조하고, delete 판정은 deep-research Verify 규칙대로 3-vote 적대적 확인을 거친다. pipeline이므로 어떤 문서의 delete 투표가 도는 동안 다른 문서의 audit이 계속 진행된다.
 
 ```javascript
 export const meta = {
   name: 'docs-audit',
-  description: '로컬 문서를 공식 문서와 병렬 대조하여 문서별 판정 산출',
-  phases: [{ title: 'Audit', detail: '문서당 에이전트 1개 병렬 대조' }],
+  description: '로컬 문서를 공식 문서와 병렬 대조, delete 판정은 3-vote 적대적 확인',
+  phases: [
+    { title: 'Audit', detail: '문서당 에이전트 1개 병렬 대조' },
+    { title: 'DeleteVote', detail: 'delete 판정당 검증 에이전트 3개 반박 시도' },
+  ],
 }
 
 // args: { product, dir, today, docs: [{ file, officialUrls: [...], suspectedRemoved: bool }] }
 const AUDIT_VERDICT_SCHEMA = { /* 위 공통 스키마 붙여넣기 */ }
+const REMOVAL_VOTE_SCHEMA = {
+  type: 'object',
+  required: ['stillExists', 'evidence'],
+  properties: {
+    stillExists: { type: 'boolean', description: '이 주제가 공식 문서 어딘가에 아직 존재하면 true' },
+    evidence: { type: 'string', description: '근거 URL과 한 줄 설명. stillExists가 true면 URL 필수' },
+  },
+}
 
-phase('Audit')
-const verdicts = await parallel(args.docs.map(d => () =>
-  agent(
-    '먼저 ToolSearch로 WebSearch와 WebFetch를 로드하라. 오늘 날짜: ' + args.today + '.\n'
+const TOOLING = '먼저 ToolSearch로 WebSearch와 WebFetch를 로드하라. 오늘 날짜: ' + args.today + '.\n'
+
+const verdicts = await pipeline(
+  args.docs,
+  d => agent(
+    TOOLING
     + '로컬 문서 ' + args.dir + '/' + d.file + ' 를 Read로 정독하라.\n'
     + '대조 기준 공식 문서: ' + (d.officialUrls.length ? d.officialUrls.join(', ') : '문서 상단의 원문 링크를 따라가라')
     + ' — 전부 WebFetch로 가져와 로컬 문서와 문장 단위로 대조하라.\n'
@@ -175,9 +200,39 @@ const verdicts = await parallel(args.docs.map(d => () =>
       : '')
     + '판정 기준: 모든 사실이 최신과 일치하고 핵심 누락 없음 → keep. 틀리거나 구버전이거나 새 내용 누락 → update (reasons에 무엇이 어떻게 다른지 구체적으로 — 이것이 수정 작업 지시서가 된다). 주제 자체가 공식에서 제거됨 → delete (근거 URL 필수).\n'
     + '파일은 수정하지 말라. 판정만 반환하라.',
-    { label: 'audit:' + d.file, schema: AUDIT_VERDICT_SCHEMA }
-  )
-))
+    { label: 'audit:' + d.file, phase: 'Audit', schema: AUDIT_VERDICT_SCHEMA }
+  ),
+  // deep-research Verify: "주제가 제거되었다"는 반증 가능한 claim → 3-vote 반박 시도.
+  // 증거 우선: 근거 URL 있는 존재 증명이 1표라도 나오면 update로 강등. 3표 전원 제거 확인 시에만 delete 유지.
+  (v, d) => {
+    if (!v || v.verdict !== 'delete') return v
+    return parallel([1, 2, 3].map(n => () =>
+      agent(
+        TOOLING
+        + '주장: "' + args.product + ' 공식 문서에서 [' + d.file.replace('.md', '') + '] 주제가 제거/폐기되었다."\n'
+        + '이 주장을 반박하라. 공식 docs 사이트와 웹 검색으로 이 주제를 직접 찾아보라. URL 변경, 섹션 이동, 이름 변경(rebrand)이었을 수 있다. '
+        + '확실히 존재하면 stillExists: true와 근거 URL을 반환하라. 정말 제거되었으면 stillExists: false와 그 근거(체인지로그, 폐기 공지 등)를 반환하라.',
+        { label: 'delete-vote' + n + ':' + d.file, phase: 'DeleteVote', schema: REMOVAL_VOTE_SCHEMA }
+      )
+    )).then(votes => {
+      const valid = votes.filter(Boolean)
+      const refutes = valid.filter(x => x.stillExists)
+      if (refutes.length >= 1 || valid.length < 3) {
+        // 존재 증명 1표 이상, 또는 표가 모자라면 보수적으로 update 강등
+        return Object.assign({}, v, {
+          verdict: 'update',
+          reasons: v.reasons.concat(refutes.map(r => ({
+            kind: 'outdated',
+            detail: '삭제 반박됨: 주제가 아직 존재. 새 위치/이름 기준으로 갱신하라',
+            sourceUrl: r.evidence,
+          }))),
+        })
+      }
+      return v // 3표 전원 제거 확인 → delete 확정
+    })
+  }
+)
+
 const valid = verdicts.filter(Boolean)
 log('판정: update ' + valid.filter(v => v.verdict === 'update').length
   + ' / keep ' + valid.filter(v => v.verdict === 'keep').length
@@ -187,15 +242,15 @@ return valid
 
 ## 4단계 — Write & Verify 워크플로
 
-수정·신규 작업을 하나의 pipeline으로. 항목별로 작성→검증→수정이 독립적으로 흐른다(배리어 없음 — 빠른 항목은 먼저 끝난다).
+수정·신규 작업을 하나의 pipeline으로. 항목별로 작성→3-vote 검증→수정이 독립적으로 흐른다(배리어 없음 — 빠른 항목은 먼저 끝난다). Verify는 deep-research의 3-vote를 렌즈 분산형으로 구현한다: 같은 검증을 3번 반복하면 같은 실수를 3번 놓치므로, 세 에이전트에게 서로 다른 렌즈(accuracy/completeness/sources)를 주고 2/3 다수결로 판정한다.
 
 ```javascript
 export const meta = {
   name: 'docs-write-verify',
-  description: '문서 병렬 작성/수정 후 적대적 검증, 실패 항목 1회 자동 수정',
+  description: '문서 병렬 작성/수정 후 3-lens 적대적 검증(2/3 다수결), 실패 항목 1회 자동 수정',
   phases: [
     { title: 'Write', detail: '항목당 에이전트 1개 병렬 작성' },
-    { title: 'Verify', detail: '다른 에이전트가 공식 문서와 재대조' },
+    { title: 'Verify', detail: '문서당 3-lens 검증 패널 (accuracy/completeness/sources)' },
     { title: 'Fix', detail: '검증 실패 항목만 수정' },
   ],
 }
@@ -205,6 +260,12 @@ export const meta = {
 // instructions: update면 Audit의 reasons 목록, create면 다룰 주제 범위
 const WRITE_RESULT_SCHEMA = { /* 위 공통 스키마 붙여넣기 */ }
 const VERIFY_SCHEMA = { /* 위 공통 스키마 붙여넣기 */ }
+
+const LENSES = [
+  { lens: 'accuracy', mission: '틀린 사실, 구버전 정보, 잘못된 파라미터·명령어·엔드포인트·가격·제한값을 찾아 반박하라.' },
+  { lens: 'completeness', mission: '출처 공식 문서에 있는 핵심 내용 중 이 문서에 누락된 것을 찾아라.' },
+  { lens: 'sources', mission: '출처 공식 문서에 근거가 없는 주장, 문서 상단 원문 링크의 누락·오류를 찾아라.' },
+]
 
 const TOOLING = '먼저 ToolSearch로 WebSearch와 WebFetch를 로드하라. 오늘 날짜: ' + args.today + '.\n'
 
@@ -221,20 +282,32 @@ const results = await pipeline(
     + '문서 본문을 응답으로 반환하지 말고 파일에 직접 쓰라. 요약과 출처만 반환하라.',
     { label: 'write:' + t.file, phase: 'Write', schema: WRITE_RESULT_SCHEMA }
   ),
-  (w, t) => w && agent(
-    TOOLING
-    + args.dir + '/' + t.file + ' 를 Read로 정독하고, 출처 공식 문서(' + t.sources.join(', ') + ')를 WebFetch로 가져와 재대조하라.\n'
-    + '적대적으로 검증하라: 틀린 사실, 구버전 정보, 출처에 없는 주장, 핵심 누락을 찾아 반박하라. '
-    + '사소한 표현 차이는 무시하고 사실 오류에 집중하라. 파일은 수정하지 말라.\n'
-    + 'critical 이슈가 하나라도 있으면 passed: false.',
-    { label: 'verify:' + t.file, phase: 'Verify', schema: VERIFY_SCHEMA }
-  ),
+  // 3-lens 검증 패널: 문서당 3개 에이전트 병렬, 2/3 다수결 (deep-research Verify)
+  (w, t) => w && parallel(LENSES.map(l => () =>
+    agent(
+      TOOLING
+      + args.dir + '/' + t.file + ' 를 Read로 정독하고, 출처 공식 문서(' + t.sources.join(', ') + ')를 WebFetch로 가져와 재대조하라.\n'
+      + '[' + l.lens + ' 렌즈] 적대적으로 검증하라: ' + l.mission + '\n'
+      + '사소한 표현 차이는 무시하고 실질 문제에 집중하라. 파일은 수정하지 말라.\n'
+      + 'critical 이슈가 하나라도 있으면 passed: false.',
+      { label: 'verify:' + l.lens + ':' + t.file, phase: 'Verify', schema: VERIFY_SCHEMA }
+    )
+  )).then(votes => {
+    const valid = votes.filter(Boolean)
+    const passes = valid.filter(x => x.passed).length
+    return {
+      file: t.file,
+      // 2/3 이상 통과 → 통과. 유효 표가 2개 미만이면 보수적으로 실패 처리해 Fix로 보낸다
+      passed: valid.length >= 2 && passes >= 2,
+      issues: valid.flatMap(x => x.issues.filter(i => i.severity === 'critical')),
+    }
+  }),
   (v, t) => {
     if (!v) return null
     if (v.passed) return { file: t.file, ok: true, issues: [] }
     return agent(
       TOOLING
-      + args.dir + '/' + t.file + ' 에서 검증 에이전트가 발견한 문제를 수정하라:\n'
+      + args.dir + '/' + t.file + ' 에서 3-lens 검증 패널이 발견한 문제를 수정하라:\n'
       + v.issues.map(i => '- [' + i.severity + '] ' + i.detail + (i.sourceUrl ? ' (근거: ' + i.sourceUrl + ')' : '')).join('\n')
       + '\n각 문제의 근거 URL을 WebFetch로 확인한 뒤 Edit로 수정하라. 문제없는 부분은 건드리지 말라.',
       { label: 'fix:' + t.file, phase: 'Fix', schema: WRITE_RESULT_SCHEMA }
@@ -250,7 +323,7 @@ return done
 
 ## 조정 가이드
 
-- **문서가 많은 제품(20개+)**: Write 작업의 `sources`가 페이지 5개를 넘으면 항목을 쪼개라. 에이전트 하나가 너무 많은 페이지를 fetch하면 품질이 떨어진다.
-- **검증 강화가 필요할 때** (사용자가 "철저히", "꼼꼼히"를 요청): Verify 스테이지를 단일 에이전트 대신 관점 분산 패널(정확성/누락/출처 3렌즈)로 바꾸고 다수결로 판정한다.
-- **신규 작성 모드**: Audit을 건너뛰므로 tasks는 전부 `action: 'create'`. 목차 설계(2단계)에서 문서별 `sources`와 `instructions`(다룰 주제 범위)를 충실히 채우는 것이 품질을 좌우한다.
+- **문서가 많은 제품(20개+)**: Write 작업의 `sources`가 페이지 5개를 넘으면 항목을 쪼개라. 에이전트 하나가 너무 많은 페이지를 fetch하면 품질이 떨어진다. 항목을 쪼개는 것은 병렬도를 높이므로 언제나 환영이다.
+- **검증 표는 줄이지 않는다**: 3-lens 패널과 delete 3-vote는 deep-research 플로우의 필수 요소다. 사용자가 "빠르게"를 요청해도 유지한다. "더 철저히"를 요청하면 렌즈를 추가한다(예: `reproducibility` 렌즈 — 코드 예제가 실제 공식 예제와 일치하는지).
+- **신규 작성 모드**: Audit을 건너뛰므로 tasks는 전부 `action: 'create'`. 목차 설계(2단계)에서 문서별 `sources`와 `instructions`(다룰 주제 범위)를 충실히 채우는 것이 품질을 좌우한다. 제품 이해가 얕으면 먼저 `Workflow({ name: "deep-research" })`를 호출하라.
 - **재실행/이어하기**: 워크플로가 중단되면 같은 스크립트로 `resumeFromRunId`를 써서 이어간다. 완료된 agent 호출은 캐시에서 즉시 반환된다.
