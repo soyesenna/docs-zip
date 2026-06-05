@@ -470,7 +470,9 @@ Claude Code가 표시하는 런타임 에러와 복구 방법을 정리합니다
 | `API Error: 500 Internal server error` | 서버 에러 |
 | `API Error: Repeated 529 Overloaded errors` | 서버 에러 |
 | `Request timed out` | 서버 에러 (또는 인터넷 연결 언급 시 네트워크) |
-| `Auto mode could not evaluate this action...` | 서버 에러 |
+| `<model> is temporarily unavailable, so auto mode cannot determine the safety of...` | 서버 에러 |
+| `Auto mode could not evaluate this action and is blocking it for safety` | 서버 에러 |
+| `Auto mode classifier transcript exceeded context window` | 서버 에러 |
 | `You've hit your session limit` / `You've hit your weekly limit` | 사용량 제한 |
 | `Server is temporarily limiting requests` | 사용량 제한 |
 | `Request rejected (429)` | 사용량 제한 |
@@ -479,13 +481,17 @@ Claude Code가 표시하는 런타임 에러와 복구 방법을 정리합니다
 | `Invalid API key` | 인증 에러 |
 | `This organization has been disabled` | 인증 에러 |
 | `Your organization has disabled Claude subscription access` | 인증 에러 |
+| `Routines are disabled by your organization's policy` | 인증 에러 |
 | `OAuth token revoked` / `OAuth token has expired` | 인증 에러 |
+| `does not meet scope requirement user:profile` | 인증 에러 |
 | `Unable to connect to API` | 네트워크 에러 |
 | `SSL certificate verification failed` | 네트워크 에러 |
+| `403` with `x-deny-reason: host_not_allowed` (클라우드/루틴 세션) | 네트워크 에러 |
 | `Prompt is too long` | 요청 에러 |
 | `Error during compaction: Conversation too long` | 요청 에러 |
 | `Request too large` | 요청 에러 |
 | `Image was too large` | 요청 에러 |
+| `Unable to resize image` | 요청 에러 |
 | `PDF too large` / `PDF is password protected` | 요청 에러 |
 | `Extra inputs are not permitted` | 요청 에러 |
 | `There's an issue with the selected model` | 요청 에러 |
@@ -493,6 +499,8 @@ Claude Code가 표시하는 런타임 에러와 복구 방법을 정리합니다
 | `thinking.type.enabled is not supported for this model` | 요청 에러 |
 | `max_tokens must be greater than thinking.budget_tokens` | 요청 에러 |
 | `API Error: 400 due to tool use concurrency issues` | 요청 에러 |
+| `Claude Code is unable to respond to this request, which appears to violate our Usage Policy` | 요청 에러 |
+| 응답 품질이 평소보다 낮아 보임 | 응답 품질 |
 
 ### 자동 재시도
 
@@ -549,6 +557,48 @@ API가 연결 기한 전에 응답하지 않았습니다. 기본 요청 타임�
 - 장기 실행 작업은 더 작은 프롬프트로 분할
 - 느린 네트워크/프록시가 원인이면 `API_TIMEOUT_MS` 증가
 - 타임아웃이 빈번하고 네트워크가 정상이면 네트워크 에러 섹션 확인
+
+#### Auto mode가 작업의 안전성을 판단할 수 없음
+
+Auto mode가 작업을 분류하는 데 사용하는 모델이 결정을 내리지 못해, auto mode가 해당 작업을 자동 승인하지 않았습니다. 표시되는 메시지는 분류기가 실패한 원인에 따라 다릅니다.
+
+작업 디렉토리 내의 읽기, 검색, 편집은 분류기를 거치지 않으므로 모든 경우에 정상 작동합니다.
+
+**분류기 모델이 과부하 상태일 때:**
+
+```
+<model> is temporarily unavailable, so auto mode cannot determine the safety of <tool> right now. Wait briefly and then try this action again.
+```
+
+**해결 방법:**
+
+- 몇 초 후 재시도. Claude는 같은 메시지를 보고 보통 자체적으로 재시도함
+- 재시도가 계속 실패하면 읽기 전용 작업을 계속하고 차단된 작업은 나중에 다시 시도
+- 이는 일시적이며 auto mode 자격과 무관. 설정 변경 불필요
+
+**분류기가 파싱 불가능한 응답을 반환했을 때:**
+
+```
+Auto mode could not evaluate this action and is blocking it for safety — run with --debug for details
+```
+
+**해결 방법:**
+
+- 작업 재시도. 보통 다음 시도에서 성공함
+- `claude --debug`로 실행하고 작업을 반복하여 디버그 로그에서 분류기 응답 확인
+
+**대화가 분류기의 컨텍스트 윈도우보다 커졌을 때:**
+
+```
+Auto mode classifier transcript exceeded context window — falling back to manual approval (try /compact to reduce conversation size)
+```
+
+대화형 세션에서는 auto mode가 해당 작업에 대해 일반 권한 프롬프트로 대체(fallback)되어 수동으로 승인 또는 거부할 수 있습니다. 비대화형 모드에서는 트랜스크립트가 계속 커지기만 하므로 재시도해도 성공할 수 없어 실행이 중단됩니다.
+
+**해결 방법:**
+
+- 표시되는 프롬프트에서 작업 승인 또는 거부
+- `/compact`을 실행하여 대화 크기를 줄이면 이후 작업이 분류기 윈도우 내에 다시 들어감
 
 ### 사용량 제한
 
@@ -646,6 +696,38 @@ Invalid API key · Fix external API key
 
 - `ANTHROPIC_API_KEY` unset 및 쉘 프로필에서 제거 후 `claude` 재시작
 - `/status`로 활성 자격 증명이 구독인지 확인
+- 환경변수가 설정되어 있지 않은데도 에러가 지속되면 비활성화된 조직이 `/login`에 연결된 것입니다. 지원팀에 문의하거나 다른 계정으로 로그인
+
+#### Your organization has disabled Claude subscription access
+
+Claude 조직에서 구독 로그인으로 Claude Code에 로그인하는 것을 허용하지 않습니다. 같은 계정으로 `/login`을 반복해도 동일한 에러가 반환됩니다.
+
+```
+Your organization has disabled Claude subscription access for Claude Code · Use an Anthropic API key instead, or ask your admin to enable access
+```
+
+이는 서버 측 조직 설정이므로 로컬 설정, 환경변수, CLI 플래그로 재정의할 수 없습니다. Agent SDK와 `-p` 비대화형 모드에서는 `oauth_org_not_allowed` 에러 코드로 표시됩니다.
+
+**해결 방법:**
+
+- 관리자에게 조직의 Claude Code 접근 활성화를 요청
+- 구독 대신 Console API 키로 인증. Claude Console 인증 참조
+- 관리자인데 활성화 옵션이 보이지 않으면 Anthropic 지원팀에 문의
+
+#### Routines are disabled by your organization's policy
+
+Team 또는 Enterprise 관리자가 조직 수준에서 루틴을 비활성화했습니다. `/schedule`이나 claude.ai/code의 Routines UI에서 루틴을 생성하거나 실행하려고 할 때 이 에러가 나타납니다.
+
+```
+Routines are disabled by your organization's policy.
+```
+
+이는 서버 측 설정이므로 로컬 설정, 환경변수, CLI 플래그로 재정의할 수 없습니다.
+
+**해결 방법:**
+
+- 관리자에게 claude.ai/admin-settings/claude-code에서 __Routines__ 토글 활성화를 요청
+- 조직 수준 루틴이 필요 없는 일회성 예약 작업은 scheduled tasks 참조
 
 #### OAuth 토큰 취소 또는 만료
 
@@ -662,13 +744,13 @@ OAuth token has expired · Please run /login
 
 #### OAuth scope 요구사항
 
+저장된 토큰이 새 기능에 필요한 권한 범위보다 이전 것입니다. `/usage`와 상태 표시줄 사용량 표시기에서 가장 자주 나타납니다.
+
 ```
 OAuth token does not meet scope requirement: user:profile
 ```
 
-저장된 토큰이 새 기능에 필요한 권한 범위보다 이전 것입니다.
-
-**해결 방법:** `/login`으로 새 토큰 발급. 로그아웃할 필요 없음.
+**해결 방법:** `/login`으로 현재 범위가 포함된 새 토큰 발급. 로그아웃할 필요 없음.
 
 ### 네트워크 에러
 
@@ -709,6 +791,27 @@ Unable to connect to API: Self-signed certificate detected
 
 - 조직의 CA 번들을 export하고 `NODE_EXTRA_CA_CERTS=/path/to/ca-bundle.pem` 설정
 - `NODE_TLS_REJECT_UNAUTHORIZED=0`은 설정하지 마세요. 인증서 검증이 완전히 비활성화됨
+
+#### 클라우드 세션에서 호스트가 허용되지 않음
+
+클라우드 세션 또는 루틴의 아웃바운드 HTTP 요청이 환경의 네트워크 정책에 의해 차단되었습니다.
+
+```
+HTTP 403
+x-deny-reason: host_not_allowed
+```
+
+대상의 실제 인증서와 일치하지 않는 TLS 인증서가 표시될 수도 있습니다. 클라우드 환경이 아웃바운드 트래픽을 네트워크 정책을 적용하는 프록시로 라우팅하므로, 인증서 불일치는 프록시가 연결을 종료했음을 의미합니다.
+
+이는 클라이언트 측 네트워크 문제가 아닙니다. 클라우드 세션과 루틴은 샌드박스 환경에서 실행되며, 아웃바운드 트래픽이 환경의 허용 목록으로 필터링됩니다. __Default__ 환경은 __Trusted__ 액세스를 사용하며, 패키지 레지스트리, 클라우드 제공자 API, 컨테이너 레지스트리, 일반 개발 도메인의 기본 허용 목록을 허용하지만 그 외에는 모두 차단합니다.
+
+**해결 방법:**
+
+- 루틴을 편집용으로 열거나 클라우드 세션을 시작합니다. 환경 이름(예: __Default__)을 표시하는 클라우드 아이콘을 선택하여 선택기를 엽니다. 환경 위에 마우스를 올리고 설정 아이콘을 클릭합니다.
+- __클라우드 환경 업데이트__ 대화상자에서 __네트워크 액세스__ 를 __Trusted__ 에서 __Custom__ 으로 변경한 후, 차단된 도메인을 __허용된 도메인__ 에 추가합니다. 도메인을 한 줄에 하나씩 입력하세요. __일반 패키지 매니저 기본 목록도 포함__ 을 체크하면 기본 허용 목록을 커스텀 도메인과 함께 유지할 수 있습니다. 무제한 액세스를 원하면 __Full__ 을 선택하세요.
+- __변경 사항 저장__ 을 클릭합니다. 다음 실행부터 업데이트된 허용 목록이 사용됩니다.
+
+Network access에서 액세스 수준과 기본 허용 목록을 확인할 수 있습니다. 로컬 CLI 세션은 이 정책의 영향을 받지 않습니다.
 
 ### 요청 에러
 
@@ -754,6 +857,7 @@ HTTP 요청의 바이트 한도를 초과한 것으로, 컨텍스트 윈도우 �
 
 ```
 Image was too large. Double press esc to go back and try again with a smaller image.
+API Error: 400 ... image dimensions exceed max allowed size
 ```
 
 에러 후에도 이미지가 대화 기록에 남아 있어, 제거할 때까지 후속 메시지도 같은 에러로 실패합니다.
@@ -763,6 +867,24 @@ Image was too large. Double press esc to go back and try again with a smaller im
 - Esc를 두 번 눌러 이미지가 추가된 턴 이전으로 이동
 - 이미지 리사이즈. API는 단일 이미지 최대 8000px (긴 변), 다수 이미지 시 2000px 허용
 - 전체 화면 대신 관련 영역만 타이트하게 캡처
+
+#### Unable to resize image
+
+Claude Code가 첨부된 이미지를 API로 전송하기 전에 다운스케일링하지 못했습니다.
+
+```
+Unable to resize image — image processing is unavailable and dimensions could not be read from the file header. Please convert the image to PNG, JPEG, GIF, or WebP.
+Unable to resize image — dimensions exceed the 2000x2000px limit and image processing failed. Please resize the image to reduce its pixel dimensions.
+Unable to resize image (… raw, … base64). The image exceeds the … API limit and compression failed. Please resize the image manually or use a smaller image.
+Unable to resize image — could not verify image dimensions are within the 2000x2000px API limit.
+```
+
+Claude Code는 일반적으로 대형 이미지를 자동으로 리사이즈합니다. 이 에러들은 네이티브 이미지 프로세서가 로드되지 않았거나 에러를 반환하여 이미지를 API 한계 내로 리사이즈할 수 없었음을 의미합니다.
+
+**해결 방법:**
+
+- 메시지에서 이미지 변환을 요청하는 경우, 이미지를 PNG, JPEG, GIF 또는 WebP로 변환한 후 다시 첨부하세요. Claude Code는 이미지 프로세서 없이도 이 형식들의 크기를 확인할 수 있습니다.
+- 메시지에서 크기 또는 용량 한도를 보고하는 경우, 이미지를 해당 한도 이하로 리사이즈하거나 재압축한 후 첨부하세요.
 
 #### PDF 에러
 
@@ -862,7 +984,7 @@ API Error: Claude Code is unable to respond to this request, which appears to vi
 
 ### 응답 품질이 평소보다 낮아 보일 때
 
-에러가 표시되지 않는데 응답 품질이 기대보다 낮으면, 원인은 보통 모델 자체보다 대화 상태입니다. Claude Code는 자동으로 모델 버전을 변경하지 않습니다.
+에러가 표시되지 않는데 응답 품질이 기대보다 낮으면, 원인은 보통 모델 자체보다 대화 상태입니다. Claude Code는 자동으로 모델 버전을 변경하지 않습니다. 단, Opus 할당량 초과 또는 Bedrock/Vertex AI 리전에서 모델을 사용할 수 없는 등 특정한 경우에는 폴백(fallback) 모델로 전환할 수 있습니다. 아래의 모델 선택 확인이 이를 감지하며, Model configuration에서 폴백 적용 시점을 설명합니다.
 
 다음을 먼저 확인하세요:
 
@@ -919,10 +1041,19 @@ wsl --shutdown
 
 ## 추가 도움
 
+위의 에러는 Claude API에서 발생하는 것들입니다. 다른 Claude Code 컴포넌트의 에러는 해당 가이드를 참조하세요:
+
+- MCP 서버 연결 또는 인증 실패: MCP 가이드 참조
+- 훅 스크립트 실패 또는 도구 차단: Debug hooks 가이드 참조
+- 설치 중 권한 거부 또는 파일시스템 에러: [일반적인 설치 문제](#일반적인-설치-문제) 및 Troubleshoot installation and login 참조
+
+에러가 여기에 나열되지 않았거나 제안된 해결 방법으로 해결되지 않으면:
+
 | 방법 | 설명 |
 |------|------|
-| `/doctor` | 설치 상태, 설정 유효성, MCP 구성, 컨텍스트 사용량을 한 번에 점검 |
-| `/feedback` | Claude Code 내부에서 Anthropic에 직접 문제 보고. 대화 내용이 함께 전송됨 |
-| `/bug` | GitHub 이슈로 보고 |
-| GitHub 이슈 | 알려진 문제 확인 |
-| Claude에게 질문 | Claude는 자체 문서에 접근할 수 있음 |
+| `/feedback` | Claude Code 내부에서 Anthropic에 문제를 보고합니다. 대화 내용과 설명이 함께 전송되며, prefilled GitHub 이슈 생성도 제안합니다. Bedrock, Vertex AI, Foundry 및 기타 타사 제공자에서는 `/feedback`이 로컬 아카이브를 저장하며, 이를 Anthropic 계정 담당자에게 전달할 수 있습니다. |
+| `/doctor` | 로컬 설정 문제를 점검합니다. 설치 상태, 설정 유효성, MCP 구성, 컨텍스트 사용량을 한 번에 확인합니다. |
+| `/bug` | GitHub 이슈로 보고합니다. |
+| status.claude.com | 활성 인시던트를 확인합니다. |
+| GitHub 이슈 검색 | 기존에 보고된 문제인지 확인합니다. |
+| Claude에게 질문 | Claude는 자체 문서에 접근할 수 있습니다. |

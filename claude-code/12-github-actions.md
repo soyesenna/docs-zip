@@ -101,7 +101,7 @@ jobs:
     if: contains(github.event.comment.body, '@claude') || (github.event_name == 'issues' && contains(github.event.issue.body, '@claude'))
     runs-on: ubuntu-latest
     steps:
-      - uses: anthropics/claude-code-base-action@v1
+      - uses: anthropics/claude-code-action@v1
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
 ```
@@ -138,22 +138,22 @@ Beta 버전을 사용 중인 경우 GA 버전으로 업그레이드하는 것이
 **Beta 버전:**
 
 ```yaml
-- uses: anthropics/claude-code-base-action@beta
+- uses: anthropics/claude-code-action@beta
   with:
     mode: "agent"
     direct_prompt: "Review this PR"
     max_turns: 5
-    model: "claude-sonnet-4-20250514"
+    model: "claude-sonnet-4-6"
     anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
 ```
 
 **GA 버전 (v1.0):**
 
 ```yaml
-- uses: anthropics/claude-code-base-action@v1
+- uses: anthropics/claude-code-action@v1
   with:
     prompt: "Review this PR"
-    claude_args: "--max-turns 5 --model claude-sonnet-4-20250514"
+    claude_args: "--max-turns 5 --model claude-sonnet-4-6"
     anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
 ```
 
@@ -188,7 +188,7 @@ Beta 버전을 사용 중인 경우 GA 버전으로 업그레이드하는 것이
 | 인자 | 설명 | 예시 |
 |------|------|------|
 | `--max-turns` | 최대 대화 턴 수 (기본값: 10) | `--max-turns 5` |
-| `--model` | 사용할 모델 | `--model claude-sonnet-4-20250514` |
+| `--model` | 사용할 모델 | `--model claude-sonnet-4-6` |
 | `--mcp-config` | MCP 설정 파일 경로 | `--mcp-config servers.json` |
 | `--allowed-tools` | 허용할 도구 목록 (쉼표 구분) | `--allowed-tools "Bash,Read,Edit"` |
 | `--debug` | 디버그 출력 활성화 | `--debug` |
@@ -196,10 +196,10 @@ Beta 버전을 사용 중인 경우 GA 버전으로 업그레이드하는 것이
 ### 사용 예시
 
 ```yaml
-- uses: anthropics/claude-code-base-action@v1
+- uses: anthropics/claude-code-action@v1
   with:
     anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-    claude_args: "--max-turns 5 --model claude-sonnet-4-20250514 --debug"
+    claude_args: "--max-turns 5 --model claude-sonnet-4-6 --debug"
 ```
 
 ---
@@ -229,7 +229,7 @@ jobs:
   review:
     runs-on: ubuntu-latest
     steps:
-      - uses: anthropics/claude-code-base-action@v1
+      - uses: anthropics/claude-code-action@v1
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           plugin_marketplaces: "https://github.com/anthropics/claude-code.git"
@@ -290,7 +290,7 @@ Claude의 동작은 두 가지 방법으로 구성할 수 있습니다.
 ### 워크플로우 예시 (Bedrock)
 
 ```yaml
-- uses: anthropics/claude-code-base-action@v1
+- uses: anthropics/claude-code-action@v1
   with:
     use_bedrock: true
     github_token: ${{ secrets.GITHUB_TOKEN }}
