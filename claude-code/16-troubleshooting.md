@@ -1,53 +1,57 @@
 # 16. 문제 해결 (Troubleshooting)
 
-> **참조**: [Troubleshooting - Anthropic](https://docs.anthropic.com/en/docs/claude-code/troubleshooting)
+> **원문**: [Troubleshooting](https://code.claude.com/docs/en/troubleshooting) | [Troubleshoot installation and login](https://code.claude.com/docs/en/troubleshoot-install) | [Error reference](https://code.claude.com/docs/en/errors)
+>
+> **기존 참조**: [Troubleshooting - Anthropic](https://docs.anthropic.com/en/docs/claude-code/troubleshooting)
 
 ---
 
-## 목차
+## 증상 기반 라우팅 테이블
 
-- [일반적인 설치 문제](#일반적인-설치-문제)
-- [권한 및 인증](#권한-및-인증)
-- [성능 및 안정성](#성능-및-안정성)
-- [IDE 통합 문제](#ide-통합-문제)
-- [마크다운 서식 문제](#마크다운-서식-문제)
-- [추가 도움](#추가-도움)
+어떤 문제인지 모르겠다면, 아래 표에서 증상에 해당하는 섹션을 찾으세요. Claude Code 내부에서 `/doctor`를 실행하면 설치, 설정, MCP 서버, 컨텍스트 사용량을 자동으로 점검합니다. `claude`가 아예 시작되지 않으면 쉘에서 `claude doctor`를 실행하세요.
+
+| 증상 | 이동 |
+|------|------|
+| `command not found`, 설치 실패, PATH 문제, `EACCES`, TLS 에러 | [일반적인 설치 문제](#일반적인-설치-문제) |
+| 로그인 루프, OAuth 에러, `403 Forbidden`, "organization disabled", Bedrock/Vertex/Foundry 자격 증명 | [인증 문제](#인증-문제) |
+| 설정이 적용되지 않음, 훅이 실행되지 않음, MCP 서버 로딩 안 됨 | 설정 디버깅 |
+| `API Error: 5xx`, `529 Overloaded`, `429`, 요청 검증 에러 | [에러 레퍼런스](#에러-레퍼런스) |
+| `model not found` 또는 `you may not have access to it` | [에러 레퍼런스 - 요청 에러](#요청-에러) |
+| VS Code 확장이 연결되지 않거나 Claude를 감지하지 못함 | VS Code 통합 |
+| JetBrains 플러그인 또는 IDE 미감지 | JetBrains 통합 |
+| 높은 CPU/메모리, 느린 응답, 멈춤, 검색 불가 | [성능 및 안정성](#성능-및-안정성) |
 
 ---
 
 ## 일반적인 설치 문제
 
-### Windows 설치 문제: WSL에서의 에러
+설치에 실패하거나 로그인할 수 없는 경우, 아래에서 해당 에러를 찾으세요.
 
-**OS/플랫폼 감지 문제**: 설치 중 에러가 발생하면 WSL이 Windows `npm`을 사용하고 있을 수 있습니다.
+### 설치 에러 빠른 찾기
 
-```bash
-# 해결 방법
-npm config set os linux
-npm install -g @anthropic-ai/claude-code --force --no-os-check
-# 주의: sudo 사용 금지
-```
+| 메시지 | 해결 방법 |
+|--------|-----------|
+| `command not found: claude` 또는 `'claude' is not recognized` | [PATH 수정](#path-확인) |
+| `syntax error near unexpected token '<'` | 설치 스크립트가 HTML 반환 |
+| `curl: (22) The requested URL returned error: 403` | 설치 스크립트 403 에러 |
+| `curl: (23)` 또는 `curl: (56) Failure writing output to destination` | 연결 확인 또는 대체 설치 프로그램 사용 |
+| `Killed` (Linux 설치 시) | 스왑 공간 추가 |
+| `TLS connect error` 또는 `SSL/TLS secure channel` | CA 인증서 업데이트 |
+| `Failed to fetch version` 또는 다운로드 서버에 연결 불가 | 네트워크 및 프록시 설정 확인 |
+| `irm is not recognized` 또는 `&& is not valid` | 올바른 쉘 명령어 사용 |
+| `'bash' is not recognized as the name of a cmdlet` | Windows 설치 명령어 사용 |
+| `Claude Code does not support 32-bit Windows` | Windows PowerShell (x86 아님) 열기 |
+| `The process cannot access the file ... being used by another process` | 다운로드 폴더 비우고 재시도 |
+| `Error loading shared library` | 시스템에 맞지 않는 바이너리 변형 |
+| `Illegal instruction` | 아키텍처 또는 CPU 명령어 집합 불일치 |
+| `cannot execute binary file: Exec format error` (WSL) | WSL1 네이티브 바이너리 회귀 |
+| `dyld: cannot load`, `dyld: Symbol not found`, `Abort trap` (macOS) | 바이너리 비호환성 |
+| `App unavailable in region` | 해당 국가에서 Claude Code 사용 불가 |
+| `unable to get local issuer certificate` | 기업 CA 인증서 구성 |
+| `OAuth error` 또는 `403 Forbidden` | [인증 문제](#인증-문제) 확인 |
+| `API Error: 500`, `529 Overloaded`, `429` | [에러 레퍼런스](#에러-레퍼런스) 확인 |
 
-**Node를 찾을 수 없는 에러**: `exec: node: not found`가 나타나면 WSL 환경이 Windows의 Node.js를 사용하고 있을 수 있습니다.
-
-```bash
-# 확인
-which npm
-which node
-# /usr/로 시작해야 함 (/mnt/c/이면 Windows 버전)
-```
-
-**nvm 버전 충돌**: WSL과 Windows 양쪽에 nvm이 설치된 경우
-
-```bash
-# 쉘 설정 파일(~/.bashrc, ~/.zshrc)에 nvm 로드 확인
-export NVM_DIR="$HOME/.nvm"
-[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-```
-
-### Linux 및 Mac 설치 문제: 권한 또는 명령어 미발견 에러
-
-**권장 해결 방법**: 네이티브 설치 사용
+### 네이티브 설치 (권장)
 
 ```bash
 # macOS, Linux, WSL
@@ -57,81 +61,817 @@ curl -fsSL https://claude.ai/install.sh | bash
 irm https://claude.ai/install.ps1 | iex
 ```
 
-**대안**: 기존 설치에서 마이그레이션
+대체 설치 방법:
 
 ```bash
-claude install  # ~/.claude/local/로 이동, 쉘 설정에 alias 추가
+# macOS - Homebrew
+brew install --cask claude-code
+
+# Windows - WinGet
+winget install Anthropic.ClaudeCode
+```
+
+### 네트워크 연결 확인
+
+설치 프로그램은 `downloads.claude.ai`에서 다운로드합니다. 연결을 확인하세요.
+
+```bash
+curl -sI https://downloads.claude.ai/claude-code-releases/latest
+```
+
+`HTTP/2 200`이 보이면 서버에 연결된 것입니다. 출력이 없거나 `Could not resolve host`, 연결 타임아웃이면 네트워크가 연결을 차단하고 있는 것입니다.
+
+기업 프록시 뒤에 있는 경우, 설치 전에 `HTTPS_PROXY`와 `HTTP_PROXY`를 설정하세요.
+
+```bash
+# macOS/Linux
+export HTTP_PROXY=http://proxy.example.com:8080
+export HTTPS_PROXY=http://proxy.example.com:8080
+curl -fsSL https://claude.ai/install.sh | bash
+
+# Windows PowerShell
+$env:HTTP_PROXY = 'http://proxy.example.com:8080'
+$env:HTTPS_PROXY = 'http://proxy.example.com:8080'
+irm https://claude.ai/install.ps1 | iex
+```
+
+### PATH 확인
+
+설치는 성공했지만 `command not found` 또는 `not recognized` 에러가 나면, 설치 디렉토리가 PATH에 없는 것입니다. 설치 위치는 macOS/Linux에서 `~/.local/bin/claude`, Windows에서 `%USERPROFILE%\.local\bin\claude.exe`입니다.
+
+**macOS/Linux - Zsh (macOS 기본):**
+
+```bash
+echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.zshrc
+source ~/.zshrc
+```
+
+**macOS/Linux - Bash (대부분의 Linux 기본):**
+
+```bash
+echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
+source ~/.bashrc
+```
+
+**Windows PowerShell:**
+
+```powershell
+$currentPath = [Environment]::GetEnvironmentVariable('PATH', 'User')
+[Environment]::SetEnvironmentVariable('PATH', "$currentPath;$env:USERPROFILE\.local\bin", 'User')
+```
+
+변경 후 터미널을 재시작하세요.
+
+### 충돌하는 설치 확인
+
+여러 Claude Code 설치가 버전 불일치나 예상치 못한 동작을 일으킬 수 있습니다.
+
+```bash
+# macOS/Linux: 설치 위치 확인
+ls -la ~/.local/bin/claude          # 네이티브 설치 프로그램
+npm -g ls @anthropic-ai/claude-code  # npm 전역 설치
+```
+
+```powershell
+# Windows PowerShell
+Test-Path "$env:USERPROFILE\.local\bin\claude.exe"
+```
+
+여러 설치가 발견되면 하나만 남기세요. 네이티브 설치(`~/.local/bin/claude`)가 권장됩니다.
+
+```bash
+# npm 전역 설치 제거
+npm uninstall -g @anthropic-ai/claude-code
+
+# 레거시 로컬 npm 설치 제거 (macOS/Linux)
+rm -rf ~/.claude/local
+
+# Homebrew 설치 제거 (macOS)
+brew uninstall --cask claude-code
+
+# WinGet 설치 제거 (Windows)
+winget uninstall Anthropic.ClaudeCode
+```
+
+### 디렉토리 권한 확인
+
+macOS/Linux에서 설치 프로그램은 `~/.local/bin/`과 `~/.claude/`에 쓰기 권한이 필요합니다.
+
+```bash
+test -w ~/.local/bin && echo "writable" || echo "not writable"
+test -w ~/.claude && echo "writable" || echo "not writable"
+```
+
+쓰기 불가인 경우:
+
+```bash
+sudo mkdir -p ~/.local/bin
+sudo chown -R $(whoami) ~/.local
+```
+
+### TLS/SSL 연결 에러
+
+`curl: (35) TLS connect error`, `schannel: next InitializeSecurityContext failed`, `Could not establish trust relationship for the SSL/TLS secure channel` 등의 에러는 TLS 핸드셰이크 실패를 나타냅니다.
+
+**시스템 CA 인증서 업데이트 (Ubuntu/Debian):**
+
+```bash
+sudo apt-get update && sudo apt-get install ca-certificates
+```
+
+**Windows에서 TLS 1.2 활성화:**
+
+```powershell
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+irm https://claude.ai/install.ps1 | iex
+```
+
+**기업 프록시 환경에서 CA 번들 사용:**
+
+```bash
+# 설치 시
+curl --cacert /path/to/corporate-ca.pem -fsSL https://claude.ai/install.sh | bash
+
+# Claude Code 실행 시
+export NODE_EXTRA_CA_CERTS=/path/to/corporate-ca.pem
+```
+
+### 저메모리 Linux 서버에서 설치 시 Killed
+
+Linux OOM killer가 프로세스를 종료한 것입니다. Claude Code는 최소 4GB RAM이 필요합니다.
+
+```bash
+# 2GB 스왑 파일 생성
+sudo fallocate -l 2G /swapfile
+sudo chmod 600 /swapfile
+sudo mkswap /swapfile
+sudo swapon /swapfile
+
+# 설치 재시도
+curl -fsSL https://claude.ai/install.sh | bash
+```
+
+### Docker에서 설치 시 멈춤
+
+Docker 컨테이너에서 루트로 `/`에 설치하면 멈출 수 있습니다.
+
+```dockerfile
+WORKDIR /tmp
+RUN curl -fsSL https://claude.ai/install.sh | bash
+```
+
+```bash
+# Docker Desktop을 사용하는 경우 메모리 한도 증가
+docker build --memory=4g .
+```
+
+### macOS에서 `dyld: cannot load`
+
+`dyld: cannot load`, `dyld: Symbol not found`, `Abort trap: 6` 에러는 바이너리가 macOS 버전 또는 하드웨어와 호환되지 않음을 의미합니다. Claude Code는 macOS 13.0 이상이 필요합니다. macOS 버전을 확인하고 필요하면 업데이트하세요.
+
+### WSL1에서 `Exec format error`
+
+WSL에서 `cannot execute binary file: Exec format error`가 나타나면 WSL1에서 알려진 네이티브 바이너리 회귀입니다.
+
+```powershell
+# PowerShell에서 WSL2로 변환
+wsl --set-version <DistroName> 2
+```
+
+WSL1을 유지해야 하는 경우, 동적 링커를 통해 실행하는 함수를 `~/.bashrc`에 추가하세요.
+
+```bash
+claude() {
+  /lib64/ld-linux-x86-64.so.2 "$(readlink -f "$HOME/.local/bin/claude")" "$@"
+}
+```
+
+### Linux musl/glibc 바이너리 불일치
+
+`libstdc++.so.6` 등의 공유 라이브러리 누락 에러가 나타나면, 설치 프로그램이 잘못된 바이너리 변형을 다운로드했을 수 있습니다.
+
+```bash
+# 시스템 libc 확인
+ldd --version 2>&1 | head -1
+# GNU libc/GLIBC = glibc, musl = musl
+```
+
+Alpine Linux (musl)인 경우:
+
+```bash
+apk add libgcc libstdc++ ripgrep
+```
+
+### `Illegal instruction`
+
+아키텍처 불일치이거나 CPU가 AVX 명령어 집합을 지원하지 않는 것입니다. 2013년 이전 Intel/AMD 프로세서 또는 하이퍼바이저가 AVX를 게스트에 전달하지 않는 VM에서 발생할 수 있습니다.
+
+```bash
+# VPS/VM에서 AVX 가용성 확인
+grep -m1 -ow avx /proc/cpuinfo
+```
+
+### Windows에서 Claude Desktop이 `claude` 명령어 덮어쓰기
+
+이전 버전의 Claude Desktop이 `WindowsApps` 디렉토리에 `Claude.exe`를 등록하여 Claude Code CLI보다 PATH 우선순위가 높을 수 있습니다. Claude Desktop을 최신 버전으로 업데이트하세요.
+
+### Windows에서 설치 스크립트가 HTML을 반환하는 경우
+
+```
+bash: line 1: syntax error near unexpected token `<'
+bash: line 1: `<!DOCTYPE html>'
+```
+
+설치 URL이 설치 스크립트 대신 HTML 페이지를 반환한 것입니다. "App unavailable in region"이면 해당 국가에서 사용할 수 없는 것입니다.
+
+**해결책:** 대체 설치 방법을 사용하거나 몇 분 후 재시도하세요.
+
+### Windows에서 파일 접근 에러
+
+`The process cannot access the file ... because it is being used by another process` 에러가 나타나면:
+
+```powershell
+Remove-Item -Recurse -Force "$env:USERPROFILE\.claude\downloads"
+irm https://claude.ai/install.ps1 | iex
 ```
 
 ---
 
-## 권한 및 인증
+## 인증 문제
 
-### 반복되는 권한 프롬프트
+### 로그인 초기화
 
-동일한 명령을 반복적으로 승인하는 경우 `/permissions` 명령으로 특정 도구를 허용할 수 있습니다.
+로그인이 실패하고 원인이 명확하지 않으면, 깨끗한 재인증이 대부분의 문제를 해결합니다.
 
-### 인증 문제
+1. `/logout` 실행하여 완전히 로그아웃
+2. Claude Code 종료
+3. `claude`로 재시작 후 인증 프로세스 다시 진행
+
+브라우저가 자동으로 열리지 않으면 `c`를 눌러 OAuth URL을 클립보드에 복사한 후 브라우저에 수동으로 붙여넣으세요.
+
+### OAuth 에러: Invalid code
+
+`OAuth error: Invalid code. Please make sure the full code was copied`가 나타나면 로그인 코드가 만료되었거나 복사 중 잘린 것입니다.
+
+- 브라우저가 열린 후 빠르게 로그인 완료
+- 브라우저가 자동으로 열리지 않으면 `c`를 눌러 URL 복사
+- 원격/SSH 세션에서는 터미널에 표시된 URL을 로컬 브라우저에서 열기
+
+### 로그인 후 403 Forbidden
+
+`API Error: 403 {"error":{"type":"forbidden","message":"Request not allowed"}}`가 나타나면:
+
+- **Claude Pro/Max 사용자**: claude.ai/settings에서 구독이 활성 상태인지 확인
+- **Anthropic Console 사용자**: 계정에 "Claude Code" 또는 "Developer" 역할이 있는지 확인. 관리자가 Anthropic Console Settings > Members에서 할당
+- **프록시 뒤에 있는 경우**: 기업 프록시가 API 요청을 방해할 수 있음
+
+### 비활성화된 조직 에러
+
+활성 Claude 구독이 있음에도 `API Error: 400 ... "This organization has been disabled"`가 나타나면, `ANTHROPIC_API_KEY` 환경변수가 구독을 덮어쓰고 있는 것입니다.
 
 ```bash
-# 1단계: 로그아웃
-/logout
-
-# 2단계: Claude Code 종료 후 재시작
-claude
-
-# 문제가 지속되면 인증 정보 삭제
-rm -rf ~/.claude/auth
+unset ANTHROPIC_API_KEY
 claude
 ```
+
+`~/.zshrc`, `~/.bashrc`, `~/.profile`에서 `export ANTHROPIC_API_KEY=...` 줄을 제거하세요. Claude Code 내부에서 `/status`를 실행하여 활성 인증 방식을 확인할 수 있습니다.
+
+### WSL2, SSH, 컨테이너에서 OAuth 로그인 실패
+
+브라우저가 다른 호스트에서 열려 리다이렉트가 Claude Code의 로컬 콜백 서버에 도달하지 못합니다. 브라우저에 로그인 코드가 표시되면 터미널의 `Paste code here if prompted` 프롬프트에 붙여넣으세요.
+
+WSL2에서 브라우저가 아예 열리지 않으면:
+
+```bash
+export BROWSER="/mnt/c/Program Files/Google/Chrome/Application/chrome.exe"
+claude
+```
+
+대화형 프롬프트에 붙여넣기가 작동하지 않으면 `claude auth login`을 대신 사용하세요.
+
+### 로그인 만료 또는 토큰 만료
+
+`/login`으로 재인증하세요. 자주 발생하면 시스템 시계가 정확한지 확인하세요. 토큰 검증은 올바른 타임스탬프에 의존합니다.
+
+macOS에서 Keychain이 잠겨 있거나 비밀번호가 동기화되지 않아 자격 증명 저장에 실패할 수 있습니다. `claude doctor`로 Keychain 접근을 확인하고, 필요하면 `security unlock-keychain ~/Library/Keychains/login.keychain-db`로 수동 잠금 해제하세요.
+
+### Bedrock, Vertex, Foundry 자격 증명 로딩 실패
+
+클라우드 제공자를 구성했는데 자격 증명 에러가 나타나면:
+
+**Bedrock:**
+
+```bash
+aws sts get-caller-identity
+```
+
+**Vertex AI:**
+
+```bash
+# 환경변수 확인
+echo $ANTHROPIC_VERTEX_PROJECT_ID
+echo $CLOUD_ML_REGION
+
+# 애플리케이션 기본 자격 증명 설정
+gcloud auth application-default login
+```
+
+IDE 확장에서 작동하지 않으면 IDE 프로세스가 쉘 환경을 상속받지 않은 것입니다. IDE 자체 설정에서 제공자 환경변수를 설정하거나, 이미 export된 터미널에서 IDE를 실행하세요.
 
 ---
 
 ## 성능 및 안정성
 
+Claude Code가 실행 중일 때의 성능, 안정성, 검색 동작과 관련된 문제를 다룹니다.
+
 ### 높은 CPU 또는 메모리 사용량
 
-| 해결 방법 | 설명 |
-|----------|------|
-| `/compact` 사용 | 컨텍스트 크기 감소 |
-| 정기적으로 재시작 | 주요 작업 사이에 Claude Code 재시작 |
-| `.gitignore` 활용 | 대규모 빌드 디렉토리 제외 |
+Claude Code는 대부분의 개발 환경에서 작동하지만, 대규모 코드베이스를 처리할 때 상당한 리소스를 소모할 수 있습니다.
+
+1. `/compact`을 정기적으로 사용하여 컨텍스트 크기 감소
+2. 주요 작업 사이에 Claude Code 재시작
+3. 대규모 빌드 디렉토리를 `.gitignore`에 추가
+
+이 단계 후에도 메모리 사용량이 계속 높으면, `/heapdump`를 실행하여 JavaScript 힙 스냅샷과 메모리 분석 결과를 `~/Desktop`에 저장하세요. Linux에서 Desktop 폴더가 없으면 홈 디렉토리에 저장됩니다.
+
+분석 결과는 상주 세트 크기, JS 힙, 배열 버퍼, 비할당 네이티브 메모리를 보여주어, 성장이 JavaScript 객체에 있는지 네이티브 코드에 있는지 식별하는 데 도움이 됩니다. Retainer를 조사하려면 Chrome DevTools의 Memory > Load에서 `.heapsnapshot` 파일을 여세요. GitHub에 메모리 문제를 보고할 때 두 파일을 모두 첨부하세요.
+
+### Auto-compaction이 thrashing 에러로 중지되는 경우
+
+`Autocompact is thrashing: the context refilled to the limit...` 메시지가 보이면, 자동 compaction은 성공했지만 파일이나 도구 출력이 즉시 컨텍스트 윈도우를 여러 번 연속으로 다시 채운 것입니다. Claude Code는 진행되지 않는 루프에서 API 호출을 낭비하지 않기 위해 재시도를 중지합니다.
+
+**해결 방법:**
+
+1. 대형 파일을 전체 대신 작은 청크(특정 라인 범위나 함수)로 읽도록 Claude에게 요청
+2. `/compact`에 초점을 맞춰 대형 출력을 제거. 예: `/compact keep only the plan and the diff`
+3. 대형 파일 작업을 서브에이전트로 이동하여 별도의 컨텍스트 윈도우에서 실행
+4. 이전 대화가 더 이상 필요 없으면 `/clear` 실행
 
 ### 명령어 멈춤 또는 중단
+
+Claude Code가 응답하지 않는 것 같으면:
 
 1. `Ctrl+C`로 현재 작업 취소 시도
 2. 응답이 없으면 터미널을 닫고 재시작
 
+재시작해도 대화가 손실되지 않습니다. 같은 디렉토리에서 `claude --resume`을 실행하여 세션을 이어갈 수 있습니다.
+
+### 에디터 통합 터미널에서 깨진 텍스트
+
+VS Code, Cursor, Devin Desktop의 통합 터미널에서 Claude Code를 실행할 때 문자가 상자, 번짐, 잘못된 글리프로 렌더링되면, 터미널의 GPU 렌더러가 원인일 가능성이 높습니다.
+
+Claude Code 내부에서 `/terminal-setup`을 실행하여 `terminal.integrated.gpuAcceleration`을 `"off"`로 설정하거나, 에디터 설정에서 수동으로 설정한 후 창을 다시 로드하세요.
+
 ### 검색 및 탐색 문제
 
-검색 도구, `@file` 멘션, 커스텀 에이전트, 커스텀 슬래시 명령어가 작동하지 않는 경우:
+검색 도구, `@file` 멘션, 커스텀 에이전트, 커스텀 스킬이 파일을 찾지 못하면, 번들된 `ripgrep` 바이너리가 시스템에서 실행되지 않는 것일 수 있습니다. 시스템의 `ripgrep` 패키지를 설치하고 Claude Code에 사용하도록 지정하세요.
 
 ```bash
-# 시스템 ripgrep 설치
 # macOS
 brew install ripgrep
 
 # Ubuntu/Debian
 sudo apt install ripgrep
 
-# 환경변수 설정
-# settings.json에 추가
-{
-  "env": {
-    "USE_BUILTIN_RIPGREP": "0"
-  }
-}
+# Alpine
+apk add ripgrep
+
+# Arch
+pacman -S ripgrep
+
+# Windows
+winget install BurntSushi.ripgrep.MSVC
 ```
+
+환경변수 `USE_BUILTIN_RIPGREP=0`을 설정하세요.
 
 ### WSL에서 느리거나 불완전한 검색 결과
 
-WSL에서 파일 시스템 간 작업 시 디스크 읽기 성능 저하가 발생할 수 있습니다.
+WSL에서 파일 시스템 간 작업 시 디스크 읽기 성능 저하로 인해 예상보다 적은 결과가 반환될 수 있습니다.
 
 | 해결 방법 | 설명 |
-|----------|------|
-| 더 구체적인 검색 | 디렉토리나 파일 유형 지정 |
-| Linux 파일시스템 사용 | `/home/`에 프로젝트 위치 (`/mnt/c/` 대신) |
+|-----------|------|
+| 더 구체적인 검색 사용 | 디렉토리나 파일 유형 지정. 예: "Search for JWT validation logic in the auth-service package" |
+| 프로젝트를 Linux 파일시스템으로 이동 | `/home/`에 프로젝트 위치 (`/mnt/c/` 대신) |
 | 네이티브 Windows 사용 | WSL 대신 네이티브 Windows에서 실행 |
+
+---
+
+## 에러 레퍼런스
+
+Claude Code가 표시하는 런타임 에러와 복구 방법을 정리합니다. 설치 에러(예: `command not found`, TLS 실패)는 [일반적인 설치 문제](#일반적인-설치-문제)를 참조하세요.
+
+이 에러와 복구 명령어는 CLI, 데스크톱 앱, 웹의 Claude Code 모두에 적용됩니다. 세 가지 모두 동일한 Claude Code CLI를 래핑합니다.
+
+### 에러 빠른 찾기
+
+| 메시지 | 섹션 |
+|--------|------|
+| `API Error: 500 Internal server error` | 서버 에러 |
+| `API Error: Repeated 529 Overloaded errors` | 서버 에러 |
+| `Request timed out` | 서버 에러 (또는 인터넷 연결 언급 시 네트워크) |
+| `Auto mode could not evaluate this action...` | 서버 에러 |
+| `You've hit your session limit` / `You've hit your weekly limit` | 사용량 제한 |
+| `Server is temporarily limiting requests` | 사용량 제한 |
+| `Request rejected (429)` | 사용량 제한 |
+| `Credit balance is too low` | 사용량 제한 |
+| `Not logged in · Please run /login` | 인증 에러 |
+| `Invalid API key` | 인증 에러 |
+| `This organization has been disabled` | 인증 에러 |
+| `Your organization has disabled Claude subscription access` | 인증 에러 |
+| `OAuth token revoked` / `OAuth token has expired` | 인증 에러 |
+| `Unable to connect to API` | 네트워크 에러 |
+| `SSL certificate verification failed` | 네트워크 에러 |
+| `Prompt is too long` | 요청 에러 |
+| `Error during compaction: Conversation too long` | 요청 에러 |
+| `Request too large` | 요청 에러 |
+| `Image was too large` | 요청 에러 |
+| `PDF too large` / `PDF is password protected` | 요청 에러 |
+| `Extra inputs are not permitted` | 요청 에러 |
+| `There's an issue with the selected model` | 요청 에러 |
+| `Claude Opus is not available with the Claude Pro plan` | 요청 에러 |
+| `thinking.type.enabled is not supported for this model` | 요청 에러 |
+| `max_tokens must be greater than thinking.budget_tokens` | 요청 에러 |
+| `API Error: 400 due to tool use concurrency issues` | 요청 에러 |
+
+### 자동 재시도
+
+Claude Code는 에러를 표시하기 전에 일시적 실패를 재시도합니다. 서버 에러, 과부하 응답, 요청 타임아웃, 임시 429 스로틀, 연결 끊김은 모두 최대 10회 지수 백오프로 재시도됩니다. 재시도 중에는 스피너에 `Retrying in Ns · attempt x/y` 카운트다운이 표시됩니다.
+
+이 페이지의 에러가 보이면 이미 재시도가 모두 소진된 것입니다. 두 가지 환경변수로 동작을 조정할 수 있습니다.
+
+| 변수 | 기본값 | 효과 |
+|------|--------|------|
+| `CLAUDE_CODE_MAX_RETRIES` | 10 | 재시도 횟수. 스크립트에서 빠른 실패를 원하면 낮추고, 긴 장애를 기다리려면 높이세요 |
+| `API_TIMEOUT_MS` | 600000 | 요청당 타임아웃 (밀리초). 느린 네트워크나 프록시에서 높이세요 |
+
+### 서버 에러
+
+추론 제공자 측의 에러입니다. Anthropic API에서는 Anthropic 인프라, Bedrock/Vertex AI/Foundry/커스텀 게이트웨이에서는 해당 제공자의 인프라를 의미합니다.
+
+#### API Error: 500 Internal server error
+
+```
+API Error: 500 Internal server error. This is a server-side issue, usually temporary — try again in a moment. If it persists, check https://status.claude.com.
+```
+
+프롬프트, 설정, 계정이 원인이 아닌 API 내부의 예상치 못한 실패입니다.
+
+**해결 방법:**
+
+- status.claude.com (또는 메시지에 명시된 제공자 상태 페이지)에서 활성 인시던트 확인
+- 잠시 기다린 후 메시지 재전송. 긴 프롬프트의 경우 전체를 다시 붙여넣지 않고 `try again` 입력
+- 에러가 지속되면 `/feedback` 실행
+
+#### API Error: Repeated 529 Overloaded errors
+
+API가 일시적으로 모든 사용자에 대해 용량 한계에 도달했습니다. Claude Code가 이 메시지를 표시하기 전에 이미 여러 번 재시도했습니다.
+
+```
+API Error: Repeated 529 Overloaded errors. The API is at capacity — this is usually temporary. Try again in a moment. If it persists, check https://status.claude.com.
+```
+
+529는 사용량 제한이 아니며 할당량에 포함되지 않습니다.
+
+**해결 방법:**
+
+- status.claude.com에서 용량 공지 확인
+- 몇 분 후 재시도
+- `/model`로 다른 모델로 전환. 용량은 모델별로 추적됨
+
+#### Request timed out
+
+API가 연결 기한 전에 응답하지 않았습니다. 기본 요청 타임아웃은 10분입니다.
+
+**해결 방법:**
+
+- 요청 재시도
+- 장기 실행 작업은 더 작은 프롬프트로 분할
+- 느린 네트워크/프록시가 원인이면 `API_TIMEOUT_MS` 증가
+- 타임아웃이 빈번하고 네트워크가 정상이면 네트워크 에러 섹션 확인
+
+### 사용량 제한
+
+계정이나 플랜에 연결된 할당량에 도달했음을 의미합니다. 서버 에러(모든 사용자에게 영향)와는 다릅니다.
+
+#### 세션 한도 도달
+
+구독 플랜에는 롤링 사용 허용량이 포함됩니다. 소진 시:
+
+```
+You've hit your session limit · resets 3:45pm
+You've hit your weekly limit · resets Mon 12:00am
+You've hit your Opus limit · resets 3:45pm
+```
+
+**해결 방법:**
+
+- 에러에 표시된 초기화 시간까지 대기
+- `/usage`로 플랜 한도 및 초기화 시점 확인
+- `/usage-credits`로 추가 사용량 구매 (Pro/Max) 또는 관리자에게 요청 (Team/Enterprise)
+- 플랜 업그레이드: claude.com/pricing
+
+#### Server is temporarily limiting requests
+
+플랜 할당량과 무관한 단기 스로틀입니다. 자동 재시도 후 표시됩니다.
+
+```
+API Error: Server is temporarily limiting requests (not your usage limit)
+```
+
+**해결 방법:** 잠시 대기 후 재시도. 지속되면 status.claude.com 확인.
+
+#### Request rejected (429)
+
+API 키, Amazon Bedrock 프로젝트, Google Vertex AI 프로젝트에 구성된 속도 제한에 도달했습니다.
+
+```
+API Error: Request rejected (429) · this may be a temporary capacity issue. If it persists, check https://status.claude.com.
+```
+
+**해결 방법:**
+
+- `/status`로 활성 자격 증명이 예상한 것인지 확인. 환경에 `ANTHROPIC_API_KEY`가 있으면 저등급 키로 요청이 전달될 수 있음
+- 제공자 콘솔에서 활성 한도 확인 및 필요시 상위 등급 요청
+- 동시성 감소: `CLAUDE_CODE_MAX_TOOL_USE_CONCURRENCY` 낮추기, 병렬 서브에이전트 실행 자제, `/model`로 더 작은 모델로 전환
+
+#### Credit balance is too low
+
+Console 조직의 선불 크레딧이 소진되었습니다.
+
+```
+Credit balance is too low
+```
+
+**해결 방법:**
+
+- platform.claude.com/settings/billing에서 크레딧 추가. 자동 리로드 활성화 권장
+- Pro, Max, Team, Enterprise 플랜이 있으면 `/login`으로 구독 인증으로 전환
+- Console에서 워크스페이스별 지출 한도 설정
+
+### 인증 에러
+
+Claude Code가 API에 신원을 증명할 수 없음을 의미합니다. 언제든 `/status`로 현재 활성 자격 증명을 확인할 수 있습니다.
+
+#### Not logged in
+
+```
+Not logged in · Please run /login
+```
+
+**해결 방법:**
+
+- `/login`으로 인증
+- 환경변수로 인증하려면 `ANTHROPIC_API_KEY`가 설정 및 export되어 있는지 확인
+- CI/자동화에서는 `apiKeyHelper` 스크립트 구성
+
+#### Invalid API key
+
+```
+Invalid API key · Fix external API key
+```
+
+**해결 방법:**
+
+- 오타 확인 및 Console에서 키가 취소되지 않았는지 확인
+- `env | grep ANTHROPIC`으로 환경변수 확인. `.env` 파일에서 오래된 키가 로드될 수 있음
+- `ANTHROPIC_API_KEY` unset 후 `/login`으로 구독 인증 사용
+- `/status`로 실제 사용 중인 자격 증명 소스 확인
+
+#### This organization has been disabled
+
+비활성화된 Console 조직의 오래된 `ANTHROPIC_API_KEY`가 구독 로그인을 덮어쓰고 있습니다. 환경변수는 `/login`보다 우선합니다.
+
+**해결 방법:**
+
+- `ANTHROPIC_API_KEY` unset 및 쉘 프로필에서 제거 후 `claude` 재시작
+- `/status`로 활성 자격 증명이 구독인지 확인
+
+#### OAuth 토큰 취소 또는 만료
+
+```
+OAuth token revoked · Please run /login
+OAuth token has expired · Please run /login
+```
+
+**해결 방법:**
+
+- `/login`으로 재로그인
+- 같은 세션에서 재인증 후에도 에러가 반복되면 `/logout` 후 `/login`
+- 여러 실행에서 반복적으로 로그인 프롬프트가 나타나면 시스템 시계 및 macOS Keychain 확인
+
+#### OAuth scope 요구사항
+
+```
+OAuth token does not meet scope requirement: user:profile
+```
+
+저장된 토큰이 새 기능에 필요한 권한 범위보다 이전 것입니다.
+
+**해결 방법:** `/login`으로 새 토큰 발급. 로그아웃할 필요 없음.
+
+### 네트워크 에러
+
+Claude Code의 네트워크 요청이 대상에 도달하지 못했음을 의미합니다. 보통 로컬 네트워크, 프록시, 방화벽 또는 클라우드 환경의 네트워크 정책이 원인입니다.
+
+#### Unable to connect to API
+
+```
+Unable to connect to API. Check your internet connection
+Unable to connect to API (ECONNREFUSED)
+Unable to connect to API (ECONNRESET)
+Unable to connect to API (ETIMEDOUT)
+fetch failed
+```
+
+**해결 방법:**
+
+- 같은 쉘에서 `curl -I https://api.anthropic.com`으로 API 호스트 연결 확인. Windows PowerShell에서는 `curl.exe -I` 사용
+- 기업 프록시 뒤에 있으면 `HTTPS_PROXY` 설정 후 Claude Code 실행
+- LLM 게이트웨이/릴레이를 사용하면 `ANTHROPIC_BASE_URL` 설정
+- 방화벽이 필요한 호스트를 허용하는지 확인
+- 간헐적 실패는 자동 재시도됨. 지속적 실패는 로컬 네트워크 문제
+
+`curl`은 성공하지만 Claude Code가 실패하면:
+
+- Linux/WSL: `/etc/resolv.conf`에서 접근 불가능한 네임서버 확인
+- macOS: 연결이 끊기거나 제거된 VPN 클라이언트가 터널 인터페이스나 라우팅 규칙을 남겼을 수 있음. `ifconfig`에서 오래된 `utun` 인터페이스 확인
+- Docker Desktop 등 컨테이너 런타임이 아웃바운드 트래픽을 가로챌 수 있음. 종료 후 재시도
+
+#### SSL 인증서 에러
+
+```
+Unable to connect to API: SSL certificate verification failed. Check your proxy or corporate SSL certificates
+Unable to connect to API: Self-signed certificate detected
+```
+
+**해결 방법:**
+
+- 조직의 CA 번들을 export하고 `NODE_EXTRA_CA_CERTS=/path/to/ca-bundle.pem` 설정
+- `NODE_TLS_REJECT_UNAUTHORIZED=0`은 설정하지 마세요. 인증서 검증이 완전히 비활성화됨
+
+### 요청 에러
+
+API가 요청을 수신했지만 내용을 거부한 것입니다.
+
+#### Prompt is too long
+
+대화와 첨부 파일이 모델의 컨텍스트 윈도우를 초과했습니다.
+
+**해결 방법:**
+
+- `/compact`으로 이전 턴 요약 및 공간 확보, 또는 `/clear`로 새로 시작
+- `/context`로 윈도우를 소비하는 항목(시스템 프롬프트, 도구, 메모리 파일, 메시지) 확인
+- 사용하지 않는 MCP 서버는 `/mcp disable <name>`으로 비활성화하여 도구 정의를 컨텍스트에서 제거
+- 대형 `CLAUDE.md` 파일 정리
+- 서브에이전트는 부모 세션의 모든 MCP 도구 정의를 상속하므로, 서브에이전트를 스폰하기 전에 사용하지 않는 MCP 서버 비활성화
+- `DISABLE_AUTO_COMPACT`를 설정한 경우 다시 활성화하거나 윈도우가 채워지기 전에 `/compact` 수동 실행
+
+#### Error during compaction: Conversation too long
+
+```
+Error during compaction: Conversation too long. Press esc twice to go up a few messages and try again.
+```
+
+`/compact` 자체가 실패한 것입니다. 요약을 생성할 여유 컨텍스트가 부족합니다.
+
+**해결 방법:**
+
+- Esc를 두 번 눌러 메시지 목록을 열고 여러 턴 뒤로 이동. 그 후 `/compact` 재실행
+- 뒤로 이동해도 공간이 부족하면 `/clear`로 새 세션 시작. 이전 대화는 보존되며 `/resume`으로 다시 열 수 있음
+
+#### Request too large
+
+```
+Request too large (max 30 MB). Double press esc to go back and remove or shrink the attached content.
+```
+
+HTTP 요청의 바이트 한도를 초과한 것으로, 컨텍스트 윈도우 한도와는 별개입니다.
+
+**해결 방법:** Esc를 두 번 눌러 과대한 콘텐츠가 추가된 턴 이전으로 이동. 대형 파일은 내용을 붙여넣지 않고 경로로 참조.
+
+#### Image was too large
+
+```
+Image was too large. Double press esc to go back and try again with a smaller image.
+```
+
+에러 후에도 이미지가 대화 기록에 남아 있어, 제거할 때까지 후속 메시지도 같은 에러로 실패합니다.
+
+**해결 방법:**
+
+- Esc를 두 번 눌러 이미지가 추가된 턴 이전으로 이동
+- 이미지 리사이즈. API는 단일 이미지 최대 8000px (긴 변), 다수 이미지 시 2000px 허용
+- 전체 화면 대신 관련 영역만 타이트하게 캡처
+
+#### PDF 에러
+
+```
+PDF too large (max 100 pages, 32 MB). Try splitting it or extracting text first.
+PDF is password protected. Try removing protection or extracting text first.
+The PDF file was not valid. Try converting to a different format first.
+```
+
+**해결 방법:** 과대한 PDF는 전체 첨부 대신 Read 도구로 페이지 범위를 읽도록 요청하거나, `pdftotext` 등으로 텍스트를 추출하여 출력 파일을 경로로 참조하세요.
+
+#### Extra inputs are not permitted
+
+```
+API Error: 400 ... Extra inputs are not permitted ... context_management
+```
+
+프록시나 LLM 게이트웨이가 `anthropic-beta` 요청 헤더를 제거하여 API가 관련 필드를 인식하지 못하는 것입니다.
+
+**해결 방법:**
+
+- 게이트웨이에서 `anthropic-beta` 헤더를 전달하도록 구성
+- 대체로 `CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS=1` 설정 후 실행. 베타 헤더가 필요한 기능이 비활성화됨
+
+#### 모델 관련 에러
+
+**선택한 모델에 문제가 있는 경우:**
+
+```
+There's an issue with the selected model (claude-...). It may not exist or you may not have access to it. Run /model to pick a different model.
+```
+
+**해결 방법:**
+
+- `/model`로 계정에서 사용 가능한 모델 선택
+- 정식 버전 ID 대신 `sonnet` 또는 `opus` 같은 별칭 사용. 별칭은 최신 릴리스를 추적함
+- CLI에서 잘못된 모델이 계속 돌아오면, 우선순위 순서로 확인: `--model` 플래그, `ANTHROPIC_MODEL` 환경변수, `.claude/settings.local.json`의 `model` 필드, 프로젝트 `.claude/settings.json`, `~/.claude/settings.json`
+
+**Claude Pro 플랜에서 Opus 사용 불가:**
+
+```
+Claude Opus is not available with the Claude Pro plan · Select a different model in /model
+```
+
+**해결 방법:** `/model`로 플랜에 포함된 모델 선택. 최근 플랜을 업그레이드했는데도 이 에러가 나면 `/logout` 후 `/login` 실행. 저장된 토큰은 로그인 시점의 플랜을 반영하므로 웹에서 업그레이드해도 기존 세션에 즉시 반영되지 않음.
+
+#### thinking.type.enabled is not supported
+
+```
+API Error: 400 ... "thinking.type.enabled" is not supported for this model. Use "thinking.type.adaptive" and "output_config.effort" to control thinking behavior.
+```
+
+Claude Code 버전이 Opus 4.7 이상의 최소 버전보다 오래된 것입니다.
+
+**해결 방법:**
+
+- `claude update` 실행 후 Claude Code 재시작. Opus 4.7은 v2.1.111 이상, Opus 4.8은 v2.1.154 이상 필요
+- 업그레이드할 수 없으면 `/model`로 Opus 4.6 또는 Sonnet 선택
+
+#### Thinking budget이 output limit을 초과
+
+```
+API Error: 400 ... max_tokens must be greater than thinking.budget_tokens
+```
+
+확장 사고(thinking) 예산이 최대 응답 길이를 초과하여 실제 답변을 위한 공간이 없는 것입니다.
+
+**해결 방법:**
+
+- `MAX_THINKING_TOKENS` 낮추기, 또는 `CLAUDE_CODE_MAX_OUTPUT_TOKENS`를 사고 예산보다 높이기
+
+#### 도구 사용 또는 thinking 블록 불일치
+
+```
+API Error: 400 due to tool use concurrency issues. Run /rewind to recover the conversation.
+```
+
+대화 기록이 일관성 없는 상태로 API에 도달한 것입니다. 보통 도구 호출이 중단되거나 턴이 중간에 편집된 후 발생합니다.
+
+**해결 방법:**
+
+- Opus 4.7 또는 4.8을 사용 중이면 먼저 `claude update` 실행. v2.1.156 이전 버전은 정상적인 도구 사용 중에도 이 에러가 발생할 수 있음
+- `/rewind` 또는 Esc 두 번 눌러 손상된 턴 이전 체크포인트로 돌아가기
+
+#### 사용 정책 거부
+
+```
+API Error: Claude Code is unable to respond to this request, which appears to violate our Usage Policy (https://www.anthropic.com/legal/aup).
+```
+
+대화 내용이 사용 정책 검사를 트리거한 것입니다. 같은 세션에서 새 메시지를 보내면 같은 거부가 반복됩니다.
+
+**해결 방법:**
+
+- Esc 두 번 누르거나 `/rewind`로 거부를 트리거한 턴 이전으로 돌아가서 다시 시도
+- 원인이 되는 턴을 식별할 수 없으면 `/clear`로 새 대화 시작. 이전 대화는 디스크에 보존되며 `/resume`으로 접근 가능
+
+### 응답 품질이 평소보다 낮아 보일 때
+
+에러가 표시되지 않는데 응답 품질이 기대보다 낮으면, 원인은 보통 모델 자체보다 대화 상태입니다. Claude Code는 자동으로 모델 버전을 변경하지 않습니다.
+
+다음을 먼저 확인하세요:
+
+- **모델 선택**: `/model`로 원하는 모델인지 확인. 이전 `/model` 선택이나 `ANTHROPIC_MODEL` 환경변수로 의도치 않은 작은 모델에 있을 수 있음
+- **노력 수준**: `/effort`로 현재 추론 수준 확인. 어려운 디버깅이나 설계 작업에는 높이세요
+- **컨텍스트 압력**: `/context`로 윈도우가 얼마나 찼는지 확인. 용량에 가까우면 `/compact` 또는 `/clear`
+- **오래된 명령어**: 대형/오래된 `CLAUDE.md` 파일과 MCP 도구 정의가 컨텍스트를 소모하고 응답을 왜곡할 수 있음. `/doctor`로 오버사이즈 메모리 파일 확인, `/context`로 MCP 도구 토큰 사용량 확인
+
+응답이 잘못되었을 때 정정 메시지로 답장하는 것보다 되감기가 더 효과적입니다. Esc를 두 번 누르거나 `/rewind`로 잘못된 턴 이전으로 돌아간 후 더 구체적인 프롬프트로 다시 시도하세요.
 
 ---
 
@@ -169,7 +909,7 @@ wsl --shutdown
 
 ### ESC 키가 JetBrains에서 작동하지 않는 경우
 
-1. **Settings → Tools → Terminal**로 이동
+1. **Settings > Tools > Terminal**로 이동
 2. 다음 중 하나 선택:
    - "Move focus to the editor with Escape" **체크 해제**
    - 또는 "Configure terminal keybindings" 클릭 후 "Switch focus to Editor" 단축키 **삭제**
@@ -177,45 +917,12 @@ wsl --shutdown
 
 ---
 
-## 마크다운 서식 문제
-
-### 코드 블록에 언어 태그 누락
-
-<!-- 잘못됨: 언어 태그 없음 -->
-```
-console.log('hello')
-```
-
-<!-- 올바름: 언어 태그 포함 -->
-```javascript
-console.log('hello')
-```
-
-**해결 방법**:
-1. Claude에게 "모든 코드 블록에 언어 태그를 추가해주세요"라고 요청
-2. 후처리 훅으로 자동 감지 및 수정 설정
-3. 생성 후 수동 검토
-
-### 간격 및 서식 불일치
-
-**해결 방법**:
-1. Claude에게 서식 수정 요청
-2. `prettier` 등 포매터 훅 설정
-3. CLAUDE.md에 서식 요구사항 명시
-
-### 마크다운 생성 모범 사례
-
-- 요청에 명확하게 지정: "언어 태그가 포함된 적절한 마크다운"
-- CLAUDE.md에 선호하는 마크다운 스타일 문서화
-- 후처리 훅으로 자동 검증 및 수정
-
----
-
 ## 추가 도움
 
 | 방법 | 설명 |
 |------|------|
-| `/bug` 명령어 | Claude Code 내에서 Anthropic에 직접 문제 보고 |
+| `/doctor` | 설치 상태, 설정 유효성, MCP 구성, 컨텍스트 사용량을 한 번에 점검 |
+| `/feedback` | Claude Code 내부에서 Anthropic에 직접 문제 보고. 대화 내용이 함께 전송됨 |
+| `/bug` | GitHub 이슈로 보고 |
 | GitHub 이슈 | 알려진 문제 확인 |
-| `/doctor` | Claude Code 설치 상태 진단 |
-| Claude에게 질문 | "Claude Code의 기능과 제한사항은 무엇인가요?" |
+| Claude에게 질문 | Claude는 자체 문서에 접근할 수 있음 |
