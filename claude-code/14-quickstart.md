@@ -24,8 +24,9 @@
 ## 시작하기 전에
 
 - 터미널 또는 명령 프롬프트 열기
+  - 터미널을 처음 사용한다면 [터미널 가이드](https://code.claude.com/docs/en/terminal-basics)를 확인하세요
 - 작업할 코드 프로젝트 준비
-- Claude 구독 (Pro, Max, Team, Enterprise) 또는 Console 계정, 혹은 지원되는 클라우드 프로바이더 접근 권한
+- Claude 구독 (Pro, Max, Team, Enterprise), Console 계정, 또는 지원되는 클라우드 프로바이더 접근 권한
 
 ---
 
@@ -52,6 +53,8 @@ curl -fsSL https://claude.ai/install.cmd -o install.cmd && install.cmd && del in
 ```
 
 > `The token '&&' is not a valid statement separator` 오류가 나타나면 PowerShell이 아닌 CMD에서 실행 중인 것입니다. 반대로 `'irm' is not recognized` 오류가 나타나면 CMD가 아닌 PowerShell에서 실행하세요.
+
+> 네이티브 Windows에서는 **Git for Windows** 설치를 권장합니다. Claude Code가 Bash 도구를 사용할 수 있습니다. Git for Windows가 설치되어 있지 않으면 Claude Code는 PowerShell을 셸 도구로 대신 사용합니다. WSL 환경에서는 Git for Windows가 필요하지 않습니다.
 
 ### Homebrew (macOS)
 
@@ -99,7 +102,7 @@ cd /path/to/your/project
 claude
 ```
 
-시작하면 환영 화면, 최근 대화 목록, 최신 업데이트가 표시됩니다.
+시작하면 환영 화면, 최근 대화 목록, 최신 업데이트가 표시됩니다. `/help`를 입력하면 사용 가능한 명령어를 확인할 수 있고, `/resume`으로 이전 대화를 이어갈 수 있습니다.
 
 ---
 
@@ -121,6 +124,16 @@ claude
 
 ```
 > 폴더 구조를 설명해주세요
+```
+
+Claude 자체의 기능에 대해서도 질문할 수 있습니다:
+
+```
+> Claude Code에서 커스텀 스킬을 어떻게 만들죠?
+```
+
+```
+> Claude Code는 Docker와 함께 작동하나요?
 ```
 
 ---
