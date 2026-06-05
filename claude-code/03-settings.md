@@ -90,13 +90,14 @@ Claude Code는 설정 파일을 감시하고 변경 시 자동으로 다시 로�
 | 키 | 설명 | 예시 |
 |----|------|------|
 | `agent` | 메인 스레드를 명명된 서브에이전트로 실행. `claude agents`에서 디스패치되는 세션의 기본 에이전트도 설정 | `"code-reviewer"` |
+| `alwaysThinkingEnabled` | 모든 세션에 대해 확장 thinking을 기본 활성화. 일반적으로 `/config` 명령으로 구성. thinking을 강제로 끄려면 `env`에 `CLAUDE_CODE_DISABLE_THINKING` 설정 | `true` |
 | `apiKeyHelper` | `/bin/sh`에서 실행할 커스텀 스크립트. 생성된 인증 값이 `X-Api-Key` 및 `Authorization: Bearer` 헤더로 전송됨 | `/bin/generate_temp_api_key.sh` |
 | `attribution` | git 커밋 및 PR의 어트리뷰션 커스터마이즈. 아래 어트리뷰션 설정 참조 | `{"commit": "...", "pr": ""}` |
 | `autoMemoryEnabled` | 자동 메모리 활성화. `false` 시 자동 메모리 디렉토리 읽기/쓰기 안 함 (기본값: `true`) | `false` |
 | `autoMemoryDirectory` | 자동 메모리 저장소의 커스텀 디렉토리. 절대 경로 또는 `~/` 접두사 허용 | `"~/my-memory-dir"` |
 | `autoScrollEnabled` | 전체화면 렌더링에서 새 출력을 따라 자동 스크롤 (기본값: `true`) | `false` |
 | `autoUpdatesChannel` | 업데이트 채널. `"stable"`은 약 1주일 뒤 버전, `"latest"` (기본값)는 최신 릴리스 | `"stable"` |
-| `autoMode` | auto 모드 분류기가 차단/허용하는 항목 커스터마이즈. `environment`, `allow`, `soft_deny`, `hard_deny` 배열 포함 | `{"soft_deny": ["$defaults", "Never run terraform apply"]}` |
+| `autoMode` | auto 모드 분류기가 차단/허용하는 항목 커스터마이즈. `environment`, `allow`, `soft_deny`, `hard_deny` 배열 포함. **공유 프로젝트 설정에서는 읽지 않음** | `{"soft_deny": ["$defaults", "Never run terraform apply"]}` |
 | `availableModels` | `/model`, `--model`, `ANTHROPIC_MODEL`로 선택 가능한 모델 제한. Default 옵션에는 영향 없음 | `["sonnet", "haiku"]` |
 | `awaySummaryEnabled` | 몇 분 자리 비운 후 세션 요약 표시 (기본값: `true`) | `false` |
 | `cleanupPeriodDays` | 마지막 활동 날짜 기준으로 세션 파일을 로컬에 보관할 기간 (기본값: 30일, 최소 1) | `20` |
@@ -134,6 +135,7 @@ Claude Code는 설정 파일을 감시하고 변경 시 자동으로 다시 로�
 | `model` | Claude Code에서 사용할 기본 모델 재정의. `--model` 및 `ANTHROPIC_MODEL`이 세션별로 재정의 | `"claude-sonnet-4-6"` |
 | `modelOverrides` | Anthropic 모델 ID를 프로바이더별 모델 ID(예: Bedrock 추론 프로필 ARN)에 매핑 | `{"claude-opus-4-6": "arn:aws:bedrock:..."}` |
 | `outputStyle` | 시스템 프롬프트를 조정할 출력 스타일 구성 | `"Explanatory"` |
+| `otelHeadersHelper` | 동적 OpenTelemetry 헤더를 생성하는 스크립트. 시작 시 및 주기적으로 실행. 새로고침 간격은 `CLAUDE_CODE_OTEL_HEADERS_HELPER_DEBOUNCE_MS`로 설정 | `/bin/generate_otel_headers.sh` |
 | `permissions` | 권한 구성 (아래 권한 설정 참조) | |
 | `plansDirectory` | 플랜 파일 저장 위치. 프로젝트 루트에 상대 경로. 기본값: `~/.claude/plans` | `"./plans"` |
 | `preferredNotifChannel` | 작업 완료 및 권한 프롬프트 알림 방식 (기본값: `"auto"`) | `"terminal_bell"` |
@@ -154,10 +156,12 @@ Claude Code는 설정 파일을 감시하고 변경 시 자동으로 다시 로�
 | `syntaxHighlightingDisabled` | diff, 코드 블록, 파일 미리보기에서 구문 강조 비활성화 | `true` |
 | `teammateMode` | 에이전트 팀 팀원 표시 방식: `"auto"`, `"in-process"`, `"tmux"` | `"in-process"` |
 | `terminalProgressBarEnabled` | 지원 터미널에서 터미널 진행 막대 표시 (기본값: `true`) | `false` |
-| `tui` | 터미널 UI 렌더러. `"fullscreen"` (깜빡임 없는 대체 화면) 또는 `"default"` (클래식) | `"fullscreen"` |
-| `useAutoModeDuringPlan` | auto 모드 사용 가능 시 플랜 모드에서 auto 모드 시맨틱 사용 여부 (기본값: `true`) | `false` |
+| `tui` | 터미널 UI 렌더러. `"fullscreen"` (깜빛임 없는 대체 화면) 또는 `"default"` (클래식) | `"fullscreen"` |
+| `ultracode` | 세션에 대해 ultracode 활성화. 세션 전용이며 `settings.json`에서 읽지 않음. `/effort ultracode`, `--settings`, 또는 Agent SDK 제어 요청으로 설정 | `true` |
+| `useAutoModeDuringPlan` | auto 모드 사용 가능 시 플랜 모드에서 auto 모드 시맨틱 사용 여부 (기본값: `true`). **공유 프로젝트 설정에서는 읽지 않음** | `false` |
 | `viewMode` | 시작 시 기본 트랜스크립트 뷰 모드: `"default"`, `"verbose"`, `"focus"` | `"verbose"` |
 | `voice` | 음성 받아쓰기 설정: `enabled`, `mode` (`"hold"` 또는 `"tap"`), `autoSubmit` | `{"enabled": true, "mode": "tap"}` |
+| `voiceEnabled` | `voice.enabled`의 레거시 별칭. `voice` 객체 사용 권장 | `true` |
 | `workflowKeywordTriggerEnabled` | 프롬프트에서 `ultracode` 키워드가 동적 워크플로우를 트리거할지 여부 (기본값: `true`) | `false` |
 
 ### Managed 전용 설정
@@ -364,7 +368,7 @@ Claude Code는 git 커밋과 풀 리퀘스트에 어트리뷰션을 추가합니
 **기본 커밋 어트리뷰션:**
 
 ```
-Generated with [Claude Code](https://claude.com/claude-code)
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
 
    Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
 ```
@@ -372,7 +376,7 @@ Generated with [Claude Code](https://claude.com/claude-code)
 **기본 PR 어트리뷰션:**
 
 ```
-Generated with [Claude Code](https://claude.com/claude-code)
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
 ```
 
 **예시:**
