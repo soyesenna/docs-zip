@@ -30,6 +30,8 @@
 
 > 네이티브 Windows 설정에는 Git for Windows가 필요합니다. WSL 설정에는 필요하지 않습니다.
 
+> **새 기능**: Claude Code는 Windows에서 PowerShell을 네이티브 쉘로 사용할 수 있는 **옵트인 프리뷰** 기능을 지원합니다. 자세한 내용은 PowerShell 도구 문서를 참조하세요.
+
 ---
 
 ## 네이티브 설치 (권장)

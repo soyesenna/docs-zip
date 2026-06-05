@@ -16,14 +16,18 @@ Claude Code는 Anthropic이 개발한 **에이전트 기반 코딩 도구**입�
 
 ### 사전 요구사항
 
-- Node.js 18 이상
-- Claude.ai 계정 (권장) 또는 Anthropic Console 계정
+- Claude.ai 계정 (Pro, Max, Team, Enterprise) 또는 Anthropic Console 계정
+- Amazon Bedrock, Google Vertex AI, Microsoft Foundry 계정도 지원
 
 ### 설치 및 실행
 
 ```bash
-# Claude Code 설치
-npm install -g @anthropic-ai/claude-code
+# Claude Code 설치 (네이티브 설치 권장)
+# macOS, Linux, WSL
+curl -fsSL https://claude.ai/install.sh | bash
+
+# Windows PowerShell
+irm https://claude.ai/install.ps1 | iex
 
 # 프로젝트 디렉토리로 이동
 cd your-awesome-project
@@ -33,6 +37,7 @@ claude
 # 최초 실행 시 로그인 프롬프트가 표시됩니다
 ```
 
+> **참고**: npm 설치(`npm install -g @anthropic-ai/claude-code`)는 더 이상 권장되지 않습니다. 네이티브 설치가 더 빠르고 의존성이 필요 없습니다.
 > 특정 설정이 필요하거나 문제가 발생한 경우 [설치 및 설정 가이드](01-installation.md)를 참조하세요.
 
 ---
@@ -78,14 +83,18 @@ Anthropic API를 직접 사용하거나 AWS/GCP에 호스팅할 수 있습니다
 |------|------|-----------|
 | 대화형 모드 | 터미널에서 대화형으로 코딩 | [CLI 참조](02-cli-reference.md) |
 | 원샷 모드 | `claude -p`로 비대화형 실행 | [CLI 참조](02-cli-reference.md) |
-| 슬래시 명령어 | 21개 내장 명령어 + 커스텀 명령어 | [CLI 참조](02-cli-reference.md) |
+| 슬래시 명령어 | 내장 명령어 + 커스텀 명령어 | [슬래시 명령어](05-slash-commands.md) |
 | Vim 모드 | Vim 스타일 편집 지원 | [CLI 참조](02-cli-reference.md) |
-| MCP 서버 | 외부 도구 및 데이터 소스 연동 | [설정](03-settings.md) |
+| MCP 서버 | 외부 도구 및 데이터 소스 연동 | [MCP 통합](07-mcp.md) |
 | 권한 관리 | allow/deny/ask 세분화된 권한 제어 | [설정](03-settings.md) |
-| Hooks | 도구 실행 전후 커스텀 명령 실행 | [설정](03-settings.md) |
-| CLAUDE.md | 프로젝트별 컨텍스트 및 지침 | [설정](03-settings.md) |
+| Hooks | 도구 실행 전후 커스텀 명령 실행 | [훅 시스템](06-hooks.md) |
+| CLAUDE.md | 프로젝트별 컨텍스트 및 지침 | [메모리 시스템](09-memory.md) |
+| 서브에이전트 | 특정 작업에 특화된 AI 어시스턴트 | [서브에이전트](08-subagents.md) |
+| 플러그인 | 커스텀 명령, 에이전트, 스킬 패키징 | [플러그인](04-plugins.md) |
 | Bedrock/Vertex | AWS, GCP 클라우드 프로바이더 연동 | [설치 및 설정](01-installation.md) |
-| SDK | TypeScript, Python 프로그래밍 통합 | [CLI 참조](02-cli-reference.md) |
+| SDK | TypeScript, Python 프로그래밍 통합 | [SDK](11-sdk.md) |
+| GitHub Actions | CI/CD 파이프라인에서 자동화 | [GitHub Actions](12-github-actions.md) |
+| IDE 통합 | VS Code, JetBrains 연동 | [IDE 통합](10-ide-integrations.md) |
 
 ---
 
@@ -94,11 +103,21 @@ Anthropic API를 직접 사용하거나 AWS/GCP에 호스팅할 수 있습니다
 | 문서 | URL |
 |------|-----|
 | Claude Code 개요 | https://docs.anthropic.com/en/docs/claude-code/overview |
+| 빠른 시작 (Quickstart) | https://code.claude.com/docs/en/quickstart |
+| 일반 워크플로우 | https://docs.anthropic.com/en/docs/claude-code/common-workflows |
 | 설치 및 설정 | https://docs.anthropic.com/en/docs/claude-code/install |
 | CLI 참조 | https://docs.anthropic.com/en/docs/claude-code/cli-reference |
 | 대화형 모드 | https://docs.anthropic.com/en/docs/claude-code/interactive-mode |
 | 슬래시 명령어 | https://docs.anthropic.com/en/docs/claude-code/slash-commands |
 | 설정 | https://docs.anthropic.com/en/docs/claude-code/settings |
+| 플러그인 | https://docs.anthropic.com/en/docs/claude-code/plugins |
+| Hooks | https://docs.anthropic.com/en/docs/claude-code/hooks |
+| MCP | https://docs.anthropic.com/en/docs/claude-code/mcp |
+| 서브에이전트 | https://docs.anthropic.com/en/docs/claude-code/sub-agents |
+| 메모리 | https://docs.anthropic.com/en/docs/claude-code/memory |
+| IDE 통합 | https://docs.anthropic.com/en/docs/claude-code/ide-integrations |
 | Bedrock & Vertex | https://docs.anthropic.com/en/docs/claude-code/bedrock-vertex |
 | SDK | https://docs.anthropic.com/en/docs/claude-code/sdk |
+| GitHub Actions | https://docs.anthropic.com/en/docs/claude-code/github-actions |
+| 보안 | https://docs.anthropic.com/en/docs/claude-code/security |
 | 트러블슈팅 | https://docs.anthropic.com/en/docs/claude-code/troubleshooting |

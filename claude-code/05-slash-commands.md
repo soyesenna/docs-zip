@@ -337,14 +337,20 @@ Steps:
 | `/cost` | 토큰 사용량 통계 |
 | `/doctor` | Claude Code 설치 상태 확인 |
 | `/help` | 사용 도움말 |
+| `/hooks` | 훅 설정 관리 |
+| `/ide` | 외부 터미널에서 IDE에 연결 |
 | `/init` | CLAUDE.md 가이드로 프로젝트 초기화 |
+| `/install-github-app` | GitHub Actions용 GitHub 앱 설치 |
 | `/login` | Anthropic 계정 전환 |
 | `/logout` | Anthropic 계정 로그아웃 |
 | `/mcp` | MCP 서버 연결 및 OAuth 인증 관리 |
 | `/memory` | CLAUDE.md 메모리 파일 편집 |
 | `/model` | AI 모델 선택 또는 변경 |
 | `/permissions` | 권한 보기 또는 업데이트 |
+| `/plugin` | 플러그인 관리 (설치, 활성화, 비활성화, 마켓플레이스) |
 | `/pr_comments` | 풀 리퀘스트 댓글 보기 |
+| `/reload-plugins` | 플러그인 다시 로드 (스킬, 에이전트, 훅, MCP/LSP 서버 포함) |
+| `/resume` | 이전 대화 선택하여 재개 |
 | `/review` | 코드 리뷰 요청 |
 | `/status` | 계정 및 시스템 상태 보기 |
 | `/terminal-setup` | Shift+Enter 줄바꿈 키 바인딩 설치 (iTerm2, VSCode) |
