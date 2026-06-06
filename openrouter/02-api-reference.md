@@ -188,6 +188,39 @@ type Plugin = {
 
 ---
 
+## Headers
+
+OpenRouter는 앱을 식별하고 openrouter.ai에서 사용자에게 노출하기 위한 선택적 헤더를 지원합니다.
+
+| 헤더 | 설명 |
+| --- | --- |
+| `HTTP-Referer` | openrouter.ai에서 앱을 식별하는 사이트 URL (랭킹에 사용) |
+| `X-OpenRouter-Title` | 앱의 타이틀 설정/수정 (`X-Title`도 허용됨) |
+| `X-OpenRouter-Categories` | 마켓플레이스 카테고리 할당 (App Attribution 참조) |
+
+```javascript
+fetch('https://openrouter.ai/api/v1/chat/completions', {
+  method: 'POST',
+  headers: {
+    Authorization: 'Bearer <API_KEY>',
+    'HTTP-Referer': '<YOUR_SITE_URL>',       // 선택. openrouter.ai 랭킹용 사이트 URL
+    'X-OpenRouter-Title': '<YOUR_SITE_TITLE>', // 선택. openrouter.ai 랭킹용 사이트 타이틀
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({
+    model: 'openai/gpt-5.2',
+    messages: [
+      {
+        role: 'user',
+        content: 'What is the meaning of life?',
+      },
+    ],
+  }),
+});
+```
+
+---
+
 ## Assistant Prefill
 
 모델에 부분 응답을 완성하도록 요청할 수 있습니다. `messages` 배열 끝에 `role: "assistant"` 메시지를 추가합니다:
@@ -411,6 +444,107 @@ const stats = await generation.json();
 | `include_reasoning: false` | `reasoning: { exclude: true }`와 동일 |
 
 새로운 통합 `reasoning` 파라미터 사용을 권장합니다.
+
+### 멀티턴 대화에서 Reasoning 보존
+
+추론 컨텍스트를 여러 턴에 걸쳐 보존하려면, 응답의 reasoning 데이터를 다음 요청의 메시지에 다시 전달해야 합니다. 두 가지 방법이 있습니다:
+
+1. **`message.reasoning`** (문자열): 어시스턴트 메시지에 reasoning 필드로 플레인텍스트 추론을 문자열로 전달
+2. **`message.reasoning_details`** (배열): 전체 `reasoning_details` 블록을 그대로 전달
+
+`reasoning_details`는 암호화되거나 요약된 특수 추론 타입을 반환하는 모델에서 필요합니다 — 이 필드가 해당 모델의 전체 구조를 보존합니다. 원시 추론 문자열만 반환하는 모델에서는 더 간단한 `reasoning` 필드를 사용할 수 있습니다. `reasoning_content`도 `reasoning`과 동일하게 작동하는 별칭으로 사용할 수 있습니다.
+
+#### 지원 모델
+
+Reasoning 보존은 다음 프로프라이어터리 모델에서 지원됩니다:
+
+- **OpenAI**: 모든 추론 모델 (o1 시리즈, o3 시리즈, GPT-5 시리즈 이상)
+- **Anthropic**: 모든 추론 모델 (Claude 3.7 시리즈 이상)
+- **Gemini**: 모든 Reasoning 모델
+- **xAI**: 모든 추론 모델
+
+그리고 다음 오픈소스 모델:
+
+- MiniMax M2 / M2.1
+- Kimi K2 Thinking / K2.5
+- INTELLECT-3
+- Nemotron 3 Nano
+- MiMo-V2-Flash
+- Z.ai reasoning 모델 (GLM 4.5 시리즈 이상; 표준 인터리브드 씽킹만 지원, 보존된 씽킹 기능은 현재 미지원)
+
+> **참고**: `reasoning_details` 기능은 지원되는 모든 추론 모델에서 동일하게 작동합니다. OpenAI 추론 모델(예: `openai/gpt-5.2`)과 Anthropic 추론 모델(예: `anthropic/claude-sonnet-4.5`) 간에 코드 구조를 변경하지 않고도 쉽게 전환할 수 있습니다.
+
+#### 툴 콜링에서의 중요성
+
+추론 블록 보존은 특히 툴 콜링 워크플로우에서 중요합니다. Claude 같은 모델이 툴을 호출할 때, 외부 정보를 기다리며 응답 생성을 일시 중지합니다. 툴 결과가 반환되면 모델은 기존 응답을 계속 구성합니다. 이 과정에서 두 가지 이유로 reasoning 블록 보존이 필수적입니다:
+
+- **추론 연속성**: reasoning 블록은 툴 요청으로 이어진 모델의 단계별 추론을 담고 있습니다. 툴 결과를 제출할 때 원래 reasoning을 포함하면 모델이 중단한 지점에서 추론을 이어갈 수 있습니다.
+- **컨텍스트 유지**: 툴 결과는 API 구조상 user 메시지로 나타나지만, 실제로는 하나의 연속된 추론 흐름의 일부입니다. reasoning 블록을 보존하면 여러 API 호출에 걸쳐 이 개념적 흐름이 유지됩니다.
+
+> **중요**: `reasoning_details` 블록을 제공할 때, 연속된 reasoning 블록의 전체 시퀀스는 원래 요청 중 모델이 생성한 출력과 정확히 일치해야 합니다. 블록의 순서를 재배열하거나 수정할 수 없습니다.
+
+#### 예제: 툴 콜링에서 Reasoning 보존
+
+```python
+from openai import OpenAI
+
+client = OpenAI(
+    base_url="https://openrouter.ai/api/v1",
+    api_key="<API_KEY>",
+)
+
+# 툴 정의
+tools = [{
+    "type": "function",
+    "function": {
+        "name": "get_weather",
+        "description": "Get current weather",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "location": {"type": "string"}
+            },
+            "required": ["location"]
+        }
+    }
+}]
+
+# 첫 번째 API 호출 (툴 포함)
+response = client.chat.completions.create(
+    model="<MODEL>",
+    messages=[
+        {"role": "user", "content": "보스턴 날씨 어때? 그리고 뭘 입어야 할지 추천해줘."}
+    ],
+    tools=tools,
+    extra_body={"reasoning": {"max_tokens": 2000}}
+)
+
+# 어시스턴트 메시지에서 reasoning_details 추출
+message = response.choices[0].message
+
+# reasoning_details를 보존하여 메시지 구성
+messages = [
+    {"role": "user", "content": "보스턴 날씨 어때? 그리고 뭘 입어야 할지 추천해줘."},
+    {
+        "role": "assistant",
+        "content": message.content,
+        "tool_calls": message.tool_calls,
+        "reasoning_details": message.reasoning_details  # 수정 없이 그대로 전달
+    },
+    {
+        "role": "tool",
+        "tool_call_id": message.tool_calls[0].id,
+        "content": '{"temperature": 45, "condition": "rainy", "humidity": 85}'
+    }
+]
+
+# 두 번째 API 호출 — 모델이 중단한 지점에서 추론을 이어감
+response2 = client.chat.completions.create(
+    model="<MODEL>",
+    messages=messages,  # 보존된 reasoning 포함
+    tools=tools
+)
+```
 
 ---
 
