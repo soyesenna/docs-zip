@@ -2,8 +2,7 @@
 
 > 설정 파일 계층, 사용 가능한 설정, 권한, 샌드박스, 워크트리, 어트리뷰션, 환경 변수, 글로벌 구성
 
-**원문**: [Claude Code settings](https://code.claude.com/docs/en/settings) | [Environment variables](https://code.claude.com/docs/en/env-vars) | [Permission modes](https://code.claude.com/docs/en/permission-modes)
-**참고**: [Settings - Anthropic 공식 문서](https://docs.anthropic.com/en/docs/claude-code/settings)
+**원문**: [Claude Code settings](https://code.claude.com/docs/en/settings) | [Environment variables](https://code.claude.com/docs/en/env-vars) | [Permissions](https://code.claude.com/docs/en/permissions) | [Permission modes](https://code.claude.com/docs/en/permission-modes) | [Auto mode config](https://code.claude.com/docs/en/auto-mode-config) | [Terminal config](https://code.claude.com/docs/en/terminal-config) | [Network config](https://code.claude.com/docs/en/network-config)
 
 ---
 
@@ -20,7 +19,14 @@ Claude Code는 __스코프 시스템__을 사용하여 구성이 적용되는 �
 
 ### 설정 파일 위치
 
-`settings.json`은 계층적 설정을 통한 공식 구성 메커니즘입니다.
+`settings.json`은 계층적 설정을 통한 공식 구성 메커니즘입니다. 설정 파일 상단에 `$schema` 줄을 추가하면 VS Code, Cursor 등에서 자동완성 및 인라인 검증이 활성화됩니다. 발행된 스키마는 주기적으로 업데이트되며, 최신 CLI 릴리스에 추가된 필드를 아직 포함하지 않을 수 있습니다.
+
+```json
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": { ... }
+}
+```
 
 | 설정 파일 | 위치 | 설명 |
 |-----------|------|------|
@@ -89,6 +95,7 @@ Claude Code는 설정 파일을 감시하고 변경 시 자동으로 다시 로�
 
 | 키 | 설명 | 예시 |
 |----|------|------|
+| `$schema` | JSON 스키마 참조. 추가 시 VS Code, Cursor 등에서 자동완성 및 인라인 검증 활성화. 스키마는 주기적으로 업데이트되며 최신 CLI 릴리스의 필드를 포함하지 않을 수 있음 | `"https://json.schemastore.org/claude-code-settings.json"` |
 | `agent` | 메인 스레드를 명명된 서브에이전트로 실행. `claude agents`에서 디스패치되는 세션의 기본 에이전트도 설정 | `"code-reviewer"` |
 | `alwaysThinkingEnabled` | 모든 세션에 대해 확장 thinking을 기본 활성화. 일반적으로 `/config` 명령으로 구성. thinking을 강제로 끄려면 `env`에 `CLAUDE_CODE_DISABLE_THINKING` 설정 | `true` |
 | `apiKeyHelper` | `/bin/sh`에서 실행할 커스텀 스크립트. 생성된 인증 값이 `X-Api-Key` 및 `Authorization: Bearer` 헤더로 전송됨 | `/bin/generate_temp_api_key.sh` |
@@ -103,6 +110,7 @@ Claude Code는 설정 파일을 감시하고 변경 시 자동으로 다시 로�
 | `cleanupPeriodDays` | 마지막 활동 날짜 기준으로 세션 파일을 로컬에 보관할 기간 (기본값: 30일, 최소 1) | `20` |
 | `companyAnnouncements` | 시작 시 사용자에게 표시할 공지. 여러 개 제공 시 무작위 순환 | `["Welcome to Acme Corp!"]` |
 | `defaultShell` | 입력 상자 `!` 명령의 기본 셸. `"bash"` (기본값) 또는 `"powershell"` | `"powershell"` |
+| `deniedMcpServers` | managed-settings.json에 설정 시 명시적으로 차단되는 MCP 서버 거부 목록. 모든 스코프에 적용. 거부 목록이 허용 목록보다 우선 | `[{"serverName": "filesystem"}]` |
 | `disableAgentView` | `true`로 설정 시 백그라운드 에이전트 및 에이전트 뷰 비활성화 | `true` |
 | `disableAllHooks` | 모든 hooks 및 커스텀 상태 라인 비활성화 | `true` |
 | `disableAutoMode` | `"disable"`으로 설정 시 auto 모드 활성화 방지. Shift+Tab 순환에서 제거 | `"disable"` |
@@ -141,6 +149,8 @@ Claude Code는 설정 파일을 감시하고 변경 시 자동으로 다시 로�
 | `preferredNotifChannel` | 작업 완료 및 권한 프롬프트 알림 방식 (기본값: `"auto"`) | `"terminal_bell"` |
 | `prefersReducedMotion` | 접근성을 위해 UI 애니메이션(스피너, 시머, 플래시 효과) 축소 또는 비활성화 | `true` |
 | `prUrlTemplate` | 푸터 및 도구 결과 요약에 표시되는 PR 배지의 URL 템플릿. `{host}`, `{owner}`, `{repo}`, `{number}`, `{url}` 치환 | `"https://reviews.example.com/{owner}/{repo}/pull/{number}"` |
+| `requiredMaximumVersion` | (Managed만) 시작을 허용하는 최대 Claude Code 버전. 실행 버전이 더 새로우면 시작 시 종료. 백그라운드 자동 업데이트 및 `claude update`는 상한선을 넘는 버전 건너뜀 | `"2.1.150"` |
+| `requiredMinimumVersion` | (Managed만) 시작에 필요한 최소 Claude Code 버전. 실행 버전이 더 오래되면 시작 시 종료. `minimumVersion`과 다르게 시작 자체를 차단 | `"2.1.150"` |
 | `respectGitignore` | `@` 파일 피커가 `.gitignore` 패턴을 존중할지 여부 (기본값: `true`) | `false` |
 | `showClearContextOnPlanAccept` | 플랜 수락 화면에 "컨텍스트 지우기" 옵션 표시 (기본값: `false`) | `true` |
 | `showThinkingSummaries` | 대화형 세션에서 확장 thinking 요약 표시 (기본값: `false`) | `true` |
@@ -205,6 +215,12 @@ Claude Code는 설정 파일을 감시하고 변경 시 자동으로 다시 로�
 | `disableBypassPermissionsMode` | `"disable"`으로 설정하면 `bypassPermissions` 모드 활성화 방지 | `"disable"` |
 | `skipDangerousModePermissionPrompt` | bypass permissions 모드 진입 전 확인 프롬프트 건너뛰기. 프로젝트 설정에서는 무시됨 | `true` |
 
+### 배열 설정 병합 규칙
+
+`permissions.allow`, `permissions.deny`, `permissions.ask` 같은 배열 설정은 스코프 간에 **재정의**되지 않고 **병합**됩니다. 예를 들어 사용자 설정의 `deny` 규칙과 프로젝트 설정의 `deny` 규칙이 모두 적용됩니다. 반면 스칼라 값(예: `defaultMode`)은 더 높은 우선순위 스코프의 값으로 재정의됩니다.
+
+deny 규칙은 어느 스코프에서 설정되든 다른 모든 스코프의 allow 규칙보다 우선합니다. 예를 들어 사용자 수준의 deny가 프로젝트 수준의 allow를 차단합니다.
+
 ### 권한 규칙 문법
 
 권한 규칙은 `Tool` 또는 `Tool(specifier)` 형식을 따릅니다. 규칙 평가 순서: deny 먼저, 그 다음 ask, 그 다음 allow. 첫 번째로 일치하는 규칙이 우선합니다.
@@ -221,11 +237,89 @@ Claude Code는 설정 파일을 감시하고 변경 시 자동으로 다시 로�
 | 모드 | 승인 없이 실행 가능한 작업 | 용도 |
 |------|---------------------------|------|
 | `default` | 읽기만 | 시작, 민감한 작업 |
-| `acceptEdits` | 읽기, 파일 편집, 일반 파일시스템 명령 | 코드 반복 작업 |
-| `plan` | 읽기만 | 변경 전 코드베이스 탐색 |
-| `auto` | 모든 작업 (백그라운드 안전 검사 포함) | 긴 작업, 프롬프트 피로 감소 |
-| `dontAsk` | 사전 승인된 도구만 | 잠긴 CI 및 스크립트 |
-| `bypassPermissions` | 모든 작업 | 격리된 컨테이너 및 VM 전용 |
+| `acceptEdits` | 읽기, 파일 편집, 일반 파일시스템 명령 (`mkdir`, `touch`, `rm`, `rmdir`, `mv`, `cp`, `sed` 등) | 코드 반복 작업 |
+| `plan` | 읽기만 (코드 편집 없이 탐색 및 플랜 작성) | 변경 전 코드베이스 탐색 |
+| `auto` | 모든 작업 (백그라운드 안전 검사 포함). **연구 프리뷰(Research Preview)** | 긴 작업, 프롬프트 피로 감소 |
+| `dontAsk` | 사전 승인된 도구만 (`permissions.allow` 규칙에 매칭되는 도구 + 읽기 전용 Bash 명령) | 잠긴 CI 및 스크립트 |
+| `bypassPermissions` | 모든 작업 (루트/홈 디렉토리 삭제만 회로 차단기로 프롬프트) | 격리된 컨테이너 및 VM 전용 |
+
+#### 모드 전환 방법
+
+| 환경 | 전환 방법 |
+|------|-----------|
+| CLI | `Shift+Tab`으로 `default` -> `acceptEdits` -> `plan` 순환. `auto`는 계정 요건 충족 시, `bypassPermissions`는 `--dangerously-skip-permissions` 시작 시 순환에 포함 |
+| 시작 시 | `claude --permission-mode plan` |
+| 기본값 | `defaultMode` 설정 사용 |
+| VS Code | 프롬프트 상자 하단 모드 표시기 클릭 |
+| Desktop / Web | 전송 버튼 옆 모드 선택기 사용 |
+
+#### Auto 모드 상세
+
+Auto 모드는 권한 프롬프트 없이 Claude가 실행할 수 있도록 합니다. 별도의 분류기 모델이 실행 전에 각 도구 호출을 검토하여 요청을 벗어나는 행위, 인식할 수 없는 인프라 대상, 악의적 콘텐츠 기반 행위를 차단합니다.
+
+**가용성 요건:**
+
+| 요건 | 내용 |
+|------|------|
+| **플랜** | 모든 플랜 |
+| **관리자** | Team/Enterprise에서 관리자가 Claude Code 관리자 설정에서 활성화해야 함. `permissions.disableAutoMode`를 `"disable"`로 설정하면 잠금 가능 |
+| **모델** | Anthropic API: Claude Opus 4.6+, Sonnet 4.6+. Bedrock/Vertex/Foundry: Claude Opus 4.7+, Opus 4.8만 |
+| **프로바이더** | Anthropic API에서 기본 사용 가능. Bedrock, Vertex AI, Foundry에서는 `CLAUDE_CODE_ENABLE_AUTO_MODE` 설정 필요 |
+
+**기본 차단/허용 동작:**
+
+| 기본 차단 | 기본 허용 |
+|-----------|-----------|
+| 코드 다운로드 및 실행 (`curl \| bash` 등) | 작업 디렉토리 내 로컬 파일 작업 |
+| 외부 엔드포인트로 민감 데이터 전송 | lock 파일에 선언된 종속성 설치 |
+| 프로덕션 배포 및 마이그레이션 | `.env` 읽기 및 일치하는 API에 자격 증명 전송 |
+| 클라우드 스토리지 대량 삭제 | 읽기 전용 HTTP 요청 |
+| IAM 또는 리포지토리 권한 부여 | 시작한 브랜치 또는 Claude가 생성한 브랜치에 푸시 |
+| 공유 인프라 수정 | |
+| 세션 전에 존재하던 파일의 되돌릴 수 없는 파괴 | |
+| 강제 푸시 및 `main`에 직접 푸시 | |
+
+**Bedrock, Vertex AI, Foundry에서 Auto 모드 활성화:**
+
+```json
+{
+  "env": {
+    "CLAUDE_CODE_ENABLE_AUTO_MODE": "1"
+  }
+}
+```
+
+이 변수를 설정하면 `Shift+Tab` 순환에 `auto` 모드가 나타납니다. 기본 시작 모드로 설정하려면 `~/.claude/settings.json`에서 `defaultMode: "auto"`도 함께 설정합니다.
+
+**Auto 모드 폴백:** 분류기가 동일한 작업을 3회 연속 또는 총 20회 차단하면 auto 모드가 일시 중지되고 권한 프롬프트가 재개됩니다. 사용자가 프롬프트를 승인하면 auto 모드가 재개됩니다.
+
+**Auto 모드 구성:** `autoMode` 설정으로 분류기의 차단/허용 규칙을 커스터마이즈할 수 있습니다. 자세한 내용은 아래 Auto Mode Configuration 섹션을 참조하세요.
+
+#### dontAsk 모드
+
+`dontAsk` 모드는 권한 프롬프트가 필요한 모든 도구 호출을 자동 거부합니다. `permissions.allow` 규칙에 매칭되는 도구와 읽기 전용 Bash 명령만 실행됩니다. 명시적인 `ask` 규칙도 프롬프트 대신 거부됩니다. CI 파이프라인 등 Claude가 수행할 작업을 정확히 사전 정의하는 환경에 적합합니다.
+
+```bash
+claude --permission-mode dontAsk
+```
+
+#### bypassPermissions 모드
+
+`bypassPermissions` 모드는 권한 프롬프트와 안전 검사를 모두 건너뜁니다. v2.1.126부터 보호 경로 쓰기도 프롬프트 없이 실행됩니다. 파일시스템 루트나 홈 디렉토리 삭제(`rm -rf /`, `rm -rf ~`)만 모델 오류 방지 회로 차단기로 프롬프트가 유지됩니다. 인터넷 접근이 없는 격리된 컨테이너, VM, dev container에서만 사용하세요.
+
+Linux와 macOS에서는 root 또는 `sudo`로 이 모드를 시작할 수 없습니다:
+
+```
+--dangerously-skip-permissions cannot be used with root/sudo privileges for security reasons
+```
+
+시작 시 활성화 플래그가 필요합니다:
+
+```bash
+claude --permission-mode bypassPermissions
+# 또는
+claude --dangerously-skip-permissions
+```
 
 ### 보호 경로
 
@@ -335,6 +429,255 @@ Claude Code는 설정 파일을 감시하고 변경 시 자동으로 다시 로�
 
 - **`sandbox.filesystem` 설정** (위 예시): OS 수준 샌드박스 경계에서 경로 제어. `kubectl`, `terraform`, `npm` 등 모든 하위 프로세스 명령에 적용
 - **권한 규칙**: `Edit` allow/deny 규칙으로 Claude 파일 도구 접근 제어, `Read` deny 규칙로 읽기 차단, `WebFetch` allow/deny 규칙로 네트워크 도메인 제어. 이 규칙의 경로도 샌드박스 구성에 병합됨
+
+---
+
+## Auto Mode Configuration
+
+`autoMode` 설정 블록으로 auto 모드 분류기가 차단/허용하는 항목을 커스터마이즈합니다. 기본적으로 분류기는 작업 디렉토리와 현재 리포지토리의 구성된 원격만 신뢰합니다. 조직의 리포지토리, 버킷, 도메인을 추가하려면 `autoMode.environment`를 구성합니다.
+
+### 분류기 구성 읽기 위치
+
+| 스코프 | 파일 | 용도 |
+|--------|------|------|
+| 개인 | `~/.claude/settings.json` | 개인 신뢰 인프라 |
+| 프로젝트(개인) | `.claude/settings.local.json` | 프로젝트별 신뢰 버킷/서비스 (gitignore) |
+| 조직 전체 | Managed 설정 | 모든 개발자에게 분산 |
+| `--settings` 플래그 또는 Agent SDK | 인라인 JSON | 자동화용 호출별 재정의 |
+
+> 분류기는 공유 프로젝트 설정(`.claude/settings.json`)에서 `autoMode`를 읽지 않으므로, 체크인된 리포지토리가 자체 허용 규칙을 주입할 수 없습니다.
+
+### 신뢰 인프라 정의
+
+대부분의 조직에서 `autoMode.environment`만 설정하면 충분합니다. 기본 항목과 함께 커스텀 항목을 추가하려면 리터럴 문자열 `"$defaults"`를 배열에 포함합니다.
+
+```json
+{
+  "autoMode": {
+    "environment": [
+      "$defaults",
+      "Source control: github.example.com/acme-corp and all repos under it",
+      "Trusted cloud buckets: s3://acme-build-artifacts, gs://acme-ml-datasets",
+      "Trusted internal domains: *.corp.example.com, api.internal.example.com",
+      "Key internal services: Jenkins at ci.example.com, Artifactory at artifacts.example.com"
+    ]
+  }
+}
+```
+
+항목은 정규식이나 도구 패턴이 아닌 **자연어**입니다. 분류기가 읽을 수 있도록 새 엔지니어에게 설명하듯 작성하세요.
+
+### 차단/허용 규칙 재정의
+
+세 가지 추가 필드로 분류기의 빌트인 규칙 목록을 재정의할 수 있습니다.
+
+| 필드 | 설명 |
+|------|------|
+| `autoMode.hard_deny` | 무조건 차단. 사용자 의도 및 `allow` 예외로도 재정의 불가 |
+| `autoMode.soft_deny` | 파괴적 작업 차단. 사용자 의도 및 `allow` 예외로 재정의 가능 |
+| `autoMode.allow` | `soft_deny` 규칙에 대한 예외 |
+
+**우선순위:** `hard_deny` > `soft_deny` > `allow` > 명시적 사용자 의도
+
+```json
+{
+  "autoMode": {
+    "environment": ["$defaults", "Source control: github.example.com/acme-corp"],
+    "allow": ["$defaults", "Deploying to staging is allowed"],
+    "soft_deny": ["$defaults", "Never run database migrations outside the CLI"],
+    "hard_deny": ["$defaults", "Never send repository contents to third-party APIs"]
+  }
+}
+```
+
+각 섹션에 `"$defaults"`를 포함하면 빌트인 규칙을 해당 위치에 상속합니다. `"$defaults"`를 생략하면 해당 목록을 완전히 교체합니다.
+
+### CLI 하위 명령어
+
+| 명령어 | 설명 |
+|--------|------|
+| `claude auto-mode defaults` | 빌트인 규칙(environment, allow, soft_deny, hard_deny)을 JSON으로 출력 |
+| `claude auto-mode config` | 설정이 적용된 실제 구성을 JSON으로 출력 |
+| `claude auto-mode critique` | 커스텀 규칙에 대한 AI 피드백 제공 |
+
+### 거부 검토
+
+auto 모드가 도구 호출을 거부하면 `/permissions`의 **Recently denied** 탭에 기록됩니다. 거부된 항목에서 `r`을 누르면 재시도로 표시됩니다. 동일한 대상에 대한 반복 거부는 분류기에 컨텍스트가 누락되었음을 의미합니다. `autoMode.environment`에 해당 대상을 추가하세요.
+
+---
+
+## 터미널 설정
+
+Claude Code는 구성 없이 모든 터미널에서 작동합니다. 아래는 특정 동작을 조정할 때 필요한 설정입니다.
+
+### 멀티라인 프롬프트 입력
+
+Enter 키로 메시지가 제출됩니다. 줄바꿈을 추가하려면 `Ctrl+J` 또는 `\` 입력 후 Enter를 사용합니다.
+
+| 터미널 | Shift+Enter 줄바꿈 |
+|--------|-------------------|
+| Ghostty, Kitty, iTerm2, WezTerm, Warp, Apple Terminal, Windows Terminal | 추가 설정 없이 작동 |
+| VS Code, Cursor, Alacritty, Zed | `/terminal-setup` 한 번 실행 필요 |
+| gnome-terminal, JetBrains IDE | 미지원. `Ctrl+J` 또는 `\` + Enter 사용 |
+
+### macOS Option 키 단축키
+
+macOS에서 대부분의 터미널은 기본적으로 Option 키를 수정자로 전송하지 않습니다.
+
+| 터미널 | 설정 방법 |
+|--------|-----------|
+| Apple Terminal | Settings > Profiles > Keyboard에서 "Use Option as Meta Key" 체크. 또는 `/terminal-setup` 실행 |
+| iTerm2 | Settings > Profiles > Keys > General에서 Left/Right Option key를 "Esc+"로 설정 |
+| VS Code | `terminal.integrated.macOptionIsMeta: true` 추가 |
+
+### 알림 설정
+
+`preferredNotifChannel` 설정 또는 Notification hook으로 작업 완료/권한 프롬프트 시 알림을 받을 수 있습니다.
+
+| 값 | 설명 |
+|----|------|
+| `"auto"` (기본값) | Ghostty, Kitty, iTerm2에서 데스크톱 알림 |
+| `"terminal_bell"` | 모든 터미널에서 벨 문자 출력 |
+| `"notifications_disabled"` | 알림 비활성화 |
+
+Notification hook으로 커스텀 사운드 재생:
+
+```json
+{
+  "hooks": {
+    "Notification": [
+      {
+        "hooks": [{ "type": "command", "command": "afplay /System/Library/Sounds/Glass.aiff" }]
+      }
+    ]
+  }
+}
+```
+
+### tmux 구성
+
+tmux 내에서 Claude Code 실행 시 `~/.tmux.conf`에 다음을 추가합니다:
+
+```
+set -g allow-passthrough on
+set -s extended-keys on
+set -as terminal-features 'xterm*:extkeys'
+```
+
+- `allow-passthrough`: 알림 및 진행 업데이트가 외부 터미널에 도달
+- `extended-keys`: Shift+Enter와 일반 Enter를 구분
+
+### 커스텀 테마
+
+`/theme` 명령으로 빌트인 프리셋 또는 커스텀 테마를 선택합니다. 커스텀 테마는 `~/.claude/themes/`에 JSON 파일로 저장됩니다.
+
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| `name` | string | `/theme`에 표시될 이름 |
+| `base` | string | 기반이 되는 빌트인 프리셋: `dark`, `light`, `dark-daltonized`, `light-daltonized`, `dark-ansi`, `light-ansi` |
+| `overrides` | object | 색상 토큰별 재정의 매핑. 나열되지 않은 토큰은 `base`에서 상속 |
+
+예시:
+
+```json
+{
+  "name": "Dracula",
+  "base": "dark",
+  "overrides": {
+    "claude": "#bd93f9",
+    "error": "#ff5555",
+    "success": "#50fa7b"
+  }
+}
+```
+
+Claude Code는 `~/.claude/themes/` 디렉토리를 감시하며 파일 변경 시 자동으로 리로드합니다.
+
+### Vim 편집 모드
+
+`editorMode`를 `"vim"`으로 설정하거나 `/config` > Editor mode에서 활성화합니다. `hjkl` 이동, `v`/`V` 선택, `d`/`c`/`y` 텍스트 객체 등 NORMAL 및 VISUAL 모션의 일부를 지원합니다. Vim 모션은 keybindings 파일에서 리매핑할 수 없습니다.
+
+INSERT 모드에서 Enter는 일반 Vim과 달리 프롬프트를 제출합니다. 줄바꿈에는 NORMAL 모드에서 `o`/`O` 또는 `Ctrl+J`를 사용하세요.
+
+### 전체화면 렌더링
+
+표시가 깜빡이거나 스크롤 위치가 점프하면 전체화면 렌더링으로 전환하세요.
+
+```bash
+/tui fullscreen
+```
+
+또는 환경 변수 `CLAUDE_CODE_NO_FLICKER=1`을 설정합니다. `/tui default`로 되돌릴 수 있습니다.
+
+---
+
+## 네트워크 설정
+
+엔터프라이즈 환경에서 Claude Code의 네트워크 연결을 구성합니다.
+
+### 프록시 구성
+
+Claude Code는 표준 프록시 환경 변수를 준수합니다.
+
+```bash
+# HTTPS 프록시 (권장)
+export HTTPS_PROXY=https://proxy.example.com:8080
+
+# HTTP 프록시
+export HTTP_PROXY=http://proxy.example.com:8080
+
+# 프록시 우회
+export NO_PROXY="localhost,192.168.1.1,example.com,.example.com"
+
+# 모든 요청에 대해 프록시 우회
+export NO_PROXY="*"
+```
+
+기본 인증 필요 시 URL에 자격 증명을 포함:
+
+```bash
+export HTTPS_PROXY=http://username:password@proxy.example.com:8080
+```
+
+### CA 인증서
+
+| 설정 | 설명 |
+|------|------|
+| `CLAUDE_CODE_CERT_STORE` | CA 인증서 소스 (쉼표 구분). `bundled` (Mozilla CA), `system` (OS 인증서 저장소). 기본값: `bundled,system` |
+| `NODE_EXTRA_CA_CERTS` | 커스텀 CA 인증서 경로 |
+
+```bash
+# Mozilla CA만 신뢰
+export CLAUDE_CODE_CERT_STORE=bundled
+
+# OS 인증서 저장소만 신뢰
+export CLAUDE_CODE_CERT_STORE=system
+
+# 커스텀 CA 추가
+export NODE_EXTRA_CA_CERTS=/path/to/ca-cert.pem
+```
+
+### mTLS 인증
+
+```bash
+export CLAUDE_CODE_CLIENT_CERT=/path/to/client-cert.pem
+export CLAUDE_CODE_CLIENT_KEY=/path/to/client-key.pem
+export CLAUDE_CODE_CLIENT_KEY_PASSPHRASE="your-passphrase"  # 선택
+```
+
+### 네트워크 접근 요구 사항
+
+| URL | 필요한 기능 |
+|-----|------------|
+| `api.anthropic.com` | Claude API 요청 |
+| `claude.ai` | claude.ai 계정 인증 |
+| `platform.claude.com` | Anthropic Console 계정 인증 |
+| `downloads.claude.ai` | 플러그인 실행 파일 다운로드, 네이티브 설치/자동 업데이트 |
+| `storage.googleapis.com` | v2.1.116 이전 버전의 네이티브 설치/자동 업데이트 |
+| `bridge.claudeusercontent.com` | Claude in Chrome 확장 WebSocket 브릿지 |
+| `raw.githubusercontent.com` | `/release-notes` 피드, 릴리스 노트, 플러그인 마켓플레이스 설치 수 |
+
+> Amazon Bedrock, Google Vertex AI, Microsoft Foundry 사용 시 모델 트래픽과 인증은 `api.anthropic.com` 대신 해당 프로바이더로 전송됩니다. WebFetch 도구는 `skipWebFetchPreflight: true` 설정이 없으면 도메인 안전 검사를 위해 여전히 `api.anthropic.com`을 호출합니다.
 
 ---
 
