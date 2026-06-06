@@ -383,7 +383,7 @@ claude plugin tag [--push] [--dry-run] [-f, --force]
 |------|--------|------|
 | GitHub `owner/repo` | `/plugin marketplace add owner/repo` | 가장 간단한 방식 |
 | GitHub + ref | `/plugin marketplace add owner/repo@v2.0` | 브랜치/태그 고정 |
-| Git HTTPS | `/plugin marketplace add https://gitlab.com/company/plugins.git` | `.git` 접미사 필요 |
+| Git HTTPS | `/plugin marketplace add https://gitlab.com/company/plugins.git` | `.git` 접미사 생략 가능 |
 | Git SSH | `/plugin marketplace add git@gitlab.com:company/plugins.git` | SSH 키 필요 |
 | Git + ref | `/plugin marketplace add https://....git#v1.0.0` | `#ref`로 브랜치/태그 지정 |
 | 로컬 경로 | `/plugin marketplace add ./my-marketplace` | 테스트에 유용 |
