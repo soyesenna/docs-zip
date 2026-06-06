@@ -161,6 +161,7 @@ pulumi login --local
 pulumi login s3://my-pulumi-state-bucket        # AWS S3
 pulumi login gs://my-pulumi-state-bucket         # GCP GCS
 pulumi login azblob://my-pulumi-state-bucket     # Azure Blob
+pulumi login postgres://username:password@hostname:5432/database  # PostgreSQL
 
 # 환경변수로 스크립트에서 인증
 export PULUMI_ACCESS_TOKEN="<YOUR_ACCESS_TOKEN>"
@@ -297,7 +298,6 @@ pulumi up [template|url] [flags]
 | `-d, --debug` | 리소스 작업 중 상세 디버깅 출력 |
 | `--diff` | 전체 변경 사항을 rich diff로 표시 |
 | `--exclude stringArray` | 무시할 리소스 URN. 와일드카드(`*`, `**`) 지원 |
-| `--exclude-dependents` | `--exclude`에 명시되지 않은 종속 리소스도 무시 |
 | `--expect-no-changes` | 변경 발생 시 오류 반환 (업데이트 적용 후 검사) |
 | `-j, --json` | 업데이트 diff, 작업, 전체 출력을 JSON으로 직렬화 |
 | `-m, --message string` | 업데이트 작업에 연결할 메시지 |
@@ -305,7 +305,26 @@ pulumi up [template|url] [flags]
 | `--plan string` | **[EXPERIMENTAL]** 업데이트에 사용할 계획 파일 경로 |
 | `--policy-pack strings` | 업데이트의 일부로 실행할 정책 팩 |
 | `-r, --refresh` | 업데이트 전 스택 리소스 상태 새로고침 |
+| `--neo` | Neo(AI 어시스턴트)를 활성화하여 CLI 경험 개선 |
+| `--neo-task-on-failure` | 작업 실패 시 Neo 디버그 태스크 자동 시작 |
 | `--remote` | **[EXPERIMENTAL]** 원격으로 작업 실행 |
+| `--remote-agent-pool-id string` | 원격 배포에 사용할 에이전트 풀 ID |
+| `--remote-env stringArray` | 원격 배포에 전달할 환경변수 (`키=값` 형식, 반복 가능) |
+| `--remote-env-secret stringArray` | 원격 배포에 전달할 시크릿 환경변수 (`키=값` 형식, 반복 가능) |
+| `--remote-executor-image string` | 원격 배포에 사용할 실행기(executor) 컨테이너 이미지 |
+| `--remote-executor-image-password string` | 원격 실행기 이미지 레지스트리 비밀번호 |
+| `--remote-executor-image-username string` | 원격 실행기 이미지 레지스트리 사용자명 |
+| `--remote-git-auth-access-token string` | 원격 배포 Git 인증용 액세스 토큰 |
+| `--remote-git-auth-password string` | 원격 배포 Git 인증용 비밀번호 |
+| `--remote-git-auth-ssh-private-key string` | 원격 배포 Git 인증용 SSH 개인 키 |
+| `--remote-git-auth-ssh-private-key-path string` | 원격 배포 Git 인증용 SSH 개인 키 파일 경로 |
+| `--remote-git-auth-username string` | 원격 배포 Git 인증용 사용자명 |
+| `--remote-git-branch string` | 원격 배포에 사용할 Git 브랜치 |
+| `--remote-git-commit string` | 원격 배포에 사용할 Git 커밋 해시 |
+| `--remote-git-repo-dir string` | 원격 배포에서 Git 저장소 내 작업 디렉터리 경로 |
+| `--remote-inherit-settings` | 원격 배포에서 조직/스택 설정 상속 |
+| `--remote-pre-run-command stringArray` | 원격 배포 실행 전에 실행할 명령어 (반복 가능) |
+| `--remote-skip-install-dependencies` | 원격 배포에서 의존성 설치 건너뛰기 |
 | `--replace stringArray` | 교체할 리소스 URN. 와일드카드 지원 |
 | `--run-program` | `--refresh` 설정 시 프로그램을 실행하여 최신 상태 확인 |
 | `--show-secrets` | 시크릿 출력을 CLI에 평문으로 표시 |
