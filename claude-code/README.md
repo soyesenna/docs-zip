@@ -38,6 +38,7 @@ Claude Code는 Anthropic이 개발한 에이전트 기반 코딩 도구입니다
 | 11 | [SDK](./11-sdk.md) | 서브프로세스 SDK, Headless 모드, --bare, 구조화된 출력 |
 | 12 | [GitHub Actions](./12-github-actions.md) | CI/CD 파이프라인, GitLab CI/CD, 스킬 사용, 커스텀 GitHub App |
 | 23 | [플랫폼](./23-platforms.md) | 데스크톱 앱, 웹, Chrome, Remote Control, Slack, 음성 입력 |
+| 25 | [Computer Use](./25-computer-use.md) | CLI에서 화면 제어, 네이티브 앱 검증, UI 테스트, 시뮬레이터 구동 |
 
 ### 모델 및 출력
 
