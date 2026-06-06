@@ -2,7 +2,7 @@
 
 > 시스템 요구사항, 플랫폼별 설치, 인증, 업데이트, 제거 방법
 
-**원문**: [Advanced Setup](https://code.claude.com/docs/en/setup) | [Amazon Bedrock](https://code.claude.com/docs/en/amazon-bedrock) | [Google Vertex AI](https://code.claude.com/docs/en/google-vertex-ai) | [Microsoft Foundry](https://code.claude.com/docs/en/microsoft-foundry)
+**원문**: [Advanced Setup](https://code.claude.com/docs/en/setup) | [Authentication](https://code.claude.com/docs/en/authentication) | [Amazon Bedrock](https://code.claude.com/docs/en/amazon-bedrock) | [Google Vertex AI](https://code.claude.com/docs/en/google-vertex-ai) | [Microsoft Foundry](https://code.claude.com/docs/en/microsoft-foundry)
 
 **참고**: [Advanced Setup - Claude Code 공식 문서](https://docs.anthropic.com/en/docs/claude-code/setup) | [Bedrock - Anthropic 공식 문서](https://docs.anthropic.com/en/docs/claude-code/bedrock) | [Vertex AI - Anthropic 공식 문서](https://docs.anthropic.com/en/docs/claude-code/vertex) | [Microsoft Foundry - Anthropic 공식 문서](https://docs.anthropic.com/en/docs/claude-code/microsoft-foundry)
 
@@ -31,9 +31,9 @@
 | 위치 | Anthropic 지원 국가 |
 | 추가 의존성 | ripgrep (보통 Claude Code에 포함됨) |
 
-> 네이티브 Windows 설정에는 Git for Windows가 필요합니다. WSL 설정에는 필요하지 않습니다.
+> 네이티브 Windows에서는 Git for Windows를 **선택적으로** 설치할 수 있습니다. 설치하면 Claude Code가 Bash 도구를 사용할 수 있습니다. 설치하지 않으면 PowerShell을 쉘 도구로 사용합니다. WSL 설정에는 Git for Windows가 필요하지 않습니다.
 
-> **새 기능**: Claude Code는 Windows에서 PowerShell을 네이티브 쉘로 사용할 수 있는 **옵트인 프리뷰** 기능을 지원합니다. 자세한 내용은 PowerShell 도구 문서를 참조하세요.
+> Git for Windows가 설치된 경우, PowerShell 도구가 Bash와 함께 추가 옵션으로 **점진적으로 배포(rolling out progressively)**되고 있습니다. `CLAUDE_CODE_USE_POWERSHELL_TOOL=1`로 옵트인하거나 `0`으로 옵트아웃할 수 있습니다. 자세한 내용은 PowerShell 도구 문서를 참조하세요.
 
 ---
 
@@ -83,15 +83,20 @@ Windows에서는 네이티브 또는 WSL 중 선택할 수 있습니다:
 
 | 옵션 | 요구사항 | 샌드박싱 | 사용 시기 |
 |------|----------|----------|-----------|
-| 네이티브 Windows | Git for Windows | 미지원 | Windows 네이티브 프로젝트 및 도구 |
+| 네이티브 Windows | 없음 (Git for Windows는 선택사항) | 미지원 | Windows 네이티브 프로젝트 및 도구 |
 | WSL 2 | WSL 2 활성화 | 지원 | Linux 툴체인 또는 샌드박스 명령 실행 |
 | WSL 1 | WSL 1 활성화 | 미지원 | WSL 2를 사용할 수 없는 경우 |
 
-### 옵션 1: 네이티브 Windows (Git Bash)
+### 옵션 1: 네이티브 Windows
 
-Git for Windows를 먼저 설치한 후 PowerShell 또는 CMD에서 설치 명령을 실행합니다. Administrator 권한은 필요하지 않습니다.
+PowerShell 또는 CMD에서 설치 명령을 실행합니다. Administrator 권한은 필요하지 않습니다. Git for Windows 설치는 **선택사항**이며, 설치하면 Bash 도구를 사용할 수 있습니다.
 
-설치 후 PowerShell, CMD, Git Bash 어디서든 `claude`를 실행할 수 있습니다. Claude Code는 내부적으로 Git Bash를 사용하여 명령을 실행합니다. Git Bash 경로를 찾지 못하는 경우 `settings.json`에 설정합니다:
+어느 쉘에서 설치하느냐에 따라 실행할 설치 명령만 다릅니다. PowerShell 프롬프트는 `PS C:\Users\YourName>` 형태로, CMD 프롬프트는 `C:\Users\YourName>` (`PS` 없음) 형태로 표시됩니다.
+
+설치 후 아무 터미널에서나 `claude`를 실행할 수 있습니다.
+
+- **Git for Windows 미설치 시**: Claude Code는 PowerShell 도구로 쉘 명령을 실행합니다.
+- **Git for Windows 설치 시**: Claude Code는 Git Bash를 Bash 도구로 사용합니다. Git Bash를 찾지 못하는 경우 `settings.json`에 경로를 설정합니다:
 
 ```json
 {
@@ -100,6 +105,15 @@ Git for Windows를 먼저 설치한 후 PowerShell 또는 CMD에서 설치 명�
   }
 }
 ```
+
+  Git for Windows가 설치된 경우, PowerShell 도구가 Bash와 함께 추가 옵션으로 점진적으로 배포되고 있습니다. 환경 변수로 제어합니다:
+
+  | 변수 | 값 | 동작 |
+  |------|-----|------|
+  | `CLAUDE_CODE_USE_POWERSHELL_TOOL` | `1` | PowerShell 도구 옵트인 |
+  | `CLAUDE_CODE_USE_POWERSHELL_TOOL` | `0` | PowerShell 도구 옵트아웃 |
+
+  자세한 내용은 PowerShell 도구 문서를 참조하세요.
 
 ### 옵션 2: WSL
 
@@ -181,54 +195,144 @@ apk add libgcc libstdc++ ripgrep
 
 ---
 
-## npm 설치 (Deprecated)
+## npm 설치
 
-> **주의**: npm 설치는 **더 이상 권장되지 않습니다**. 네이티브 설치가 더 빠르고, 의존성이 필요 없으며, 백그라운드에서 자동 업데이트됩니다. 가능하면 네이티브 설치 방법을 사용하세요.
-
-### npm에서 네이티브로 마이그레이션
-
-```bash
-# 네이티브 바이너리 설치
-curl -fsSL https://claude.ai/install.sh | bash
-
-# 기존 npm 설치 제거
-npm uninstall -g @anthropic-ai/claude-code
-```
-
-기존 npm 설치에서 `claude install`을 실행하여 네이티브 바이너리를 나란히 설치한 후 npm 버전을 제거할 수도 있습니다.
-
-### npm으로 설치 (호환성이 필요한 경우)
-
-Node.js 18+가 필요합니다:
+npm을 통해서도 Claude Code를 전역 패키지로 설치할 수 있습니다. Node.js 18+가 필요합니다.
 
 ```bash
 npm install -g @anthropic-ai/claude-code
 ```
 
+npm 패키지는 독립 실행형 설치 관리자와 동일한 네이티브 바이너리를 설치합니다. npm은 플랫폼별 optional dependency(예: `@anthropic-ai/claude-code-darwin-arm64`)를 통해 바이너리를 가져오며, postinstall 단계에서 링크합니다. 설치된 `claude` 바이너리는 Node를 직접 호출하지 않습니다.
+
+**지원 npm 설치 플랫폼:**
+
+| 플랫폼 | optional dependency 패키지 |
+|--------|---------------------------|
+| macOS ARM64 | `@anthropic-ai/claude-code-darwin-arm64` |
+| macOS x64 | `@anthropic-ai/claude-code-darwin-x64` |
+| Linux x64 | `@anthropic-ai/claude-code-linux-x64` |
+| Linux ARM64 | `@anthropic-ai/claude-code-linux-arm64` |
+| Linux x64 (musl) | `@anthropic-ai/claude-code-linux-x64-musl` |
+| Linux ARM64 (musl) | `@anthropic-ai/claude-code-linux-arm64-musl` |
+| Windows x64 | `@anthropic-ai/claude-code-win32-x64` |
+| Windows ARM64 | `@anthropic-ai/claude-code-win32-arm64` |
+
+> 패키지 매니저는 optional dependency를 허용해야 합니다. 설치 후 바이너리가 누락된 경우 문제 해결 가이드를 참조하세요.
+
+### npm 설치 업그레이드
+
+```bash
+npm install -g @anthropic-ai/claude-code@latest
+```
+
+> `npm update -g`는 최초 설치 시의 semver 범위를 따르므로 최신 릴리스로 이동하지 않을 수 있습니다. 반드시 `install -g @anthropic-ai/claude-code@latest`를 사용하세요.
+
 ---
 
 ## 인증
 
-Claude Code를 사용하려면 다음 계정 중 하나가 필요합니다:
+Claude Code를 사용하려면 Pro, Max, Team, Enterprise 또는 Console 계정이 필요합니다. 무료 Claude.ai 플랜에는 Claude Code 액세스가 포함되지 않습니다. Amazon Bedrock, Google Vertex AI, Microsoft Foundry와 같은 서드파티 클라우드 프로바이더를 통해서도 사용할 수 있습니다.
 
-| 계정 유형 | 설명 |
-|-----------|------|
-| Pro | Claude.ai Pro 구독 |
-| Max | Claude.ai Max 구독 |
-| Team | Claude.ai Team 플랜 |
-| Enterprise | Claude.ai Enterprise 플랜 |
-| Console | Anthropic Console (API 사용량 기반 요금 청구) |
+### 로그인
 
-> 무료 Claude.ai 플랜에는 Claude Code 액세스가 포함되지 않습니다.
-
-Amazon Bedrock, Google Vertex AI, Microsoft Foundry와 같은 서드파티 API 프로바이더를 통해서도 사용할 수 있습니다.
-
-설치 후 `claude`를 실행하고 브라우저 프롬프트를 따라 로그인합니다.
+설치 후 터미널에서 `claude`를 실행합니다. 최초 실행 시 브라우저 창이 열려 로그인을 진행합니다.
 
 ```bash
 claude
 # 최초 실행 시 브라우저에서 로그인 프롬프트가 표시됩니다
 ```
+
+- 브라우저가 자동으로 열리지 않으면 `c`를 눌러 로그인 URL을 클립보드에 복사한 후 브라우저에 붙여넣습니다.
+- 브라우저에서 로그인 코드가 표시되면 터미널의 `Paste code here if prompted` 프롬프트에 붙여넣습니다. 이는 WSL2, SSH 세션, 컨테이너 등에서 콜백 서버에 연결할 수 없는 경우에 발생합니다.
+
+**지원 계정 유형:**
+
+| 계정 유형 | 설명 |
+|-----------|------|
+| Claude Pro 또는 Max | Claude.ai 계정으로 로그인. claude.com/pricing에서 구독 |
+| Claude for Teams 또는 Enterprise | 팀 관리자의 초대로 받은 Claude.ai 계정으로 로그인 |
+| Claude Console | Console 자격 증명으로 로그인 (관리자가 먼저 초대 필요) |
+| 클라우드 프로바이더 | Amazon Bedrock, Google Vertex AI, Microsoft Foundry — `claude` 실행 전 필요한 환경 변수 설정. 브라우저 로그인 불필요 |
+
+로그아웃 후 재인증하려면 Claude Code 프롬프트에서 `/logout`을 입력합니다.
+
+### 인증 우선순위
+
+여러 자격 증명이 있을 때 Claude Code는 다음 순서로 선택합니다:
+
+| 우선순위 | 인증 방법 | 설명 |
+|----------|-----------|------|
+| 1 | 클라우드 프로바이더 자격 증명 | `CLAUDE_CODE_USE_BEDROCK`, `CLAUDE_CODE_USE_VERTEX`, `CLAUDE_CODE_USE_FOUNDRY` 설정 시 |
+| 2 | `ANTHROPIC_AUTH_TOKEN` 환경 변수 | `Authorization: Bearer` 헤더로 전송. LLM 게이트웨이/프록시에서 Bearer 토큰으로 인증할 때 사용 |
+| 3 | `ANTHROPIC_API_KEY` 환경 변수 | `X-Api-Key` 헤더로 전송. Claude Console의 키로 직접 Anthropic API 액세스 시 사용. 대화형 모드에서는 한 번 승인/거부 선택이 저장되며, `/config`의 "Use custom API key" 토글로 변경 가능 |
+| 4 | `apiKeyHelper` 스크립트 출력 | 동적/회전 자격 증명(예: Vault의 단기 토큰)에 사용 |
+| 5 | `CLAUDE_CODE_OAUTH_TOKEN` 환경 변수 | `claude setup-token`으로 생성된 장기 OAuth 토큰. 브라우저 로그인이 불가능한 CI 파이프라인/스크립트용 |
+| 6 | 구독 OAuth 자격 증명 (`/login`) | Claude Pro, Max, Team, Enterprise 사용자의 기본 인증 방식 |
+
+> 활성 Claude 구독이 있으면서 환경에 `ANTHROPIC_API_KEY`도 설정된 경우, 승인 후 API 키가 우선합니다. 비활성화되거나 만료된 조직의 키인 경우 인증 실패가 발생할 수 있습니다. `unset ANTHROPIC_API_KEY`로 구독으로 폴백하고 `/status`로 활성 인증 방식을 확인하세요.
+>
+> Claude Code on the Web은 항상 구독 자격 증명을 사용합니다. 샌드박스 환경의 `ANTHROPIC_API_KEY` 및 `ANTHROPIC_AUTH_TOKEN`은 이를 재정의하지 않습니다.
+>
+> `apiKeyHelper`, `ANTHROPIC_API_KEY`, `ANTHROPIC_AUTH_TOKEN`은 터미널 CLI 세션에만 적용됩니다. Claude Desktop 및 원격 세션은 OAuth만 사용하며 `apiKeyHelper`를 호출하거나 API 키 환경 변수를 읽지 않습니다.
+
+### 자격 증명 관리
+
+Claude Code는 인증 자격 증명을 안전하게 관리합니다.
+
+**저장 위치 (OS별):**
+
+| OS | 저장소 | 비고 |
+|----|--------|------|
+| macOS | 암호화된 macOS Keychain | 시스템 키체인 사용 |
+| Linux | `~/.claude/.credentials.json` | 파일 모드 `0600` |
+| Windows | `%USERPROFILE%\.claude\.credentials.json` | 사용자 프로필 디렉토리의 접근 제어 상속 |
+
+> Linux 또는 Windows에서 `CLAUDE_CONFIG_DIR` 환경 변수를 설정한 경우 `.credentials.json` 파일은 해당 디렉토리 아래에 위치합니다.
+>
+> Claude Code는 `.credentials.json`을 `/login`과 `/logout`으로 관리합니다. 커스텀 API 엔드포인트로 요청을 라우팅하려면 `ANTHROPIC_BASE_URL` 환경 변수를 설정하세요.
+
+**지원 인증 유형:** Claude.ai 자격 증명, Claude API 자격 증명, Azure Auth, Bedrock Auth, Vertex Auth
+
+### apiKeyHelper 설정
+
+`apiKeyHelper` 설정으로 API 키를 반환하는 쉘 스크립트를 실행할 수 있습니다.
+
+```json
+{
+  "apiKeyHelper": "/path/to/your/script.sh"
+}
+```
+
+| 항목 | 동작 |
+|------|------|
+| 호출 시점 | 기본적으로 5분 경과 후 또는 HTTP 401 응답 시 |
+| 커스텀 갱신 간격 | `CLAUDE_CODE_API_KEY_HELPER_TTL_MS` 환경 변수로 설정 (밀리초) |
+| 지연 경고 | 10초 이상 소요 시 프롬프트 바에 경과 시간 표시 |
+
+### 장기 토큰 생성 (claude setup-token)
+
+CI 파이프라인, 스크립트 등 대화형 브라우저 로그인이 불가능한 환경에서는 `claude setup-token`으로 1년짜리 OAuth 토큰을 생성합니다.
+
+```bash
+claude setup-token
+# OAuth 인증 후 토큰이 터미널에 출력됩니다
+```
+
+출력된 토큰을 `CLAUDE_CODE_OAUTH_TOKEN` 환경 변수로 설정합니다:
+
+```bash
+export CLAUDE_CODE_OAUTH_TOKEN=your-token
+```
+
+| 항목 | 설명 |
+|------|------|
+| 토큰 유효기간 | 1년 |
+| 필요 플랜 | Pro, Max, Team 또는 Enterprise |
+| 스코프 | inference 전용 (Remote Control 세션 설정 불가) |
+| Bare 모드 | `--bare` 사용 시 `CLAUDE_CODE_OAUTH_TOKEN`을 읽지 않음. 대신 `ANTHROPIC_API_KEY` 또는 `apiKeyHelper` 사용 |
+
+> 토큰은 어디에도 자동 저장되지 않으므로 즉시 복사하세요.
 
 ---
 
@@ -983,16 +1087,6 @@ LLM 프록시(예: LiteLLM)와 함께 Claude Code를 사용할 때 인증 동작
     "ANTHROPIC_CUSTOM_HEADERS": "X-Custom-Header: value",
     "HTTP_PROXY": "http://proxy.example.com:8080"
   }
-}
-```
-
-### apiKeyHelper 설정
-
-`apiKeyHelper`를 사용하여 API 키를 가져오는 커스텀 쉘 스크립트를 실행할 수 있습니다. 시작 시 한 번 호출되며 각 세션 동안 캐시됩니다.
-
-```json
-{
-  "apiKeyHelper": "/bin/generate_temp_api_key.sh"
 }
 ```
 
