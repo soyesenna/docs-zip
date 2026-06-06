@@ -1,37 +1,33 @@
 # Codex CLI - 개요 및 빠른 시작
 
-> OpenAI의 에이전트 기반 코딩 도구, Codex CLI에 대한 종합 가이드
+> OpenAI의 에이전트 기반 코딩 도구, Codex에 대한 종합 가이드
 
-**참조**: [developers.openai.com/codex](https://developers.openai.com/codex) | [developers.openai.com/codex/models](https://developers.openai.com/codex/models) | [developers.openai.com/codex/changelog](https://developers.openai.com/codex/changelog) | [developers.openai.com/codex/feature-maturity](https://developers.openai.com/codex/feature-maturity) | [github.com/openai/codex](https://github.com/openai/codex)
-
----
-
-## Codex CLI 소개
-
-**Codex CLI**는 OpenAI가 개발한 경량 코딩 에이전트로, 로컬 컴퓨터의 터미널에서 실행됩니다. Rust 기반(`codex-rs`)으로 작성되어 빠르고 가볍게 동작하며, 코드 작성, 디버깅, 리팩토링, 자동화 등 소프트웨어 개발 전반을 지원합니다.
-
-ChatGPT Free, Go, Plus, Pro, Business, Edu, Enterprise 플랜에 Codex가 포함되어 있으며, OpenAI API 키를 통해서도 사용할 수 있습니다.
+**참조**: [developers.openai.com/codex/overview](https://developers.openai.com/codex/overview) | [developers.openai.com/codex/quickstart](https://developers.openai.com/codex/quickstart) | [developers.openai.com/codex/changelog](https://developers.openai.com/codex/changelog) | [developers.openai.com/codex/feature-maturity](https://developers.openai.com/codex/feature-maturity) | [github.com/openai/codex](https://github.com/openai/codex)
 
 ---
 
-## 두 가지 실행 환경
+## Codex 소개
 
-### 로컬 환경
+**Codex**는 OpenAI의 코딩 에이전트로, "어디서든 코딩할 수 있는 하나의 에이전트(One agent for everywhere you code)"를 표방합니다. 코드 작성, 디버깅, 리팩토링, 자동화 등 소프트웨어 개발 전반을 지원하며 App, IDE Extension, CLI, Web(클라우드) 네 가지 실행 환경에서 동일한 에이전트를 사용할 수 있습니다.
+
+ChatGPT **Plus, Pro, Business, Edu, Enterprise** 플랜에 Codex가 포함되어 있습니다. 일부 기간 동안 Free, Go 플랜에도 Codex가 포함된 적이 있으나, 공식 개요 페이지에서는 Plus 이상 플랜을 기준으로 명시하고 있습니다. OpenAI API 키를 통해서도 사용할 수 있습니다.
+
+---
+
+## 실행 환경
+
+공식 문서는 App, IDE Extension, CLI, Web(클라우드)을 동등한 실행 환경으로 분류합니다. Quickstart에서는 "IDE, CLI, or the cloud"로 안내합니다.
 
 | 환경 | 설명 |
 | --- | --- |
-| **CLI** | 터미널에서 직접 실행하는 풀스크린 TUI. 대화형으로 코드를 작성하고 검토 |
-| **IDE 확장** | VS Code, Cursor, Windsurf에서 사이드바 패널로 동작 |
-| **Codex App** | macOS/Windows 데스크톱 앱 (`codex app`으로 실행 또는 별도 다운로드) |
+| **App** | macOS/Windows 데스크톱 앱. 프로젝트 사이드바, 스레드 목록, 리뷰 패널 제공. 권장 실행 환경 |
+| **IDE Extension** | VS Code, Cursor, Windsurf에서 사이드바 패널로 동작 |
+| **CLI** | 터미널에서 직접 실행하는 풀스크린 TUI. macOS, Windows, Linux 지원 |
+| **Web (클라우드)** | [chatgpt.com/codex](https://chatgpt.com/codex)에서 브라우저 기반으로 동작. GitHub 리포지토리 연동 |
 | **Amazon Bedrock** | AWS 관리 인증·결제로 Codex를 로컬에서 실행. Bedrock을 모델 프로바이더로 구성 |
-
-### 클라우드 환경
-
-| 환경 | 설명 |
-| --- | --- |
-| **Codex Cloud (Web)** | [chatgpt.com/codex](https://chatgpt.com/codex)에서 브라우저 기반으로 동작. GitHub 리포지토리 연동 |
-| **Code Review** | GitHub PR 코멘트에서 `@codex` 태그로 코드 리뷰 위임 |
-| **Slack** | Slack 연동을 통해 팀 채널에서 Codex 사용 |
+| **Slack** | Slack 연동을 통해 팀 채널에서 `@Codex`로 작업 지시 |
+| **Linear** | Linear 이슈에서 `@Codex` 언급으로 클라우드 작업 시작 |
+| **GitHub** | PR 코멘트에서 `@codex` 태그로 코드 리뷰 위임, 이슈에서 작업 시작 |
 
 ---
 
@@ -76,7 +72,7 @@ brew install --cask codex
 codex
 ```
 
-실행 후 **Sign in with ChatGPT**를 선택하여 ChatGPT 계정(Free, Go, Plus, Pro, Business, Edu, Enterprise)으로 로그인합니다. API 키를 사용하려면 환경변수를 설정합니다:
+실행 후 **Sign in with ChatGPT**를 선택하여 ChatGPT 계정(Plus, Pro, Business, Edu, Enterprise)으로 로그인합니다. API 키를 사용하려면 환경변수를 설정합니다:
 
 ```shell
 export OPENAI_API_KEY="sk-..."
@@ -122,6 +118,8 @@ codex --cd /path/to/project "버그를 찾아줘"
 | **MCP (Model Context Protocol)** | 외부 도구 서버를 연결하여 Codex 도구 생태계 확장 | [MCP 문서](https://developers.openai.com/codex/mcp) |
 | **Apps (앱 연동)** | GitHub, Slack, Linear 등 서드파티 앱과 연동 | [Integrations 문서](https://developers.openai.com/codex/integrations) |
 | **Sandbox (샌드박스)** | 명령어 실행을 격리된 환경에서 수행하여 시스템 보호 | [Sandbox 문서](https://developers.openai.com/codex/sandboxing) |
+| **Auto-review** | 승인 프롬프트를 자동 리뷰 에이전트가 사전 판단하여 승인·거부·중단 | [Auto-review 문서](https://developers.openai.com/codex/sandboxing/auto-review) |
+| **Memories / Chronicle** | 과거 작업의 맥락을 기억하여 향후 스레드에 활용 | [Memories 문서](https://developers.openai.com/codex/memories) |
 | **Subagents (서브에이전트)** | 큰 작업을 병렬로 분산 처리 | [Subagents 문서](https://developers.openai.com/codex/subagents) |
 | **Sites** | 웹사이트, 대시보드, 내부 도구, 게임 등을 빌드하고 배포 (Preview) | [Sites 문서](https://developers.openai.com/codex/sites) |
 | **Goal Mode** | 장기 실행 목표를 설정하고 시간·일 단위로 Codex가 자율 진행 | 관련 문서 참조 |
@@ -129,19 +127,27 @@ codex --cd /path/to/project "버그를 찾아줘"
 | **Appshots** | macOS에서 Command 키 두 번으로 최상단 앱 창을 Codex에 전송 | [Appshots 문서](https://developers.openai.com/codex/app/appshots) |
 | **Codex Security** | 플러그인 + 클라우드 보안으로 위협 모델 강화 | [Codex Security 문서](https://developers.openai.com/codex/codex-security) |
 | **AGENTS.md** | 프로젝트별 지속적 명령어 파일로 Codex 동작 가이드 | [AGENTS.md 문서](https://developers.openai.com/codex/agents-md) |
+| **Codex SDK** | TypeScript SDK로 Codex 에이전트를 자체 도구·워크플로우에 통합 | [Codex SDK 문서](https://developers.openai.com/codex/codex-sdk) |
+| **Python SDK** | Python용 SDK. `pip install openai-codex`로 설치 (Beta) | [Python SDK 문서](https://developers.openai.com/codex/codex-sdk) |
+| **GitHub Action** | CI/CD 파이프라인에 Codex를 통합하는 GitHub Action | [GitHub Action 문서](https://developers.openai.com/codex/github-action) |
+| **Remote Connections** | 모바일(iOS/Android)에서 Mac/Windows 호스트에 원격 연결하여 Codex 사용 | [Remote connections 문서](https://developers.openai.com/codex/remote-connections) |
+| **Access Tokens** | Enterprise 관리자가 허용한 멤버가 신뢰할 수 있는 비대화형 워크플로우용 토큰 생성 | [Access tokens 문서](https://developers.openai.com/codex/authentication/access-tokens) |
+| **Environment Variables** | Codex 설정을 환경 변수로 구성 | [Environment Variables 문서](https://developers.openai.com/codex/config-file/environment-variables) |
+| **Permissions** | 파일시스템 접근·명령어 실행 권한을 프로필 단위로 관리 | [Permissions 문서](https://developers.openai.com/codex/permissions) |
+| **Migrate** | 기존 명령어 파일, MCP 서버 설정, 스킬, 서브에이전트를 Codex로 이관 | [Migrate 문서](https://developers.openai.com/codex/migrate) |
 
 ---
 
 ## 추천 모델
 
-| 모델 | 용도 |
-| --- | --- |
-| **gpt-5.5** | 복잡한 코딩, Computer Use, 지식 작업, 리서치 워크플로우에 권장되는 최신 프론티어 모델 |
-| **gpt-5.4** | 강력한 코딩·추론·도구 사용·에이전트 워크플로우를 갖춘 범용 프론티어 모델 |
-| **gpt-5.4-mini** | 빠르고 효율적인 미니 모델. 가벼운 작업 및 서브에이전트에 적합 |
-| **gpt-5.3-codex-spark** | ChatGPT Pro 구독자 전용. 거의 즉각적인 실시간 코딩 반복에 최적화 (연구 프리뷰, 텍스트 전용) |
+| 모델 | 용도 | 상태 |
+| --- | --- | --- |
+| **gpt-5.5** | 복잡한 코딩, Computer Use, 지식 작업, 리서치 워크플로우에 권장되는 최신 프론티어 모델 | 권장 |
+| **gpt-5.4** | 강력한 코딩·추론·도구 사용·에이전트 워크플로우를 갖춘 범용 프론티어 모델. 최초의 Computer Use 내장 범용 모델 | 권장 |
+| **gpt-5.4-mini** | 빠르고 효율적인 미니 모델. 가벼운 작업 및 서브에이전트에 적합. GPT-5.4 대비 약 30% 사용량 | 권장 |
+| **gpt-5.3-codex-spark** | ChatGPT Pro 구독자 전용. 1000+ tok/s의 초고속 실시간 코딩 (연구 프리뷰, 텍스트 전용, 128k 컨텍스트) | Pro 전용 |
 
-> **Deprecated 모델 경고**: `gpt-5.2` 및 `gpt-5.3-codex` 모델은 ChatGPT 로그인 시 더 이상 사용되지 않습니다(deprecated). 스크립트, 설정 파일, `codex exec --model` 명령에서 해당 모델을 참조하고 있다면 위 권장 모델로 업데이트하세요. 일부 deprecated 모델은 API에서 여전히 사용할 수 있습니다. 자세한 내용은 [Codex Models 문서](https://developers.openai.com/codex/models)를 참조하세요.
+> **Deprecated 모델 경고**: 2026년 4월 7일부터 `gpt-5.2-codex`, `gpt-5.1-codex-mini`, `gpt-5.1-codex-max`, `gpt-5.1-codex`, `gpt-5.1`, `gpt-5` 모델이 ChatGPT 로그인 시 모델 선택기에서 제거되었으며, 4월 14일에 Codex에서 완전히 제거되었습니다. **`gpt-5.2`는 여전히 사용 가능합니다.** `gpt-5.3-codex` 모델도 ChatGPT 로그인 시 deprecated로 표시됩니다. 실제 deprecated된 모델과 아닌 모델을 혼동하지 마세요. 일부 deprecated 모델은 API에서 여전히 사용할 수 있습니다.
 
 세션 중 `/model` 명령으로 모델을 전환할 수 있습니다.
 
