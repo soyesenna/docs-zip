@@ -10,7 +10,7 @@
 
 **Codex CLI**는 OpenAI가 개발한 경량 코딩 에이전트로, 로컬 컴퓨터의 터미널에서 실행됩니다. Rust 기반(`codex-rs`)으로 작성되어 빠르고 가볍게 동작하며, 코드 작성, 디버깅, 리팩토링, 자동화 등 소프트웨어 개발 전반을 지원합니다.
 
-ChatGPT Plus, Pro, Business, Edu, Enterprise 플랜에 Codex가 포함되어 있으며, OpenAI API 키를 통해서도 사용할 수 있습니다.
+ChatGPT Free, Go, Plus, Pro, Business, Edu, Enterprise 플랜에 Codex가 포함되어 있으며, OpenAI API 키를 통해서도 사용할 수 있습니다.
 
 ---
 
@@ -76,7 +76,7 @@ brew install --cask codex
 codex
 ```
 
-실행 후 **Sign in with ChatGPT**를 선택하여 ChatGPT 계정(Plus, Pro, Business, Edu, Enterprise)으로 로그인합니다. API 키를 사용하려면 환경변수를 설정합니다:
+실행 후 **Sign in with ChatGPT**를 선택하여 ChatGPT 계정(Free, Go, Plus, Pro, Business, Edu, Enterprise)으로 로그인합니다. API 키를 사용하려면 환경변수를 설정합니다:
 
 ```shell
 export OPENAI_API_KEY="sk-..."
