@@ -1,6 +1,8 @@
 # OpenRouter API 레퍼런스
 
-> 원문: https://openrouter.ai/docs/api-reference
+> 원문: https://openrouter.ai/docs/api-reference/overview
+> https://openrouter.ai/docs/api-reference
+> https://openrouter.ai/docs/requests
 
 OpenRouter의 요청/응답 스키마는 OpenAI Chat API와 매우 유사합니다. **OpenRouter는 모델과 프로바이더 간 스키마를 정규화**하므로 하나의 스키마만 학습하면 됩니다.
 
@@ -47,46 +49,30 @@ type Request = {
 
   // 샘플링 파라미터
   seed?: number;                     // 정수만 (재현 가능한 결과)
-  top_p?: number;                    // 범위: [0.0, 1.0], 기본값: 1.0
-  top_k?: number;                    // 정수, 0 이상, 기본값: 0 (OpenAI 모델은 미지원)
+  top_p?: number;                    // 범위: (0, 1], 기본값: 1.0
+  top_k?: number;                    // 범위: [1, Infinity), OpenAI 모델은 미지원
   frequency_penalty?: number;        // 범위: [-2.0, 2.0], 기본값: 0.0
   presence_penalty?: number;         // 범위: [-2.0, 2.0], 기본값: 0.0
-  repetition_penalty?: number;       // 범위: [0.0, 2.0], 기본값: 1.0
-  min_p?: number;                    // 범위: [0.0, 1.0], 기본값: 0.0
-  top_a?: number;                    // 범위: [0.0, 1.0], 기본값: 0.0
+  repetition_penalty?: number;       // 범위: (0, 2], 기본값: 1.0
+  min_p?: number;                    // 범위: [0, 1], 기본값: 0.0
+  top_a?: number;                    // 범위: [0, 1], 기본값: 0.0
   logit_bias?: { [key: number]: number };
-  top_logprobs?: number;             // 정수만 (0~20, logprobs가 true일 때 필요)
+  top_logprobs: number;              // 정수만
   logprobs?: boolean;                // 출력 토큰의 로그 확률 반환 여부
-
-  // 추론(Reasoning) 제어 (자세한 내용은 본문 참조)
-  reasoning?: {
-    enabled?: boolean;               // 추론 활성화 여부
-    effort?: 'xhigh' | 'high' | 'medium' | 'low' | 'minimal' | 'none';
-    max_tokens?: number;             // 최대 추론 토큰 수
-    exclude?: boolean;               // 응답에서 추론 토큰 제외
-  };
-  reasoning_effort?: 'xhigh' | 'high' | 'medium' | 'low' | 'minimal' | 'none';
-  include_reasoning?: boolean;       // deprecated: reasoning.exclude의 별칭
-
-  // 추가 생성 파라미터
-  max_completion_tokens?: number;    // max_tokens와 동일 (다른 명칭)
-  verbosity?: 'low' | 'medium' | 'high' | 'xhigh' | 'max'; // 응답 상세도 제어
-  structured_outputs?: boolean;      // 구조화된 출력 지원 여부
-  web_search_options?: object;       // 네이티브 웹 검색 옵션
-  parallel_tool_calls?: boolean;     // 병렬 툴 콜 활성화 (기본값: true)
 
   // 지연 시간 최적화 (predicted output)
   prediction?: { type: 'content'; content: string };
 
   // OpenRouter 전용 파라미터
-  models?: string[];          // 모델 폴백 배열
+  transforms?: string[];       // 프롬프트 변환 (예: 메시지 정규화)
+  models?: string[];           // 모델 폴백 배열
   route?: 'fallback';
   provider?: ProviderPreferences; // 프로바이더 라우팅 설정
-  user?: string;              // 사용자 식별자 (남용 방지용)
+  user?: string;               // 사용자 식별자 (남용 방지용)
 
   // 디버그 옵션 (스트리밍 전용)
   debug?: {
-    echo_upstream_body?: boolean;
+    echo_upstream_body?: boolean; // true면 프로바이더에 전송된 변환된 요청 본문 반환
   };
 };
 ```
@@ -136,7 +122,8 @@ type Tool = {
 type ToolChoice =
   | 'none'
   | 'auto'
-  | 'required'   // 모델이 반드시 하나 이상의 툴을 호출해야 함
+  // 참고: 공식 parameters 문서에는 'required'도 지원된다고 명시되어 있으나
+  // 공식 TypeScript 타입 정의에는 포함되지 않음
   | {
       type: 'function';
       function: {
@@ -168,8 +155,10 @@ type Plugin = {
 
 `response_format` 파라미터로 모델의 JSON 응답을 강제할 수 있습니다:
 
-- `{ type: 'json_object' }`: 기본 JSON 모드
-- `{ type: 'json_schema', json_schema: { ... } }`: 엄격한 스키마 모드
+- `{ type: 'json_object' }`: 기본 JSON 모드 -- 모델이 유효한 JSON을 반환
+- `{ type: 'json_schema', json_schema: { ... } }`: 엄격한 스키마 모드 -- 지정한 스키마에 정확히 일치하는 JSON 반환
+
+자세한 사용법은 Structured Outputs 문서를 참조하세요. 구조화된 출력을 지원하는 모델은 모델 페이지에서 확인할 수 있습니다.
 
 ---
 
@@ -186,7 +175,16 @@ type Plugin = {
 }
 ```
 
-사용 가능한 플러그인: `web` (웹 검색), `file-parser` (PDF 처리), `response-healing` (JSON 자동 수리), `context-compression` (프롬프트 압축)
+사용 가능한 플러그인:
+
+| 플러그인 ID | 기능 |
+| --- | --- |
+| `web` | 실시간 웹 검색 |
+| `file-parser` | PDF 처리 |
+| `response-healing` | JSON 자동 수리 |
+| `context-compression` | 중간 프롬프트 압축 |
+
+자세한 설정 옵션은 Plugins 문서를 참조하세요.
 
 ---
 
@@ -217,7 +215,7 @@ fetch('https://openrouter.ai/api/v1/chat/completions', {
 
 ### CompletionsResponse 포맷
 
-OpenRouter는 모델/프로바이더 간 스키마를 OpenAI Chat API에 맞게 정규화합니다.
+OpenRouter는 모델/프로바이더 간 스키마를 OpenAI Chat API에 맞게 정규화합니다. `choices`는 항상 배열이며, 스트리밍 요청 시 `delta` 속성을, 비스트리밍 요청 시 `message` 속성을 포함합니다.
 
 ```typescript
 type Response = {
@@ -226,7 +224,7 @@ type Response = {
   created: number;           // Unix 타임스탬프
   model: string;
   object: 'chat.completion' | 'chat.completion.chunk';
-  system_fingerprint?: string;
+  system_fingerprint?: string; // 프로바이더가 지원하는 경우에만 존재
   usage?: ResponseUsage;
 };
 ```
@@ -306,7 +304,7 @@ type ToolCall = {
 type ErrorResponse = {
   code: number;
   message: string;
-  metadata?: Record<string, unknown>;
+  metadata?: Record<string, unknown>; // 프로바이더 세부 정보, 원본 에러 메시지 등
 };
 ```
 
@@ -324,7 +322,7 @@ OpenRouter는 각 모델의 `finish_reason`을 다음 값 중 하나로 정규�
 | `content_filter` | 콘텐츠 필터링 |
 | `error` | 오류 발생 |
 
-원래의 `finish_reason`은 `native_finish_reason` 속성에서 확인할 수 있습니다.
+일부 모델/프로바이더는 추가 finish reason을 가질 수 있습니다. 원래의 `finish_reason`은 `native_finish_reason` 속성에서 확인할 수 있습니다.
 
 ---
 
@@ -332,7 +330,7 @@ OpenRouter는 각 모델의 `finish_reason`을 다음 값 중 하나로 정규�
 
 반환된 `id`를 사용하여 요청 완료 후 `/api/v1/generation` 엔드포인트로 통계를 조회할 수 있습니다. 이는 과거 사용량 감사나 비동기 통계 조회에 유용합니다.
 
-> **참고**: 토큰 수는 비스트리밍 완성의 경우 응답 본문의 `usage` 필드에서도 확인할 수 있습니다. 토큰 수는 모델의 네이티브 토크나이저를 사용하여 계산됩니다.
+> **참고**: 비스트리밍 완성의 경우 토큰 수는 응답 본문의 `usage` 필드에서도 확인할 수 있습니다. 토큰 수는 모델의 네이티브 토크나이저를 사용하여 계산됩니다.
 
 ```javascript
 const generation = await fetch(
@@ -342,57 +340,77 @@ const generation = await fetch(
 const stats = await generation.json();
 ```
 
-### Generation 응답 주요 필드
-
-```typescript
-type GenerationResponse = {
-  id: string;
-  model: string;
-  streamed: boolean;
-  generation_time: number;           // 생성 소요 시간 (초)
-  created_at: string;                // ISO 타임스탬프
-  tokens_prompt: number;             // 입력 토큰 수
-  tokens_completion: number;         // 완성 토큰 수
-  native_tokens_prompt: number;      // 네이티브 입력 토큰 수
-  native_tokens_completion: number;  // 네이티브 완성 토큰 수
-  num_media_prompt: number;          // 입력 미디어 수
-  num_media_completion: number;      // 완성 미디어 수
-  origin: string;                    // 요청 출처
-  total_cost: number;                // 총 비용 (크레딧)
-  cache_discount: number;            // 캐시 할인액
-};
-```
+자세한 응답 형태는 Generation API 레퍼런스를 참조하세요.
 
 ---
 
 ## Reasoning (추론) 파라미터
 
-추론 토큰을 지원하는 모델에서 `reasoning` 객체로 추론 동작을 제어할 수 있습니다:
+> 원문: https://openrouter.ai/docs/guides/reasoning-tokens
+
+추론 토큰을 지원하는 모델에서 `reasoning` 객체로 추론 동작을 제어할 수 있습니다. 추론 토큰은 출력 토큰으로 간주되어 해당 비용이 청구됩니다.
+
+추론 토큰은 모델이 출력하기로 결정한 경우 기본적으로 응답에 포함되며, `exclude`를 설정하지 않는 한 각 메시지의 `reasoning` 필드에 나타납니다.
+
+> **참고**: 일부 추론 모델(예: OpenAI o-시리즈)은 추론 토큰을 반환하지 않습니다.
 
 ```json
 {
+  "model": "your-model",
+  "messages": [],
   "reasoning": {
-    "enabled": true,
     "effort": "high",
-    "max_tokens": 10000,
+    "max_tokens": 2000,
     "exclude": false
   }
 }
 ```
 
+| 필드 | 타입 | 설명 |
+| --- | --- | --- |
+| `reasoning.enabled` | `boolean` | 추론 기능 활성화 (기본값: `effort` 또는 `max_tokens`에서 추론) |
+| `reasoning.effort` | `string` | 추론 노력 수준 (OpenAI 스타일): `xhigh`, `high`, `medium`, `low`, `minimal`, `none` |
+| `reasoning.max_tokens` | `number` | 최대 추론 토큰 수 (Anthropic/Gemini/Qwen 스타일) |
+| `reasoning.exclude` | `boolean` | `true`면 응답에서 추론 토큰 제외 (기본값: `false`) |
+
+### effort별 토큰 할당 비율
+
+| effort | 할당 비율 (max_tokens 대비) |
+| --- | --- |
+| `xhigh` | 약 95% |
+| `high` | 약 80% |
+| `medium` | 약 50% |
+| `low` | 약 20% |
+| `minimal` | 약 10% |
+| `none` | 추론 비활성화 |
+
+### Reasoning Details (응답)
+
+추론 모델의 응답에는 `reasoning_details` 배열이 포함됩니다:
+
+- **비스트리밍**: `choices[].message.reasoning_details`
+- **스트리밍**: `choices[].delta.reasoning_details`
+
+각 reasoning detail 객체의 타입:
+
+| 타입 | 필드 | 설명 |
+| --- | --- | --- |
+| `reasoning.summary` | `summary` | 추론 과정의 요약 |
+| `reasoning.encrypted` | `data` | 암호화된 추론 데이터 |
+| `reasoning.text` | `text`, `signature` | 원시 텍스트 추론 (선택적 서명) |
+
+모든 객체는 공통으로 `id`, `format`, `index` 필드를 포함합니다.
+
+### 레거시 파라미터
+
+하위 호환성을 위해 다음 레거시 파라미터가 지원됩니다:
+
 | 필드 | 설명 |
 | --- | --- |
-| `reasoning.enabled` | 추론 기능 활성화 여부 |
-| `reasoning.effort` | 추론 노력 수준: `xhigh`, `high`, `medium`, `low`, `minimal`, `none` |
-| `reasoning.max_tokens` | 최대 추론 토큰 수 |
-| `reasoning.exclude` | `true`면 응답에서 추론 토큰 제외 |
+| `include_reasoning: true` | `reasoning: {}`와 동일 |
+| `include_reasoning: false` | `reasoning: { exclude: true }`와 동일 |
 
-### 편의 필드
-
-| 필드 | 설명 |
-| --- | --- |
-| `reasoning_effort` | OpenAI 스타일 추론 노력 설정 (reasoning.effort와 동일) |
-| `include_reasoning` | **deprecated**: `reasoning.exclude`의 별칭. `true`면 추론 토큰이 응답에 포함됨 |
+새로운 통합 `reasoning` 파라미터 사용을 권장합니다.
 
 ---
 
@@ -409,21 +427,18 @@ type GenerationResponse = {
 | 값 | 설명 |
 | --- | --- |
 | `low` | 간결한 응답 |
-| `medium` | 일반적인 상세도 |
+| `medium` | 일반적인 상세도 (기본값) |
 | `high` | 상세한 응답 |
-| `xhigh` | 매우 상세한 응답 |
-| `max` | 최대 상세도 |
-
-- OpenAI Responses API에서 도입된 파라미터입니다
-- Anthropic 모델의 경우 `output_config.effort`로 매핑됩니다
-- `xhigh`는 Anthropic Claude 4.7 Opus 이상에서 지원됩니다
-- `max`는 Anthropic Claude 4.6 Opus 이상에서 지원됩니다
 
 ---
 
 ## 스트리밍
 
-`stream: true`를 설정하면 Server-Sent Events (SSE)로 **모든 모델**에 대해 스트리밍이 지원됩니다. SSE 스트림에 주석 페이로드가 포함될 수 있으며, 이는 무시해야 합니다.
+`stream: true`를 설정하면 Server-Sent Events (SSE)로 **모든 모델**에 대해 스트리밍이 지원됩니다. SSE 스트림에 연결 타임아웃 방지용 주석 페이로드가 포함될 수 있으며, 이는 무시해야 합니다.
+
+### 스트림 취소
+
+스트리밍 요청은 연결을 중단하여 취소할 수 있습니다. 지원되는 프로바이더의 경우 모델 처리와 요금 청구가 즉시 중지됩니다.
 
 ---
 
@@ -433,9 +448,18 @@ type GenerationResponse = {
 
 ---
 
+## 모델 라우팅
+
+`model` 파라미터를 생략하면 사용자(또는 결제자)의 기본 모델이 사용됩니다. `models` 배열과 `route: 'fallback'`을 사용하여 폴백 체인을 구성할 수 있습니다. OpenRouter는 비용이 가장 낮고 성능이 가장 좋은 GPU를 선택하여 요청을 처리하며, 5xx 응답 코드를 수신하거나 요청 제한에 걸린 경우 다른 프로바이더나 GPU로 폴백합니다.
+
+---
+
 ## 관련 문서
 
 - [Quickstart](./01-quickstart.md)
 - [툴 콜링 가이드](./03-tool-calling.md)
 - [Structured Outputs](./05-structured-outputs.md)
 - [플러그인](./09-plugins.md)
+- [Reasoning Tokens 가이드](https://openrouter.ai/docs/guides/reasoning-tokens)
+- [API Parameters](https://openrouter.ai/docs/api-reference/parameters)
+- [API Streaming](https://openrouter.ai/docs/api-reference/streaming)
