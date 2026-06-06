@@ -1,6 +1,6 @@
 # 16. 문제 해결 (Troubleshooting)
 
-> **원문**: [Troubleshooting](https://code.claude.com/docs/en/troubleshooting) | [Troubleshoot installation and login](https://code.claude.com/docs/en/troubleshoot-install) | [Error reference](https://code.claude.com/docs/en/errors)
+> **원문**: [Troubleshooting](https://code.claude.com/docs/en/troubleshooting) | [Troubleshoot installation and login](https://code.claude.com/docs/en/troubleshoot-install) | [Error reference](https://code.claude.com/docs/en/errors) | [Debug your configuration](https://code.claude.com/docs/en/debug-your-config)
 >
 > **기존 참조**: [Troubleshooting - Anthropic](https://docs.anthropic.com/en/docs/claude-code/troubleshooting)
 
@@ -45,10 +45,19 @@
 | `Error loading shared library` | 시스템에 맞지 않는 바이너리 변형 |
 | `Illegal instruction` | 아키텍처 또는 CPU 명령어 집합 불일치 |
 | `cannot execute binary file: Exec format error` (WSL) | WSL1 네이티브 바이너리 회귀 |
+| `Claude Code on Windows requires either Git for Windows (for bash) or PowerShell` | 쉘 설치 |
+| `The process cannot access the file ... being used by another process` | 다운로드 폴더 비우고 재시도 |
+| `Error loading shared library` | 시스템에 맞지 않는 바이너리 변형 |
+| `Illegal instruction` | 아키텍처 또는 CPU 명령어 집합 불일치 |
+| `cannot execute binary file: Exec format error` (WSL) | WSL1 네이티브 바이너리 회귀 |
+| PowerShell 설치 완료 후 `claude` 미인식 또는 구버전 표시 | 터미널 재시작 후 PATH 확인 |
 | `dyld: cannot load`, `dyld: Symbol not found`, `Abort trap` (macOS) | 바이너리 비호환성 |
+| `Invoke-Expression: Missing argument in parameter list` | 설치 스크립트가 HTML 반환 |
 | `App unavailable in region` | 해당 국가에서 Claude Code 사용 불가 |
 | `unable to get local issuer certificate` | 기업 CA 인증서 구성 |
 | `OAuth error` 또는 `403 Forbidden` | [인증 문제](#인증-문제) 확인 |
+| `Could not load the default credentials` 또는 `Could not load credentials from any providers` | Bedrock, Vertex, Foundry 자격 증명 |
+| `ChainedTokenCredential authentication failed` 또는 `CredentialUnavailableError` | Bedrock, Vertex, Foundry 자격 증명 |
 | `API Error: 500`, `529 Overloaded`, `429` | [에러 레퍼런스](#에러-레퍼런스) 확인 |
 
 ### 네이티브 설치 (권장)
@@ -246,6 +255,42 @@ claude() {
 }
 ```
 
+### WSL에서 npm 설치 에러
+
+WSL 내에서 `npm install -g`로 설치한 경우 해당됩니다. 네이티브 설치 프로그램을 사용했다면 이 섹션을 건너뛰세요.
+
+- **OS/플랫폼 감지 문제**: npm이 플랫폼 불일치를 보고하면 WSL이 Windows `npm`을 사용하고 있을 수 있습니다. `npm config set os linux` 실행 후 `npm install -g @anthropic-ai/claude-code --force`로 설치하세요. `sudo`는 사용하지 마세요.
+- **`exec: node: not found`**: WSL이 Windows의 Node.js를 사용하고 있을 수 있습니다. `which npm`과 `which node`로 확인하세요. `/mnt/c/`로 시작하면 Windows 바이너리입니다. Linux 배포판의 패키지 매니저나 `nvm`으로 Node를 설치하세요.
+- **nvm 버전 충돌**: WSL과 Windows 양쪽에 nvm이 있으면 버전 전환이 깨질 수 있습니다. `~/.bashrc` 또는 `~/.zshrc`에 nvm 로더를 추가하세요:
+
+  ```bash
+  export NVM_DIR="$HOME/.nvm"
+  [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+  [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
+  ```
+
+  nvm이 로드되었는데도 Windows 경로가 우선이면 Linux Node 경로를 명시적으로 앞에 추가하세요:
+
+  ```bash
+  export PATH="$HOME/.nvm/versions/node/$(node -v)/bin:$PATH"
+  ```
+
+### npm 설치 후 네이티브 바이너리를 찾을 수 없음
+
+`Could not find native binary package "@anthropic-ai/claude-code-<platform>"`이 나타나면:
+
+- **선택적 의존성 비활성화**: npm의 `--omit=optional`, pnpm의 `--no-optional`, yarn의 `--ignore-optional`을 제거하고 `.npmrc`에 `optional=false`가 없는지 확인 후 재설치하세요. 네이티브 바이너리는 선택적 의존성으로만 제공됩니다.
+- **미지원 플랫폼**: 사전 빌드 바이너리는 `darwin-arm64`, `darwin-x64`, `linux-x64`, `linux-arm64`, `linux-x64-musl`, `linux-arm64-musl`, `win32-x64`, `win32-arm64`용으로만 게시됩니다.
+- **기업 npm 미러**: 레지스트리가 8개의 `@anthropic-ai/claude-code-*` 플랫폼 패키지를 모두 미러링하는지 확인하세요.
+
+### 설치 중 권한 에러
+
+네이티브 설치 프로그램이 권한 에러로 실패하면 [디렉토리 권한 확인](#디렉토리-권한-확인)을 참조하세요. 이전에 npm으로 설치했고 npm 관련 권한 에러가 발생하면 네이티브 설치 프로그램으로 전환하세요:
+
+```bash
+curl -fsSL https://claude.ai/install.sh | bash
+```
+
 ### Linux musl/glibc 바이너리 불일치
 
 `libstdc++.so.6` 등의 공유 라이브러리 누락 에러가 나타나면, 설치 프로그램이 잘못된 바이너리 변형을 다운로드했을 수 있습니다.
@@ -275,6 +320,50 @@ grep -m1 -ow avx /proc/cpuinfo
 
 이전 버전의 Claude Desktop이 `WindowsApps` 디렉토리에 `Claude.exe`를 등록하여 Claude Code CLI보다 PATH 우선순위가 높을 수 있습니다. Claude Desktop을 최신 버전으로 업데이트하세요.
 
+### Windows에서 잘못된 설치 명령어
+
+`'irm' is not recognized`, `The token '&&' is not valid`, `'bash' is not recognized as the name of a cmdlet`가 나타나면 다른 쉘이나 운영체제용 설치 명령어를 복사한 것입니다.
+
+- **`irm` not recognized**: CMD에 있습니다. PowerShell을 열어 원래 설치 명령어를 실행하거나, CMD 설치 명령어를 사용하세요:
+
+  ```cmd
+  curl -fsSL https://claude.ai/install.cmd -o install.cmd && install.cmd && del install.cmd
+  ```
+
+- **`&&` not valid**: PowerShell에서 CMD 설치 명령어를 실행한 것입니다. PowerShell 설치 명령어를 사용하세요:
+
+  ```powershell
+  irm https://claude.ai/install.ps1 | iex
+  ```
+
+- **`bash` not recognized**: macOS/Linux 설치 명령어를 Windows에서 실행한 것입니다. PowerShell 설치 명령어를 사용하세요.
+
+### Windows에서 Claude Code 실행에 쉘 필요
+
+`Claude Code on Windows requires either Git for Windows (for bash) or PowerShell` 에러가 나타나면 PowerShell과 Git Bash 모두 감지되지 않은 것입니다.
+
+- **PowerShell이 PATH에 없으면**: 기본 위치는 `C:\Windows\System32\WindowsPowerShell\v1.0\`입니다. PATH에 추가하거나 PowerShell 7(`pwsh`)을 설치하세요.
+- **Git for Windows를 설치하려면**: git-scm.com/downloads/win에서 다운로드하세요. 설치 중 "Add to PATH"를 선택하고 터미널을 재시작하세요. Bash 기반 스크립트와 도구를 사용할 수 있습니다.
+- **Git이 설치되어 있지만 감지되지 않으면**: `settings.json`에 경로를 설정하세요:
+
+  ```json
+  {
+    "env": {
+      "CLAUDE_CODE_GIT_BASH_PATH": "C:\\Program Files\\Git\\bin\\bash.exe"
+    }
+  }
+  ```
+
+### Claude Code does not support 32-bit Windows
+
+Windows 시작 메뉴에 `Windows PowerShell`과 `Windows PowerShell (x86)` 두 항목이 있습니다. x86 항목은 32비트 프로세스로 실행되어 64비트 머신에서도 이 에러를 트리거합니다. 어떤 경우인지 확인하려면:
+
+```powershell
+[Environment]::Is64BitOperatingSystem
+```
+
+`True`이면 운영체제는 문제없습니다. x86 창을 닫고 x86 접미사가 없는 `Windows PowerShell`을 열어 설치 명령어를 다시 실행하세요. `False`이면 32비트 Windows를 사용 중이며, Claude Code는 64비트 운영체제가 필요합니다.
+
 ### Windows에서 설치 스크립트가 HTML을 반환하는 경우
 
 ```
@@ -282,9 +371,25 @@ bash: line 1: syntax error near unexpected token `<'
 bash: line 1: `<!DOCTYPE html>'
 ```
 
-설치 URL이 설치 스크립트 대신 HTML 페이지를 반환한 것입니다. "App unavailable in region"이면 해당 국가에서 사용할 수 없는 것입니다.
+PowerShell에서는 다음과 같이 나타납니다:
+
+```
+Invoke-Expression: Missing argument in parameter list.
+```
+
+설치 URL이 설치 스크립트 대신 HTML 페이지를 반환한 것입니다. "App unavailable in region"이면 해당 국가에서 사용할 수 없는 것입니다. 본문 없는 403은 기업 프록시나 방화벽이 다운로드를 차단한 것일 수도 있습니다.
 
 **해결책:** 대체 설치 방법을 사용하거나 몇 분 후 재시도하세요.
+
+### Windows에서 인증서 해지 확인 우회
+
+`CRYPT_E_NO_REVOCATION_CHECK (0x80092012)` 또는 `CRYPT_E_REVOCATION_OFFLINE (0x80092013)`이 나타나면 기업 방화벽이 인증서 해지 조회를 차단하는 것입니다.
+
+```cmd
+curl --ssl-revoke-best-effort -fsSL https://claude.ai/install.cmd -o install.cmd && install.cmd && del install.cmd
+```
+
+또는 `winget install Anthropic.ClaudeCode`로 curl을 우회하세요.
 
 ### Windows에서 파일 접근 에러
 
@@ -376,7 +481,103 @@ echo $CLOUD_ML_REGION
 gcloud auth application-default login
 ```
 
+**Microsoft Foundry:**
+
+`ANTHROPIC_FOUNDRY_API_KEY`가 설정되어 있는지 확인하거나, Azure CLI로 로그인하여 기본 자격 증명 체인이 계정을 찾을 수 있도록 하세요.
+
 IDE 확장에서 작동하지 않으면 IDE 프로세스가 쉘 환경을 상속받지 않은 것입니다. IDE 자체 설정에서 제공자 환경변수를 설정하거나, 이미 export된 터미널에서 IDE를 실행하세요.
+
+---
+
+## 설정 디버깅
+
+Claude가 명령을 무시하거나 구성한 기능이 나타나지 않으면, 원인은 보통 파일이 로드되지 않았거나 예상과 다른 위치에서 로드되었거나 다른 파일이 덮어쓴 것입니다. 이 가이드는 Claude Code가 실제로 무엇을 로드했는지 확인하여 원인을 좁히는 방법을 보여줍니다.
+
+### 컨텍스트에 로드된 항목 확인
+
+`/context` 명령은 현재 세션의 컨텍스트 윈도우를 점유하는 모든 항목을 카테고리별로 보여줍니다: 시스템 프롬프트, 메모리 파일, 스킬, MCP 도구, 대화 메시지. `CLAUDE.md`, 규칙, 스킬 설명이 실제로 존재하는지 먼저 확인하세요.
+
+특정 카테고리의 세부 정보는 전용 명령으로 확인합니다:
+
+| 명령어 | 표시 내용 |
+|--------|-----------|
+| `/memory` | 로드된 `CLAUDE.md` 및 규칙 파일, 자동 메모리 항목 |
+| `/skills` | 프로젝트, 사용자, 플러그인 소스의 사용 가능한 스킬 |
+| `/agents` | 구성된 서브에이전트 및 설정 |
+| `/hooks` | 활성 훅 구성 |
+| `/mcp` | 연결된 MCP 서버 및 상태 |
+| `/permissions` | 현재 적용 중인 allow/deny 규칙 |
+| `/doctor` | 구성 진단: 잘못된 키, 스키마 에러, 설치 상태 |
+| `/debug [issue]` | 세션의 디버그 로깅을 활성화하고 Claude가 로그 출력과 설정 경로를 사용하여 진단 |
+| `/status` | 활성 설정 소스, 관리형 설정 적용 여부 포함 |
+
+`/memory`에 파일이 누락되어 있으면, 파일 위치가 CLAUDE.md 파일 로드 방식과 일치하는지 확인하세요. 하위 디렉토리의 `CLAUDE.md` 파일은 세션 시작 시가 아니라 Claude가 해당 디렉토리의 파일을 Read 도구로 읽을 때 온디맨드로 로드됩니다.
+
+`/memory`에서 파일이 로드된 것을 확인했는데도 특정 명령을 따르지 않으면, 문제는 로드 여부가 아니라 명령의 작성 방식일 가능성이 높습니다. CLAUDE.md는 새 팀원에게 주는 종류의 안내(프로젝트 규칙, 빌드 명령, 파일 위치)에 효과적입니다. 지시사항이 여러 가지로 해석될 수 있을 만큼 모호하거나, 두 파일이 충돌하는 지시를 주거나, 파일이 너무 길어져 개별 규칙의 주목도가 떨어질 때 준수도가 낮아집니다.
+
+### 해결된 설정 확인
+
+설정은 managed, user, project, local 스코프에 걸쳐 병합됩니다. Managed 설정은 항상 우선합니다. 나머지 중에서는 local, project, user 순서로 가까운 스코프가 넓은 스코프를 덮어씁니다. 일부 설정은 명령줄 플래그나 환경변수로도 설정할 수 있으며, 이는 또 다른 오버라이드 레이어입니다. 설정이 적용되지 않는 것 같으면, 설정한 값이 다른 스코프나 환경변수에 의해 덮어쓰이고 있는 경우가 많습니다.
+
+- `/doctor`를 실행하여 구성 파일의 유효성을 검사하고 잘못된 키나 스키마 에러를 확인하세요. `/doctor`가 문제를 보고하면 `f`를 눌러 진단 보고서를 Claude에게 보내 수정을 함께 진행할 수 있습니다.
+- `/status`를 실행하여 어떤 설정 소스가 활성 상태인지, 관리형 설정이 적용되고 있는지 확인하세요.
+
+### MCP 서버 확인
+
+`/mcp`를 실행하여 구성된 모든 서버, 연결 상태, 현재 프로젝트에 승인되었는지 확인하세요. 서버가 올바르게 정의되었지만 도구를 제공하지 않는 몇 가지 일반적인 원인이 있습니다:
+
+- `.mcp.json`의 프로젝트 스코프 서버는 일회성 승인이 필요합니다. 프롬프트가 닫혔으면 `/mcp`에서 승인할 때까지 서버가 비활성화됩니다.
+- 서버가 시작에 실패하면 `/mcp`에 실패로 표시됩니다. `command`나 `args`의 상대 파일 경로가 흔한 원인입니다. 경로는 `.mcp.json`의 위치가 아니라 Claude Code를 실행한 디렉토리 기준으로 해석됩니다.
+- 서버가 연결된 것으로 표시되지만 도구가 0개이면 시작은 성공했지만 도구 목록을 반환하지 않는 것입니다. `/mcp`에서 __Reconnect__ 를 선택하세요. 도구 수가 계속 0이면 `claude --debug mcp`로 서버의 stderr 출력을 확인하세요.
+
+### 훅 확인
+
+`/hooks`를 실행하여 현재 세션에 등록된 모든 훅을 이벤트별로 그룹화하여 나열하세요. 정의한 훅이 나타나지 않으면 읽히지 않은 것입니다. 훅은 독립 실행형 파일이 아니라 설정 파일의 `"hooks"` 키 아래에 있어야 합니다.
+
+훅이 나타나지만 실행되지 않으면 matcher가 일반적인 원인입니다. `matcher` 필드는 `|`를 사용하여 여러 도구 이름을 매칭하는 단일 문자열입니다(예: `"Edit|Write"`). 도구 이름의 오타는 matcher가 매칭되지 않아 조용히 실패합니다. 배열 값은 스키마 에러입니다. Claude Code가 설정 에러 알림을 표시하고, `/doctor`가 유효성 검사 실패를 보고하며, 해당 훅 항목이 삭제되어 `/hooks`에 나타나지 않습니다.
+
+`settings.json` 편집은 짧은 파일 안정성 지연 후 현재 세션에 즉시 적용됩니다. 재시작이 필요 없습니다. 저장 후 몇 초가 지났는데도 `/hooks`에 이전 정의가 표시되면 `/hooks`를 다시 실행하여 새로고침하세요.
+
+`/hooks`에 훅이 표시되는데도 여전히 실행되지 않으면, 훅 평가를 실시간으로 관찰하세요. `claude --debug hooks`로 세션을 시작하고 도구 호출을 트리거하세요. 디버그 로그에 각 이벤트, 확인된 matcher, 훅의 종료 코드와 출력이 기록됩니다.
+
+### 클린 설정으로 테스트
+
+대상화된 점검으로 원인을 찾을 수 없거나 구성 상태를 알 수 없는 경우, 일반 설정을 로드하지 않는 세션과 비교하세요. `CLAUDE_CONFIG_DIR`을 빈 디렉토리로 지정하여 `~/.claude`의 모든 항목을 우회하고, `.claude` 폴더, `.mcp.json`, `CLAUDE.md`가 없는 디렉토리에서 실행하여 프로젝트 구성도 건너뛰세요.
+
+```bash
+cd /tmp && CLAUDE_CONFIG_DIR=/tmp/claude-clean claude
+```
+
+클린 세션에는 사용자/프로젝트 설정, 훅, MCP 서버, 플러그인, 메모리가 없습니다.
+
+- 조직에서 managed 설정을 배포 중이면 계속 적용됩니다. managed 설정은 `~/.claude` 외부의 시스템 경로에 있습니다.
+- Linux와 Windows에서는 자격 증명이 구성 디렉토리에 저장되므로 다시 로그인해야 합니다.
+- macOS에서는 자격 증명이 Keychain에 있으므로 클린 세션으로 전달됩니다.
+
+문제가 여기서 사라지면 원인은 실제 `~/.claude` 또는 프로젝트 `.claude` 파일에 있습니다. 파일을 하나씩 임시 디렉토리에 복사하거나 프로젝트에서 실행하여 원인을 찾으세요. 클린 세션에서도 지속되면 원인은 사용자/프로젝트 구성 외부에 있습니다. `/status`로 managed 설정이 적용 중인지 확인하고, Claude Code에 영향을 주는 환경변수를 찾으세요.
+
+### 일반적인 구성 문제 원인
+
+대부분의 구성 문제는 적은 수의 위치 및 구문 규칙으로 추적됩니다. 버그로 가정하기 전에 아래를 확인하세요:
+
+| 증상 | 원인 | 해결 |
+|------|------|------|
+| 훅이 실행되지 않음 | `matcher`가 문자열이 아닌 JSON 배열 | 여러 도구를 매칭하려면 `|`가 포함된 단일 문자열을 사용. 예: `"Edit\|Write"` |
+| 훅이 실행되지 않음 | `matcher` 값이 소문자 (예: `"bash"`) | 매칭은 대소문자 구분. 도구 이름: `Bash`, `Edit`, `Write`, `Read` |
+| 훅이 실행되지 않음 | 훅이 `settings.json`이 아닌 독립 실행형 파일에 정의됨 | 프로젝트/사용자 설정용 독립 훅 파일은 없습니다. `settings.json`의 `"hooks"` 키 아래에 정의하세요 |
+| 권한, 훅, env가 무시됨 | 구성이 `~/.claude.json`에 추가됨 | `~/.claude.json`은 앱 상태 및 UI 토글입니다. `permissions`, `hooks`, `env`는 `~/.claude/settings.json`에 있어야 합니다 |
+| `settings.json` 값이 무시됨 | 같은 키가 `settings.local.json`에 설정됨 | `settings.local.json`이 `settings.json`을 덮어씀 |
+| 스킬이 `/skills`에 없음 | 스킬 파일이 `.claude/skills/name.md`에 있음 | 폴더 안에 `SKILL.md`를 사용: `.claude/skills/name/SKILL.md` |
+| 스킬은 있지만 Claude가 호출하지 않음 | `disable-model-invocation: true`이거나 설명이 요청과 매칭되지 않음 | `/skills`에서 배지 확인. "user-only" 라벨은 Claude가 자동 트리거하지 않음 |
+| 하위 디렉토리 `CLAUDE.md` 무시됨 | 하위 디렉토리 파일은 온디맨드 로드 | Claude가 해당 디렉토리의 파일을 Read 도구로 읽을 때 로드됨 |
+| 서브에이전트가 `CLAUDE.md` 무시 | 내장 Explore/Plan 에이전트는 `CLAUDE.md`를 건너뜀 | 해당 에이전트에는 프롬프트에 직접 명령을 포함하세요 |
+| 세션 종료 시 정리 로직 미실행 | `SessionEnd` 훅 미구성 | `settings.json`에 `SessionEnd` 훅 추가 |
+| `.mcp.json`의 MCP 서버 로드 안 됨 | 파일이 `.claude/` 아래에 있거나 Claude Desktop 형식 사용 | 프로젝트 MCP 구성은 리포지토리 루트에 `.mcp.json`으로 |
+| `settings.json`의 `mcpServers` 미인식 | `settings.json`은 `mcpServers` 키를 읽지 않음 | `.mcp.json` 또는 `claude mcp add --scope user` 사용 |
+| 프로젝트 MCP 서버 추가 후 미표시 | 일회성 승인 프롬프트가 닫힘 | `/mcp`에서 상태 확인 후 승인 |
+| 일부 디렉토리에서 MCP 서버 시작 실패 | `command`/`args`에 상대 경로 사용 | 로컬 스크립트에는 절대 경로 사용. `npx`, `uvx` 등은 PATH에서 작동 |
+| MCP 서버에 환경변수 누락 | 변수가 `settings.json`의 `env`에 있음 | `settings.json`의 `env`는 MCP 자식 프로세스에 전파되지 않음. `.mcp.json`의 서버별 `env`에 설정 |
+| `Bash(rm *)` deny 규칙이 `/bin/rm` 차단 안 함 | 접두사 규칙은 실행 파일이 아닌 명령어 문자열 매칭 | 각 변형에 대한 명시적 패턴 추가 또는 PreToolUse 훅/샌드박스 사용 |
 
 ---
 
@@ -870,21 +1071,12 @@ API Error: 400 ... image dimensions exceed max allowed size
 
 #### Unable to resize image
 
-Claude Code가 첨부된 이미지를 API로 전송하기 전에 다운스케일링하지 못했습니다.
-
-```
-Unable to resize image — image processing is unavailable and dimensions could not be read from the file header. Please convert the image to PNG, JPEG, GIF, or WebP.
-Unable to resize image — dimensions exceed the 2000x2000px limit and image processing failed. Please resize the image to reduce its pixel dimensions.
-Unable to resize image (… raw, … base64). The image exceeds the … API limit and compression failed. Please resize the image manually or use a smaller image.
-Unable to resize image — could not verify image dimensions are within the 2000x2000px API limit.
-```
-
-Claude Code는 일반적으로 대형 이미지를 자동으로 리사이즈합니다. 이 에러들은 네이티브 이미지 프로세서가 로드되지 않았거나 에러를 반환하여 이미지를 API 한계 내로 리사이즈할 수 없었음을 의미합니다.
+Claude Code가 첨부된 이미지를 다운스케일링하지 못했습니다. 네이티브 이미지 프로세서가 로드되지 않았거나 에러를 반환한 것입니다.
 
 **해결 방법:**
 
-- 메시지에서 이미지 변환을 요청하는 경우, 이미지를 PNG, JPEG, GIF 또는 WebP로 변환한 후 다시 첨부하세요. Claude Code는 이미지 프로세서 없이도 이 형식들의 크기를 확인할 수 있습니다.
-- 메시지에서 크기 또는 용량 한도를 보고하는 경우, 이미지를 해당 한도 이하로 리사이즈하거나 재압축한 후 첨부하세요.
+- 이미지 변환을 요청하는 메시지: PNG, JPEG, GIF 또는 WebP로 변환 후 다시 첨부
+- 크기/용량 한도를 보고하는 메시지: 해당 한도 이하로 리사이즈 후 첨부
 
 #### PDF 에러
 
