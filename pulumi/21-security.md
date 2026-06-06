@@ -162,10 +162,32 @@ curl -X POST \
     https://api.pulumi.com/api/oauth/token
 ```
 
-### GitHub Actions OIDC 설정 예시
+### 프로덕션 보안 배포 접근 방식
+
+프로덕션과 같은 민감한 환경에서는 다음 세 가지 배포 접근 방식 중 하나를 선택해야 한다.
+
+#### Option A: Pulumi Deployments (관리형 자동 배포)
+
+Pulumi Deployments는 자동화되고 관리되며 안전한 인프라 배포를 제공한다.
+
+| 기능 | 설명 |
+|---|---|
+| 자동 GitHub 연동 | PR에 대해 `pulumi preview` 자동 실행, PR 병합 시 `pulumi up` 자동 실행 |
+| REST API | 커스텀 워크플로우나 서드파티 CI/CD 시스템에서 프로그래밍 방식으로 배포 트리거 |
+
+**GitHub 연동 설정 단계:**
+
+1. **Pulumi GitHub App 설치:** Pulumi Cloud 콘솔 → Management > Version control에서 Add account 선택 후 GitHub 선택, GitHub 리포지토리 접근 권한 부여
+2. **배포 트리거 구성:** Pulumi Cloud 콘솔에서 스택 → Stack Settings > Deploy에서 배포 트리거 설정 (예: main 브랜치로 PR 병합 시)
+
+> **참고:** 자세한 내용은 [Pulumi Deployments GitHub 연동](https://www.pulumi.com/docs/deployments/github-integration/) 및 [Pulumi Deployments REST API](https://www.pulumi.com/docs/deployments/api/) 문서를 참조.
+
+#### Option B: GitHub Actions + OIDC 인증
+
+GitHub Actions에서 Pulumi의 OIDC 연동을 사용하여 토큰 없는 안전한 배포를 수행한다. Pulumi Cloud가 GitHub의 OIDC 프로바이더를 신뢰하도록 구성하고, 팀 범위의 Pulumi 액세스 토큰을 획득하여 배포를 실행한다.
 
 ```yaml
-# TypeScript/공통 워크플로우
+# TypeScript/공통 워크플로우 (Team-Scoped)
 name: Pulumi Deployment
 
 on:
@@ -192,7 +214,7 @@ jobs:
           team: <YOUR_TEAM>
 
       - name: Deploy Infrastructure
-        uses: pulumi/actions@v6
+        uses: pulumi/actions@v7
         with:
           command: up
           stack-name: <YOUR_ORG>/<YOUR_STACK>
@@ -202,6 +224,23 @@ jobs:
 # Python 프로젝트의 경우 pulumi/actions 단계에서 동일하게 사용
 # main 브랜치에 Push 시 자동 배포
 ```
+
+> **참고:** `pulumi/auth-actions`는 OIDC 토큰을 팀 범위의 Pulumi 액세스 토큰으로 교환하며, `pulumi/actions`는 할당된 팀 권한에 따라 `pulumi up`을 실행한다. 자세한 내용은 [GitHub OIDC 설정](https://www.pulumi.com/docs/administration/access-identity/oidc-issuers/github/) 및 [Pulumi GitHub Actions](https://www.pulumi.com/docs/using-pulumi/continuous-delivery/github-actions/) 문서를 참조.
+
+#### Option C: 다른 CI/CD 프로바이더
+
+Pulumi는 GitHub Actions 외에도 다음과 같은 주요 CI/CD 플랫폼과 연동된다.
+
+| 프로바이더 | 설명 |
+|---|---|
+| GitLab CI/CD | GitLab 파이프라인에서 Pulumi 배포 실행 |
+| Azure DevOps Pipelines | Azure DevOps에서 Pulumi 배포 자동화 |
+| Jenkins | Jenkins 파이프라인과 Pulumi 연동 |
+| CircleCI | CircleCI 워크플로우에서 Pulumi 실행 |
+
+이들 플랫폼도 보안 OIDC 인증 또는 토큰 기반 워크플로우를 활용할 수 있으며, CI/CD 프로바이더의 `sub`, `aud`, 커스텀 클레임을 사용하여 특정 파이프라인에 대한 접근을 제한할 수 있다.
+
+> **참고:** 각 프로바이더별 상세 설정 가이드는 [Continuous Delivery 문서](https://www.pulumi.com/docs/using-pulumi/continuous-delivery/)를 참조.
 
 ### 지원 OIDC 프로바이더
 
