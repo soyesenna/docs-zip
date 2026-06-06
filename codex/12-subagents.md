@@ -2,7 +2,7 @@
 
 > 서브에이전트 워크플로우로 Codex를 병렬 작업에 활용하는 방법, 커스텀 에이전트 정의, 팀 구성 패턴, 모델 선택 가이드
 
-**참조**: [developers.openai.com/codex/subagents](https://developers.openai.com/codex/subagents) | [developers.openai.com/codex/concepts/subagents](https://developers.openai.com/codex/concepts/subagents) | [developers.openai.com/codex/multi-agent](https://developers.openai.com/codex/multi-agent) | [developers.openai.com/codex/concepts/multi-agents](https://developers.openai.com/codex/concepts/multi-agents)
+**원문**: [Subagents – Codex](https://developers.openai.com/codex/subagents) | [Subagent Concepts](https://developers.openai.com/codex/concepts/subagents) | [Multi-agents Concepts](https://developers.openai.com/codex/concepts/multi-agents)
 
 ---
 
@@ -35,6 +35,36 @@ Codex는 전문화된 에이전트를 병렬로 실행(spawn)하고 그 결과�
 - **서브에이전트**: 탐색, 테스트, 로그 분석 등을 병렬로 실행
 - **요약 반환**: 원시 중간 출력 대신 요약을 메인 스레드에 반환
 
+또한 작업이 독립적으로 병렬 실행 가능할 때 **시간을 절약**할 수 있으며, 더 큰 규모의 작업을 관리 가능한 단위로 나누어 처리할 수 있습니다. 예를 들어 Codex는 **수백만 토큰 규모의 문서(multi-million-token document)** 분석을 더 작은 문제로 분할하고, 각각의 결과를 증류하여 메인 스레드에 반환할 수 있습니다.
+
+**병렬 시간 절약 예시**:
+
+```
+I would like to review the following points on the current PR (this branch vs main).
+Spawn one agent per point, wait for all of them, and summarize the result for each point.
+1. Security issue
+2. Code quality
+3. Bugs
+4. Race conditions
+5. Test flakiness
+6. Maintainability of the code
+```
+
+**대규모 작업 분할 예시** — `spawn_agents_on_csv`를 활용하면 수십~수백 개의 유사한 작업을 CSV 행 단위로 분할하여 병렬 처리할 수 있습니다:
+
+```
+Create /tmp/components.csv with columns path,owner and one row per frontend component.
+
+Then call spawn_agents_on_csv with:
+- csv_path: /tmp/components.csv
+- id_column: path
+- instruction: "Review {path} owned by {owner}. Return JSON with keys path, risk,
+  summary, and follow_up via report_agent_job_result."
+- output_csv_path: /tmp/components-review.csv
+```
+
+출발점으로는 탐색, 테스트, 분류, 요약 등 **읽기 중심 작업**에 병렬 에이전트를 사용하는 것을 권장합니다. 병렬 **쓰기 중심 워크플로우**는 여러 에이전트가 동시에 코드를 편집하면 충돌과 조정 오버헤드가 증가하므로 신중하게 접근해야 합니다.
+
 ---
 
 ## 활성화 및 기본 동작
@@ -62,7 +92,7 @@ multi_agent = true
 
 | 버전 | 자동 스폰 | 비고 |
 | --- | --- | --- |
-| **서브에이전트 (현재)** | 사용자가 명시적으로 요청할 때만 | "spawn two agents", "delegate in parallel" 등 직접 지시 필요 |
+| **서브에이전트 (현재)** | 사용자가 명시적으로 요청할 때만 | "spawn two agents", "delegate this work in parallel", "use one agent per point" 등 직접 지시 필요 |
 | **멀티 에이전트 (실험적)** | Codex가 자동으로 판단하거나 사용자가 명시적 요청 | 장시간 실행 명령/폴링 워크플로우에 `monitor` 역할 활용 |
 
 ---
@@ -224,7 +254,7 @@ Lead with concrete findings, include reproduction steps when possible, and avoid
 | 역할 | 책임 | 모델 | reasoning | sandbox |
 | --- | --- | --- | --- | --- |
 | `pr_explorer` / `explorer` | 코드베이스 매핑, 증거 수집 | `gpt-5.3-codex-spark` 또는 `gpt-5.4-mini` | `medium` | `read-only` |
-| `reviewer` | 정확성, 보안, 테스트 리스크 탐색 | `gpt-5.3-codex` 또는 `gpt-5.4` | `high` | `read-only` |
+| `reviewer` | 정확성, 보안, 테스트 리스크 탐색 | `gpt-5.5` 또는 `gpt-5.4` | `high` | `read-only` |
 | `docs_researcher` | 프레임워크/API 문서 확인 (MCP 서버 활용) | `gpt-5.4-mini` | `medium` | `read-only` |
 
 서브에이전트 방식의 커스텀 에이전트 파일 예시:
@@ -452,7 +482,9 @@ CLI에서 활성 에이전트 스레드 간 전환하고 진행 중인 스레드
 
 ## 모델 및 추론 설정 가이드
 
-서브에이전트와 멀티 에이전트는 동일한 모델 선택 철학을 공유합니다. 모델이나 `model_reasoning_effort`를 고정하지 않으면 Codex가 작업에 맞게 균형을 잡아 선택합니다.
+서브에이전트와 멀티 에이전트는 동일한 모델 선택 철학을 공유합니다. **대부분의 Codex 작업은 `gpt-5.5`로 시작하는 것을 권장합니다.** 속도와 비용이 중요한 가벼운 서브에이전트 작업에는 `gpt-5.4-mini`를, ChatGPT Pro에서 거의 즉각적인 텍스트 전용 반복이 필요하면 `gpt-5.3-codex-spark`를 사용하세요.
+
+모델이나 `model_reasoning_effort`를 고정하지 않으면 Codex가 작업에 맞게 균형을 잡아 선택합니다. 예를 들어 빠른 스캔에는 `gpt-5.4-mini`를 선호하고, 더 까다로운 추론에는 더 높은 노력의 `gpt-5.5` 구성을 선택할 수 있습니다. 더 세밀한 제어가 필요하면 프롬프트에서 직접 지시하거나 에이전트 파일에서 `model`과 `model_reasoning_effort`를 설정하세요.
 
 ### 모델 선택
 
@@ -473,6 +505,17 @@ CLI에서 활성 에이전트 스레드 간 전환하고 진행 중인 스레드
 
 추론 노력이 높을수록 응답 시간과 토큰 사용량이 증가하지만 복잡한 작업의 품질이 향상될 수 있습니다.
 
+### 자동 모델 선택
+
+모델이나 `model_reasoning_effort`를 명시적으로 고정하지 않으면, Codex가 작업 특성에 맞춰 **지능, 속도, 가격의 균형**을 자동으로 잡아 모델과 추론 노력을 선택합니다. 예를 들어:
+
+- 빠른 코드 스캔이나 읽기 중심 작업에는 자동으로 `gpt-5.4-mini`를 선호
+- 복잡한 추론이나 다단계 계획이 필요한 작업에는 자동으로 더 높은 추론 노력의 `gpt-5.5` 구성을 선택
+
+더 세밀한 제어가 필요한 경우:
+1. **프롬프트에서 지시**: "Use gpt-5.4-mini for exploration tasks"와 같이 직접 지정
+2. **에이전트 파일에서 설정**: `model`과 `model_reasoning_effort`를 TOML 파일에 명시적으로 설정
+
 ### 작업 유형별 권장 조합
 
 | 작업 유형 | 추천 모델 | 추론 노력 | sandbox_mode |
@@ -489,6 +532,13 @@ CLI에서 활성 에이전트 스레드 간 전환하고 진행 중인 스레드
 ## 사용 패턴과 모범 사례
 
 ### 서브에이전트 프롬프트 작성
+
+Codex는 서브에이전트를 **자동으로 실행하지 않으며**, 사용자가 명시적으로 요청할 때만 실행합니다. 실제 수동 트리거에 사용되는 영어 예시 구문:
+
+- `"spawn two agents"`
+- `"delegate this work in parallel"`
+- `"use one agent per point"`
+- `"Spawn one agent per point, wait for all of them, and summarize the result for each point."`
 
 좋은 서브에이전트 프롬프트는 다음을 설명해야 합니다.
 
