@@ -2,7 +2,7 @@
 
 > 기업 환경 설정, 관리형 정책, 비용/사용량 모니터링, 규정 준수
 
-**원문**: https://code.claude.com/docs/en/admin-setup (및 관련 페이지)
+**원문**: https://code.claude.com/docs/en/admin-setup, https://code.claude.com/docs/en/server-managed-settings, https://code.claude.com/docs/en/costs, https://code.claude.com/docs/en/monitoring-usage, https://code.claude.com/docs/en/analytics, https://code.claude.com/docs/en/amazon-bedrock, https://code.claude.com/docs/en/google-vertex-ai, https://code.claude.com/docs/en/microsoft-foundry, https://code.claude.com/docs/en/llm-gateway, https://code.claude.com/docs/en/third-party-integrations
 
 ---
 
@@ -19,6 +19,7 @@ Claude Code는 여러 API 제공자를 통해 Claude에 연결한다. 선택에 
 | Claude for Teams / Enterprise | Claude Code와 claude.ai를 하나의 시트당 구독으로 통합. 인프라 운영 불필요. 기본 권장 |
 | Claude Console | API 우선 또는 사용량 기반(Pay-as-you-go) 과금 선호 시 |
 | Amazon Bedrock | 기존 AWS 규정 준수 통제와 요금 청구를 상속받으려는 경우 |
+| Claude Platform on AWS | AWS Marketplace 과금으로 Claude API 기능을 사용하려는 경우 |
 | Google Vertex AI | 기존 GCP 규정 준수 통제와 요금 청구를 상속받으려는 경우 |
 | Microsoft Foundry | 기존 Azure 규정 준수 통제와 요금 청구를 상속받으려는 경우 |
 
@@ -35,7 +36,13 @@ Claude Code는 여러 API 제공자를 통해 Claude에 연결한다. 선택에 
 | 파일 기반 관리 | macOS: `/Library/Application Support/ClaudeCode/managed-settings.json`, Linux/WSL: `/etc/claude-code/managed-settings.json`, Windows: `C:\Program Files\ClaudeCode\managed-settings.json` | 중간 | 전체 |
 | Windows 사용자 레지스트리 | `HKCU\SOFTWARE\Policies\ClaudeCode` | 최저 | Windows만 |
 
-서버 관리형 설정은 인증 시점에 장치에 도달하며 활성 세션 중 매시간 새로고침된다. Claude for Teams 또는 Enterprise 플랜이 필요하다.
+서버 관리형 설정은 인증 시점에 장치에 도달하며 활성 세션 중 매시간 새로고침된다. Claude for Teams 또는 Enterprise 플랜이 필요하다. 조직이 여러 제공자를 혼합하는 경우, Claude.ai 사용자에게는 서버 관리형 설정을 구성하고 다른 사용자에게는 파일 기반 또는 plist/레지스트리 대체 수단을 구성해야 한다.
+
+plist와 HKLM 레지스트리 위치는 관리자 권한이 필요해 변조에 강하다. Windows 사용자 레지스트리(HKCU)는 권한 상승 없이 쓸 수 있으므로 강제 채널이 아닌 편의 기본값으로 취급한다.
+
+기본적으로 WSL은 `/etc/claude-code`의 Linux 파일 경로만 읽는다. 같은 장치에서 Windows 레지스트리와 `C:\Program Files\ClaudeCode` 정책을 WSL로 확장하려면, admin 전용 Windows 소스 중 하나에 `wslInheritsWindowsSettings: true`를 설정한다.
+
+어떤 메커니즘을 선택하든 관리형 값은 사용자 및 프로젝트 설정보다 우선한다. `permissions.allow`와 `permissions.deny` 같은 배열 설정은 모든 소스의 항목을 병합하므로, 개발자는 관리형 목록을 확장할 수 있지만 제거할 수는 없다.
 
 ### 강제 가능한 제어 항목
 
@@ -116,6 +123,28 @@ Claude Code는 여러 API 제공자를 통해 Claude에 연결한다. 선택에 
 ### 감사 로깅
 
 설정 변경에 대한 감사 로그 이벤트는 Compliance API 또는 감사 로그 내보내기를 통해 사용할 수 있다. 이벤트에는 수행된 작업 유형, 작업을 수행한 계정 및 장치, 이전 값과 새 값에 대한 참조가 포함된다.
+
+### 현재 제약사항
+
+서버 관리형 설정에는 다음 제약이 있다.
+
+- 조직 내 모든 사용자에게 설정이 균일하게 적용된다. 그룹별 구성은 아직 지원되지 않는다.
+- `managed-mcp.json` 파일은 서버 관리형 설정을 통해 배포할 수 없다. 대신 `allowedMcpServers`와 `deniedMcpServers` 정책 키를 사용하라.
+- `policyHelper` 및 `wslInheritsWindowsSettings` 등 OS 수준 정책 소스로 제한된 설정은 서버 관리형에서 적용되지 않는다. MDM 또는 시스템 `managed-settings.json` 파일을 통해 배포하라.
+
+### 보안 고려사항
+
+서버 관리형 설정은 중앙 집중식 정책 시행을 제공하지만, 클라이언트 측 제어로 작동한다. 비관리 장치에서 관리자 또는 sudo 접근 권한이 있는 사용자는 Claude Code 바이너리, 파일시스템 또는 네트워크 구성을 수정할 수 있다.
+
+| 시나리오 | 동작 |
+| --- | --- |
+| 사용자가 캐시된 설정 파일 편집 | 조작된 파일이 시작 시 적용되지만, 다음 서버 가져오기 시 올바른 설정으로 복원 |
+| 사용자가 캐시된 설정 파일 삭제 | 첫 실행 동작 발생: 설정을 비동기로 가져오며 짧은 미적용 구간 존재 |
+| API 사용 불가 | 캐시된 설정이 있으면 적용, 없으면 다음 성공적 가져오기까지 관리형 설정 미시행. `forceRemoteSettingsRefresh: true` 시 `claude auth` 하위 명령을 제외하고 CLI 종료 |
+| 사용자가 다른 조직으로 인증 | 관리 조직 외부 계정에는 설정이 전달되지 않음 |
+| 사용자가 타사 모델 제공자 구성 | 서버 관리형 설정이 우회됨. `CLAUDE_CODE_USE_BEDROCK`, `CLAUDE_CODE_USE_MANTLE`, `CLAUDE_CODE_USE_VERTEX`, `CLAUDE_CODE_USE_FOUNDRY` 또는 비기본 `ANTHROPIC_BASE_URL` 설정 시 포함 |
+
+런타임 구성 변경을 감지하려면 `ConfigChange` 훅을 사용하여 변경 사항을 로깅하거나 승인되지 않은 변경을 차단할 수 있다. 더 강력한 시행을 위해서는 MDM에 등록된 장치에서 엔드포인트 관리형 설정을 사용하라.
 
 ### 접근 제어
 
@@ -280,7 +309,44 @@ LLM 게이트웨이는 Claude Code와 모델 제공자 사이의 중앙 집중�
 
 ### 모델 검색
 
-`CLAUDE_CODE_ENABLE_GATEWAY_MODEL_DISCOVERY=1`을 설정하면 Claude Code가 게이트웨이의 `/v1/models` 엔드포인트를 쿼리하여 `/model` 선택기에 모델을 추가한다. v2.1.129 이상 필요. Anthropic Messages 형식에만 적용된다.
+`CLAUDE_CODE_ENABLE_GATEWAY_MODEL_DISCOVERY=1`을 설정하면 Claude Code가 게이트웨이의 `/v1/models` 엔드포인트를 쿼리하여 `/model` 선택기에 모델을 추가한다. v2.1.129 이상 필요. Anthropic Messages 형식에만 적용된다. 검색 요청은 `ANTHROPIC_AUTH_TOKEN`을 Bearer 토큰으로, 또는 `ANTHROPIC_API_KEY`를 `x-api-key` 헤더로 전송한다. `claude` 또는 `anthropic`으로 시작하는 모델만 선택기에 추가된다.
+
+### 동적 API 키 (apiKeyHelper)
+
+회전 키 또는 사용자별 인증이 필요한 경우 `apiKeyHelper` 스크립트를 구성할 수 있다.
+
+1. API 키 헬퍼 스크립트 작성:
+
+```bash
+#!/bin/bash
+# ~/bin/get-litellm-key.sh
+
+# 예: Vault에서 키 가져오기
+vault kv get -field=api_key secret/litellm/claude-code
+
+# 예: JWT 토큰 생성
+jwt encode \
+  --secret="${JWT_SECRET}" \
+  --exp="+1h" \
+  '{"user":"'${USER}'","team":"engineering"}'
+```
+
+2. Claude Code 설정에서 헬퍼 사용:
+
+```json
+{
+  "apiKeyHelper": "~/bin/get-litellm-key.sh"
+}
+```
+
+3. 토큰 갱신 간격 설정:
+
+```bash
+# 1시간마다 갱신 (3600000 ms)
+export CLAUDE_CODE_API_KEY_HELPER_TTL_MS=3600000
+```
+
+헬퍼 출력은 `Authorization` 및 `X-Api-Key` 헤더로 전송된다. `apiKeyHelper`는 `ANTHROPIC_AUTH_TOKEN` 또는 `ANTHROPIC_API_KEY`보다 우선순위가 낮다.
 
 ### LiteLLM 구성 예시
 
@@ -302,6 +368,12 @@ export ANTHROPIC_VERTEX_PROJECT_ID=your-gcp-project-id
 export CLAUDE_CODE_SKIP_VERTEX_AUTH=1
 export CLAUDE_CODE_USE_VERTEX=1
 export CLOUD_ML_REGION=us-east5
+
+# Claude Platform on AWS 게이트웨이 패스스루
+export ANTHROPIC_AWS_BASE_URL=https://litellm-server:4000/anthropic-aws
+export ANTHROPIC_AWS_WORKSPACE_ID=wrkspc_01ABCDEFGHIJKLMN
+export CLAUDE_CODE_SKIP_ANTHROPIC_AWS_AUTH=1
+export CLAUDE_CODE_USE_ANTHROPIC_AWS=1
 ```
 
 ---
@@ -368,7 +440,36 @@ Bedrock, Vertex AI, Foundry를 사용할 때는 모델 트래픽과 인증이 �
 
 ---
 
-## 7. 법률 및 규정 준수
+## 7. 엔터프라이즈 배포 개요
+
+조직은 Anthropic 직접 또는 클라우드 제공자를 통해 Claude Code를 배포할 수 있다.
+
+### 배포 옵션 비교
+
+대부분의 조직에서 Claude for Teams 또는 Claude for Enterprise가 최적의 경험이다. 팀원은 단일 구독으로 Claude Code와 Claude on the Web에 모두 접근할 수 있으며, 중앙 집중식 청구에 인프라 설정이 필요 없다.
+
+| 기능 | Teams/Enterprise | Console | Bedrock | Claude Platform on AWS | Vertex AI | Foundry |
+| --- | --- | --- | --- | --- | --- | --- |
+| 적합 대상 | 대부분 조직 (권장) | 개인 개발자 | AWS 네이티브 | AWS Marketplace + Claude API | GCP 네이티브 | Azure 네이티브 |
+| 과금 | 시트당 / 연락처 | 사용량 기반 | AWS 사용량 기반 | AWS Marketplace 사용량 기반 | GCP 사용량 기반 | Azure 사용량 기반 |
+| 인증 | SSO 또는 이메일 | API 키 | API 키 또는 AWS 자격 | API 키 또는 AWS 자격 | GCP 자격 | API 키 또는 Entra ID |
+| Claude on web 포함 | 예 | 아니오 | 아니오 | 아니오 | 아니오 | 아니오 |
+| 엔터프라이즈 기능 | 팀 관리, SSO, 모니터링 | 없음 | IAM, CloudTrail | IAM, CloudTrail | IAM, Cloud Audit Logs | RBAC, Azure Monitor |
+
+### 프록시 및 게이트웨이 구성
+
+| 유형 | 용도 | 구성 변수 |
+| --- | --- | --- |
+| 기업 프록시 | 모든 아웃바운드 트래픽을 보안 모니터링/규정 준수를 위해 프록시로 라우팅 | `HTTPS_PROXY`, `HTTP_PROXY` |
+| LLM 게이트웨이 | 중앙 집중식 사용량 추적, 커스텀 요금 제한, 인증 관리 | `ANTHROPIC_BASE_URL`, `ANTHROPIC_BEDROCK_BASE_URL`, `ANTHROPIC_AWS_BASE_URL`, `ANTHROPIC_VERTEX_BASE_URL` |
+
+### 모델 버전 고정 권장
+
+Bedrock, Vertex AI, Foundry 또는 Claude Platform on AWS로 배포하는 경우, `ANTHROPIC_DEFAULT_OPUS_MODEL`, `ANTHROPIC_DEFAULT_SONNET_MODEL`, `ANTHROPIC_DEFAULT_HAIKU_MODEL`로 특정 모델 버전을 고정하라. 고정하지 않으면 모델 별칭이 최신 버전으로 해결되며, Anthropic 업데이트 시 계정에 아직 활성화되지 않은 버전일 수 있다.
+
+---
+
+## 8. 법률 및 규정 준수
 
 ### 라이선스
 
@@ -397,7 +498,7 @@ BAA(Business Associate Agreement)를 체결한 고객이 Claude Code를 사용�
 
 ---
 
-## 8. 데이터 사용
+## 9. 데이터 사용
 
 ### 데이터 훈련 정책
 
@@ -442,7 +543,7 @@ WebFetch 도구는 URL을 가져오기 전에 요청된 호스트명을 `api.ant
 
 ---
 
-## 9. 제로 데이터 보존 (ZDR)
+## 10. 제로 데이터 보존 (ZDR)
 
 ZDR은 Claude for Enterprise를 통해 Claude Code에 사용할 수 있다. ZDR이 활성화되면 Claude Code 세션 중 생성된 프롬프트와 모델 응답은 실시간으로 처리되며, 법적 준수나 오용 방지에 필요한 경우를 제외하고 Anthropic에 저장되지 않는다.
 
@@ -478,7 +579,7 @@ Claude for Enterprise에서 ZDR을 요청하려면 영업팀이나 Anthropic 계
 
 ---
 
-## 10. 비용
+## 11. 비용
 
 Claude Code는 API 토큰 소비량에 따라 요금이 청구된다. 구독 플랜 가격은 claude.com/pricing을 참조한다.
 
@@ -526,9 +627,34 @@ Claude Code는 API 토큰 소비량에 따라 요금이 청구된다. 구독 플
 | 하위 에이전트에 위임 | 장황한 출력은 하위 에이전트 컨텍스트에 격리 |
 | 구체적인 프롬프트 | "improve this codebase"보다 "auth.ts의 login 함수에 입력 검증 추가"가 효율적 |
 
+### 에이전트 팀 토큰 비용
+
+에이전트 팀은 여러 Claude Code 인스턴스를 생성하며, 각각 자체 컨텍스트 윈도우를 갖는다. 토큰 사용량은 활성 팀원 수와 각 실행 시간에 비례한다. 팀원이 plan 모드로 실행될 때 표준 세션의 약 7배 토큰을 사용한다.
+
+비용 관리를 위한 권장 사항:
+
+- 팀원에 Sonnet 사용. 조정 작업에 적합한 성능-비용 균형
+- 팀 규모를 작게 유지. 각 팀원이 자체 컨텍스트를 실행하므로 토큰은 팀 규모에 비례
+- spawn 프롬프트를 집중적으로 유지. 팀원은 CLAUDE.md, MCP 서버, 스킬을 자동 로드하지만 spawn 프롬프트의 모든 내용이 초기 컨텍스트에 추가됨
+- 작업 완료 시 팀 정리. 활성 팀원은 유휴 상태에서도 토큰을 계속 소비
+- 에이전트 팀은 기본적으로 비활성화됨. settings.json 또는 환경에서 `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` 설정 필요
+
+### 백그라운드 토큰 사용량
+
+Claude Code는 유휴 상태에서도 일부 백그라운드 기능에 토큰을 사용한다.
+
+- **대화 요약**: `claude --resume` 기능을 위한 이전 대화 요약 백그라운드 작업
+- **명령 처리**: `/usage` 등 일부 명령은 상태 확인을 위해 요청을 생성할 수 있음
+
+이러한 백그라운드 프로세스는 활성 상호작용 없이도 세션당 약 $0.04 미만의 적은 토큰을 소비한다.
+
+### Claude Code 동작 변경 이해
+
+Claude Code는 비용 보고를 포함하여 기능 작동 방식을 변경할 수 있는 업데이트를 정기적으로 수신한다. 현재 버전은 `claude --version`으로 확인한다. 특정 청구 관련 질의는 Console 계정을 통해 Anthropic 지원에 문의하라.
+
 ---
 
-## 11. 분석
+## 12. 분석
 
 Claude Code는 조직이 개발자 사용 패턴을 이해하고, 기여 메트릭을 추적하며, Claude Code가 엔지니어링 속도에 미치는 영향을 측정할 수 있는 분석 대시보드를 제공한다.
 
@@ -575,7 +701,7 @@ Console 대시보드에는 다음이 포함된다.
 
 ---
 
-## 12. 사용량 모니터링 (OpenTelemetry)
+## 13. 사용량 모니터링 (OpenTelemetry)
 
 Claude Code는 OpenTelemetry(OTel)를 통해 원격 측정 데이터를 내보내어 조직 전반의 사용량, 비용, 도구 활동을 추적할 수 있다.
 
@@ -625,9 +751,41 @@ export OTEL_EXPORTER_OTLP_HEADERS="Authorization=Bearer your-token"
 | `OTEL_LOG_USER_PROMPTS` | 사용자 프롬프트 내용 로깅 | `1` |
 | `OTEL_LOG_TOOL_DETAILS` | 도구 매개변수 및 MCP 서버/도구 이름 로깅 | `1` |
 | `OTEL_LOG_TOOL_CONTENT` | 도구 입출력 내용 로깅 (추적 필요, 60KB에서 잘림) | `1` |
-| `OTEL_LOG_RAW_API_BODIES` | 전체 API 요청/응답 JSON 로깅 | `1` 또는 `file:<dir>` |
+| `OTEL_LOG_RAW_API_BODIES` | 전체 API 요청/응답 JSON 로깅. `=1`은 60KB 잘림 인라인, `=file:<dir>`은 디스크에 무잘림 저장 후 `body_ref` 포인터 | `1` 또는 `file:<dir>` |
 | `OTEL_METRIC_EXPORT_INTERVAL` | 메트릭 내보내기 간격(ms, 기본 60000) | `5000` |
 | `OTEL_LOGS_EXPORT_INTERVAL` | 로그 내보내기 간격(ms, 기본 5000) | `10000` |
+| `OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE` | 메트릭 시간성 기본 설정 (기본 `delta`). 백엔드가 누적을 기대하면 `cumulative`로 설정 | `delta`, `cumulative` |
+| `CLAUDE_CODE_OTEL_HEADERS_HELPER_DEBOUNCE_MS` | 동적 헤더 갱신 간격 (기본 1740000ms / 29분) | `900000` |
+
+### mTLS 인증
+
+OTLP 익스포터의 클라이언트 인증서 구성은 해당 신호에 사용 중인 OTLP 프로토콜에 따라 다르다.
+
+| 프로토콜 | 클라이언트 인증서 변수 | CA 신뢰 |
+| --- | --- | --- |
+| `http/protobuf`, `http/json` | `CLAUDE_CODE_CLIENT_CERT`, `CLAUDE_CODE_CLIENT_KEY`, `CLAUDE_CODE_CLIENT_KEY_PASSPHRASE` | `NODE_EXTRA_CA_CERTS` |
+| `grpc` | `OTEL_EXPORTER_OTLP_CLIENT_KEY`, `OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE` (또는 신호별 변형) | `OTEL_EXPORTER_OTLP_CERTIFICATE` |
+
+### 메트릭 카디널리티 제어
+
+| 변수 | 설명 | 기본값 |
+| --- | --- | --- |
+| `OTEL_METRICS_INCLUDE_SESSION_ID` | `session.id` 속성 포함 | `true` |
+| `OTEL_METRICS_INCLUDE_VERSION` | `app.version` 속성 포함 | `false` |
+| `OTEL_METRICS_INCLUDE_ACCOUNT_UUID` | `user.account_uuid` 및 `user.account_id` 속성 포함 | `true` |
+| `OTEL_METRICS_INCLUDE_ENTRYPOINT` | `app.entrypoint` 속성 포함 | `false` |
+
+### 동적 헤더 헬퍼
+
+엔터프라이즈 환경에서 동적 인증이 필요한 경우, 헤더를 생성하는 스크립트를 구성할 수 있다. `http/protobuf` 및 `http/json` 프로토콜에만 적용된다.
+
+```json
+{
+  "otelHeadersHelper": "/bin/generate_opentelemetry_headers.sh"
+}
+```
+
+스크립트는 HTTP 헤더를 나타내는 문자열 키-값 쌍의 유효한 JSON을 출력해야 한다. 기본적으로 29분마다 실행되며, `CLAUDE_CODE_OTEL_HEADERS_HELPER_DEBOUNCE_MS`로 간격 조정이 가능하다.
 
 ### 사용 가능한 메트릭
 
@@ -650,6 +808,8 @@ export OTEL_EXPORTER_OTLP_HEADERS="Authorization=Bearer your-token"
 | `claude_code.tool_result` | 도구 실행 완료 시 |
 | `claude_code.api_request` | Claude API 요청 시 |
 | `claude_code.api_error` | API 요청 실패 시 |
+| `claude_code.api_request_body` | `OTEL_LOG_RAW_API_BODIES` 설정 시 API 요청 본문 (인라인 모드: 60KB 잘림, 파일 모드: `body_ref` 경로) |
+| `claude_code.api_response_body` | `OTEL_LOG_RAW_API_BODIES` 설정 시 API 응답 본문 |
 | `claude_code.tool_decision` | 도구 권한 결정 시 |
 | `claude_code.mcp_server_connection` | MCP 서버 연결/해제/실패 시 |
 | `claude_code.auth` | 로그인/로그아웃 시 |
@@ -657,6 +817,15 @@ export OTEL_EXPORTER_OTLP_HEADERS="Authorization=Bearer your-token"
 | `claude_code.plugin_installed` | 플러그인 설치 시 |
 | `claude_code.plugin_loaded` | 세션 시작 시 활성 플러그인 |
 | `claude_code.skill_activated` | 스킬 호출 시 |
+| `claude_code.at_mention` | `@`-멘션 해결 시 |
+| `claude_code.api_retries_exhausted` | API 재시도 모두 소진 시 |
+| `claude_code.hook_registered` | 세션 시작 시 구성된 훅 |
+| `claude_code.hook_execution_start` | 훅 실행 시작 시 |
+| `claude_code.hook_execution_complete` | 훅 실행 완료 시 |
+| `claude_code.hook_plugin_metrics` | 공식 마켓플레이스 플러그인 훅 메트릭 |
+| `claude_code.compaction` | 대화 압축 완료 시 |
+| `claude_code.feedback_survey` | 세션 품질 설문조사 표시/응답 시 |
+| `claude_code.internal_error` | 예기치 않은 내부 오류 포착 시 |
 
 ### 분산 추적 (베타)
 
@@ -673,6 +842,10 @@ claude_code.interaction
       +-- claude_code.tool.execution
       +-- (Agent tool) subagent claude_code.llm_request / claude_code.tool spans
 ```
+
+`llm_request`, `tool.execution`, `hook` 스팬은 실패 기록 시 OpenTelemetry 상태 `ERROR`를 설정한다. 기본적으로 사용자 프롬프트 텍스트, 도구 입력 세부 정보, 도구 내용은 제거(redact)된다. 포함하려면 `OTEL_LOG_USER_PROMPTS=1`, `OTEL_LOG_TOOL_DETAILS=1`, `OTEL_LOG_TOOL_CONTENT=1`을 설정하라.
+
+추적 활성 시 Bash 및 PowerShell 하위 프로세스는 활성 도구 실행 스팬의 W3C trace context를 포함하는 `TRACEPARENT` 환경 변수를 자동으로 상속한다. Agent SDK 및 `-p` 비대화형 세션에서는 `TRACEPARENT` 및 `TRACESTATE`를 자체 환경에서 읽어 외부 프로세스의 분산 추적을 Claude Code 스팬 아래에 배치할 수 있다. 대화형 세션은 CI 또는 컨테이너 환경의 앰비언트 값을 우연히 상속하지 않도록 인바운드 `TRACEPARENT`를 무시한다.
 
 ### 보안 감사
 
@@ -692,6 +865,24 @@ SIEM으로 이벤트를 전송하려면 `OTEL_EXPORTER_OTLP_LOGS_ENDPOINT`를 SI
   }
 }
 ```
+
+### 보안 및 개인정보 보호
+
+- OpenTelemetry 내보내기는 옵트인이며 명시적 구성이 필요하다. Anthropic의 별도 운영 원격 측정 및 비활성화 방법은 Data usage 참조
+- 원시 파일 내용과 코드 스니펫은 메트릭이나 이벤트에 포함되지 않는다. 추적 스팬은 별도 데이터 경로이며 아래 `OTEL_LOG_TOOL_CONTENT` 참조
+- OAuth 인증 시 `user.email`이 원격 측정 속성에 포함된다. 조직에서 우려되는 경우 원격 측정 백엔드에서 해당 필드를 필터링 또는 수정하라
+- 사용자 프롬프트 내용은 기본적으로 수집되지 않는다. 프롬프트 길이만 기록. 포함하려면 `OTEL_LOG_USER_PROMPTS=1` 설정
+- 도구 입력 인수 및 매개변수는 기본적으로 로깅되지 않는다. 포함하려면 `OTEL_LOG_TOOL_DETAILS=1` 설정. 이 데이터는 구성한 OTEL 엔드포인트로만 전송되며 Anthropic에는 전송되지 않는다
+- **`OTEL_LOG_TOOL_CONTENT`**: 추적 스팬에서 도구 입출력 내용 기본 비활성화. `=1` 설정 시 스팬 이벤트에 스팬당 60KB 잘림으로 전체 도구 입출력 포함. Read 도구 결과의 원시 파일 내용과 Bash 명령 출력이 포함될 수 있으므로 원격 측정 백엔드에서 필터링 구성 필요
+- **`OTEL_LOG_RAW_API_BODIES`**: Anthropic Messages API 요청/응답 본문 기본 비활성화. `=1`은 60KB 잘림 인라인, `=file:<dir>`은 디스크에 무잘림 저장. 두 모드 모두 전체 대화 기록(시스템 프롬프트, 모든 사용자/어시스턴트 턴, 도구 결과)이 포함되므로, 다른 `OTEL_LOG_*` 콘텐츠 플래그가 공개하는 모든 것에 동의하는 것임. Claude의 확장 사고 내용은 다른 설정과 관계없이 항상 제거됨
+
+### ROI 측정 자료
+
+Claude Code의 투자 대비 수익(ROI) 측정에 대한 포괄적인 가이드(원격 측정 설정, 비용 분석, 생산성 메트릭, 자동화된 보고 포함)는 Claude Code ROI Measurement Guide를 참조하라. 이 저장소는 Docker Compose 구성, Prometheus 및 OpenTelemetry 설정, Linear 등 도구와 통합된 생산성 보고서 생성 템플릿을 제공한다.
+
+### Amazon Bedrock에서 Claude Code 모니터링
+
+Amazon Bedrock에서 Claude Code 사용량 모니터링에 대한 자세한 지침은 Claude Code Monitoring Implementation (Bedrock)을 참조하라.
 
 ### 백엔드 선택
 
