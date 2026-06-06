@@ -142,18 +142,6 @@ default_tools_approval_mode = "approve"
 approval_mode = "prompt"
 ```
 
-### 병렬 도구 호출
-
-MCP 도구는 기본적으로 직렬 호출됩니다. 서버의 모든 도구를 병렬 호출 대상으로 설정하려면:
-
-```toml
-[mcp_servers.docs]
-command = "docs-server"
-supports_parallel_tool_calls = true
-```
-
-병렬 호출은 도구가 동시에 실행되어도 안전한 서버에만 활성화하세요. 공유 상태, 파일, 데이터베이스 등에 읽기/쓰기 경쟁 조건이 있는지 검토해야 합니다.
-
 ---
 
 ## 6. OAuth 인증
