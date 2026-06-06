@@ -83,6 +83,7 @@ Codex local은 신규 ChatGPT Enterprise 워크스페이스에서 **기본 활�
 
 - **GitHub (cloud-hosted) 리포지토리** 필요
 - 온프레미스 또는 비-GitHub 코드베이스인 경우 Codex SDK로 자체 인프라에 유사 워크플로우 구축 가능
+- 관리자로서 Codex를 설정하려면 조직 전체에서 일반적으로 사용되는 리포지토리에 **GitHub 접근 권한이 필수**입니다. 필요한 접근 권한이 없는 경우, 해당 권한을 가진 엔지니어링 팀원과 협업하세요.
 
 #### 워크스페이스 설정
 
@@ -262,6 +263,80 @@ API 키 인증은 로컬 Codex 워크플로우만 지원하며, ChatGPT 워크�
 
 서버에서 device code 로그인이 활성화되지 않은 경우 표준 브라우저 기반 로그인으로 대체됩니다.
 
+### 원격/헤드리스 환경 폴백 인증
+
+ChatGPT로 CLI에 로그인할 때 브라우저 기반 로그인 UI가 작동하지 않는 경우(예: 원격 또는 헤드리스 환경, 로컬 네트워크 설정이 `localhost` 콜백을 차단하는 경우) 다음 폴백 방법을 사용할 수 있습니다.
+
+#### 폴백 1: 로컬에서 인증 후 auth.json 복사
+
+브라우저가 있는 머신에서 로그인한 후 캐시된 자격 증명을 헤드리스 머신으로 복사합니다.
+
+1. 브라우저가 있는 머신에서 `codex login` 실행
+2. `~/.codex/auth.json`이 생성되었는지 확인
+3. `~/.codex/auth.json`을 헤드리스 머신의 `~/.codex/auth.json`으로 복사
+
+> **보안 경고**: `~/.codex/auth.json`에는 액세스 토큰이 포함되어 있으므로 비밀번호처럼 취급하세요. 커밋하거나, 티켓에 붙여넣거나, 채팅에 공유하지 마세요.
+
+**SSH를 통한 원격 머신 복사**:
+
+```bash
+ssh user@remote 'mkdir -p ~/.codex'
+scp ~/.codex/auth.json user@remote:~/.codex/auth.json
+```
+
+또는 `scp` 없이 원격 라인으로 복사:
+
+```bash
+ssh user@remote 'mkdir -p ~/.codex && cat > ~/.codex/auth.json' < ~/.codex/auth.json
+```
+
+**Docker 컨테이너로 복사**:
+
+```bash
+CONTAINER_HOME=$(docker exec MY_CONTAINER printenv HOME)
+docker exec MY_CONTAINER mkdir -p "$CONTAINER_HOME/.codex"
+docker cp ~/.codex/auth.json MY_CONTAINER:"$CONTAINER_HOME/.codex/auth.json"
+```
+
+OS가 `~/.codex/auth.json` 대신 자격 증명 저장소를 사용하는 경우 이 방법이 적용되지 않을 수 있습니다. 파일 기반 저장소 구성에 대한 자세한 내용은 [자격 증명 저장소](#자격-증명-저장소)를 참조하세요.
+
+신뢰할 수 있는 CI/CD 러너에서 이 패턴의 고급 버전은 **Maintain Codex account auth in CI/CD (advanced)** 가이드를 참조하세요. API 키는 여전히 자동화의 권장 기본값입니다.
+
+#### 폴백 2: SSH를 통한 localhost 콜백 포워딩
+
+로컬 머신과 원격 호스트 간에 포트를 포워딩할 수 있는 경우, 표준 브라우저 기반 흐름을 터널링할 수 있습니다.
+
+1. 로컬 머신에서 포트 포워딩 시작:
+
+```bash
+ssh -L 1455:localhost:1455 user@remote
+```
+
+2. 해당 SSH 세션에서 `codex login`을 실행하고 로컬 머신의 브라우저에서 출력된 주소를 엽니다.
+
+### 커스텀 model_provider 인증
+
+구성 파일에서 커스텀 모델 제공자를 정의할 때 다음 인증 방법 중 하나를 선택할 수 있습니다.
+
+| 방법 | 설정 | 설명 |
+| --- | --- | --- |
+| **OpenAI 인증** | `requires_openai_auth = true` | ChatGPT 또는 API 키로 로그인. LLM 프록시 서버를 통해 OpenAI 모델에 접근할 때 유용. `requires_openai_auth = true` 시 `env_key`는 무시됨 |
+| **환경 변수 인증** | `env_key = "<ENV_VARIABLE_NAME>"` | 로컬 환경 변수에서 제공자별 API 키 사용 |
+| **인증 없음** | 둘 다 설정하지 않음 | 제공자가 인증을 요구하지 않는다고 가정. 로컬 모델에 유용 |
+
+### 로그인 디버깅
+
+직접 `codex login` 실행 시 구성된 로그 디렉토리에 전용 `codex-login.log` 파일이 작성됩니다. 브라우저 로그인 또는 기기 코드 실패를 디버깅하거나 지원팀이 로그인 관련 로그를 요청할 때 사용하세요.
+
+### 인증 캐시 보안
+
+`~/.codex/auth.json`에는 액세스 토큰이 포함되어 있습니다. 다음을 절대 수행하지 마세요:
+
+- 버전 관리에 커밋
+- 티켓이나 이슈에 붙여넣기
+- 채팅이나 메신저에 공유
+- 신뢰할 수 없는 머신에 보관
+
 ### 접근 토큰 (Access Tokens)
 
 Codex 접근 토큰은 신뢰할 수 있는 자동화가 ChatGPT 워크스페이스 아이덴티티로 Codex local을 실행할 수 있게 합니다. ChatGPT Business 및 Enterprise 워크스페이스에서 지원됩니다.
@@ -327,6 +402,7 @@ codex exec "summarize the last release diff"
 | 접근 토큰 목록 보기 | 워크스페이스 전체 (생성자 포함) | 자신이 생성한 토큰만 | 아니오 |
 | 접근 토큰 해지 | 워크스페이스의 모든 토큰 | 자신이 생성한 토큰만 | 페이지 접근 불가 |
 | 접근 토큰 권한 부여/제거 | 예 | 아니오 | 아니오 |
+| 다른 Codex 엔터프라이즈 설정 관리 | 예 (관리자 역할 및 Codex 관리자 권한 기반) | 아니오 (별도로 부여되지 않은 경우) | 아니오 |
 
 #### 토큰 교체 절차
 
@@ -334,6 +410,13 @@ codex exec "summarize the last release diff"
 2. 실행 환경, 스케줄러 또는 시크릿 매니저의 시크릿 업데이트
 3. 새 토큰으로 스모크 테스트 실행
 4. Access tokens 페이지에서 이전 토큰 해지
+
+#### 접근 토큰 문제 해결
+
+| 문제 | 해결 방법 |
+| --- | --- |
+| Access tokens 페이지가 404 또는 forbidden | 워크스페이스 owner 또는 admin에게 Codex 접근 토큰이 활성화되어 있는지, 역할에 접근 토큰 권한이 포함되어 있는지 확인 요청 |
+| `codex login --with-access-token` 실패 | 브라우저 세션 토큰이나 Platform API 키가 아닌 **생성된 접근 토큰**을 복사했는지 확인. 토큰이 만료되거나 해지되지 않았는지 확인 |
 
 ### MFA 요구사항
 
@@ -802,6 +885,7 @@ Fast Mode는 우선 처리(priority processing)를 사용하며, 초기 Amazon B
 | 승인 요청에 대한 Auto-review | 지원 |
 | 샌드박싱 및 권한 제어 | 지원 |
 | 프로젝트/독립형 앱 자동화 | 지원 |
+| Automations | 지원 |
 | Worktree 및 내장 Git 도구 | 지원 |
 | 로컬 환경 및 반복 가능한 작업 | 지원 |
 | Appshots | 지원 |
@@ -854,6 +938,7 @@ Fast Mode는 우선 처리(priority processing)를 사용하며, 초기 Amazon B
 | AWS 리전 | 모델이 사용 가능한 리전인지 확인 |
 | 자격 증명 유효성 | Bedrock API 키 또는 AWS 자격 증명이 만료되지 않았는지 확인 |
 | 모델 접근 권한 | AWS 아이덴티티에 선택한 Bedrock 모델 접근 권한이 있는지 확인 |
+| `AWS_BEARER_TOKEN_BEDROCK` | 만료되거나 의도하지 않은 키로 설정되어 있지 않은지 확인 |
 | 환경 변수 | 데스크톱 앱/VS Code Extension의 경우 `~/.codex/.env`에 필요한 변수가 있는지 확인 |
 
 ### 지원 경계
