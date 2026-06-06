@@ -1,6 +1,6 @@
 # 18. 모델 구성 (Model Configuration)
 
-> **원문**: [Model configuration](https://code.claude.com/docs/en/model-config) | [Fast mode](https://code.claude.com/docs/en/fast-mode) | [Prompt caching](https://code.claude.com/docs/en/prompt-caching) | [Context window](https://code.claude.com/docs/en/context-window)
+> **원문**: [Model configuration](https://code.claude.com/docs/en/model-config) | [Fast mode](https://code.claude.com/docs/en/fast-mode) | [Context window](https://code.claude.com/docs/en/context-window) | [Prompt caching](https://code.claude.com/docs/en/prompt-caching)
 
 ---
 
@@ -30,9 +30,15 @@
 | 환경변수 | `ANTHROPIC_MODEL=<별칭|이름>` |
 | 설정 파일 | `model` 필드로 영구 구성 |
 
-v2.1.153부터 `/model`은 사용자 설정에 기본값으로 저장됨. 피커에서 `Enter`: 전환 + 기본값 저장, `s`: 이번 세션만 전환.
+v2.1.153부터 `/model`은 사용자 설정에 기본값으로 저장됨. 피커에서 `Enter`: 전환 + 기본값 저장, `s`: 이번 세션만 전환. v2.1.144~v2.1.152에서는 `/model`이 현재 세션에만 적용되었으며 피커에서 `d`로 기본값을 저장했음.
 
 이력이 있는 대화에서 모델을 바꾸면 캐시된 컨텍스트 없이 전체 이력을 재처리하므로 확인 메시지가 표시됨.
+
+`--model` 플래그와 `ANTHROPIC_MODEL` 환경변수는 해당 세션에만 적용됨. 여러 터미널에서 동시에 다른 모델을 실행하려면 `/model` 대신 각각 `--model` 플래그로 실행.
+
+`claude --resume`, `--continue`, `/resume` 피커로 시작한 재개 세션은 트랜스크립트 저장 시 사용 중이던 모델을 유지함. 현재 `model` 설정과 무관. 해당 모델이 은퇴한 경우 일반 우선순위로 폴백.
+
+시작 시 활성 모델이 프로젝트 또는 관리 설정에서 온 경우 시작 헤더에 어떤 설정 파일이 지정했는지 표시됨. `/model`로 재정의 가능, 다음 실행 시 프로젝트/관리 설정이 다시 적용됨.
 
 ```bash
 # Opus로 시작
@@ -52,6 +58,8 @@ claude --model opus
 | Claude Platform on AWS | Opus 4.7 |
 | Pro, Team Standard, Enterprise 구독 시트 | Sonnet 4.6 |
 | Bedrock, Vertex, Foundry | Sonnet 4.5 |
+
+Enterprise pay-as-you-go는 구독 시트가 아닌 사용량 기반 과금 Enterprise 조직을 의미함.
 
 Opus 사용량 한도에 도달하면 Sonnet으로 자동 폴백될 수 있음.
 
@@ -73,6 +81,14 @@ Opus 사용량 한도에 도달하면 Sonnet으로 자동 폴백될 수 있음.
 - `availableModels`: 전환 가능한 모델 제한
 - `model`: 세션 시작 시 초기 모델 설정
 - `ANTHROPIC_DEFAULT_SONNET_MODEL` / `ANTHROPIC_DEFAULT_OPUS_MODEL` / `ANTHROPIC_DEFAULT_HAIKU_MODEL`: `default` 옵션이 해석되는 대상 제어
+
+**Merge 동작**: `availableModels`가 여러 수준(예: 사용자 설정 + 프로젝트 설정)에서 설정된 경우 배열이 병합되고 중복 제거됨. 엄격한 허용 목록을 적용하려면 최우선 순위인 managed 또는 policy 설정에서 `availableModels`를 설정.
+
+---
+
+## Mantle 모델 IDs
+
+Bedrock Mantle 엔드포인트가 활성화된 경우, `availableModels`에서 `anthropic.`으로 시작하는 항목은 `/model` 피커에 커스텀 옵션으로 추가되어 Mantle 엔드포인트로 라우팅됨. 이는 서드파티 배포 모델 고정에서 설명하는 alias-only 매칭의 예외임. 설정은 여전히 피커를 나열된 항목으로 제한하므로, Mantle IDs와 함께 표준 alias도 포함해야 함.
 
 ---
 
@@ -166,7 +182,7 @@ Opus 4.6 이상, Sonnet 4.6은 100만 토큰 컨텍스트 윈도우를 지원.
 | Pro | 사용량 크레딧 필요 | 사용량 크레딧 필요 |
 | API 및 pay-as-you-go | 전체 접근 | 전체 접근 |
 
-Max, Team, Enterprise 플랜에서 Opus는 추가 구성 없이 자동으로 1M 컨텍스트로 업그레이드됨. Sonnet 1M은 모든 구독 플랜(Max 포함)에서 사용량 크레딧이 필요.
+Max, Team, Enterprise 플랜에서 Opus는 추가 구성 없이 자동으로 1M 컨텍스트로 업그레이드됨. 이는 Team Standard와 Team Premium 시트 모두에 적용됨. Sonnet 1M은 모든 구독 플랜(Max 포함)에서 사용량 크레딧이 필요.
 
 1M 컨텍스트는 200K 이상 토큰에도 표준 모델 가격이 적용됨.
 
@@ -190,9 +206,14 @@ export CLAUDE_CODE_DISABLE_1M_CONTEXT=1
 
 ## Fast Mode (빠른 모드)
 
-Fast mode는 Claude Opus의 고속 구성으로, 모델을 최대 2.5배 빠르게 만들지만 토큰당 비용이 높음. 다른 모델이 아닌 Claude Opus를 다른 API 구성으로 사용하는 것.
+Fast mode는 Claude Opus의 고속 구성으로, 모델을 최대 2.5배 빠르게 만들지만 토큰당 비용이 높음. 다른 모델이 아닌 Claude Opus를 다른 API 구성으로 사용하는 것. 동일한 품질과 기능을 더 빠른 응답으로 제공함.
 
 **지원 모델**: Opus 4.8, Opus 4.7, Opus 4.6 (Sonnet, Haiku 미지원)
+
+**핵심 사항**:
+- Claude Code CLI에서 `/fast`로 토글. **VS Code 확장에서는 미지원**
+- 구독 플랜(Pro/Max/Team/Enterprise) 및 Claude Console 사용자에게 제공
+- 구독 플랜(Pro/Max/Team/Enterprise)에서 fast mode는 사용량 크레딧을 통해서만 제공되며 **구독 rate limit에 포함되지 않음**
 
 ### 토글 방법
 
@@ -202,6 +223,10 @@ Fast mode는 Claude Opus의 고속 구성으로, 모델을 최대 2.5배 빠르�
 | 설정 파일 | `"fastMode": true` |
 
 활성화 시 다른 모델이면 자동으로 Opus로 전환, `↯` 아이콘이 프롬프트 옆에 표시됨. 비활성화해도 Opus에 유지되며, 다른 모델로 전환하려면 `/model` 사용.
+
+**버전별 기본값**: Claude Code v2.1.154 이상에서 fast mode 기본 모델은 Opus 4.8. v2.1.142~v2.1.153에서는 Opus 4.7이 기본값.
+
+비용 효율을 위해 대화 중간보다 세션 시작 시 활성화하는 것이 좋음.
 
 ### 가격
 
@@ -229,6 +254,10 @@ Fast mode 가격은 전체 1M 컨텍스트 윈도우에 일괄 적용. 대화 �
 
 ### 관리자 설정
 
+관리자는 다음 경로에서 fast mode를 활성화할 수 있음:
+- **Console** (API 고객): Claude Code preferences
+- **Claude AI** (Team 및 Enterprise): Admin Settings > Claude Code
+
 ```json
 // 세션별 opt-in 강제 (기본적으로 세션 간 유지되는 것을 방지)
 {
@@ -236,14 +265,26 @@ Fast mode 가격은 전체 1M 컨텍스트 윈도우에 일괄 적용. 대화 �
 }
 ```
 
+세션별 opt-in은 여러 세션을 동시에 실행하는 조직에서 비용 제어에 유용. 사용자는 여전히 `/fast`로 활성화 가능하지만 새 세션마다 초기화됨. 사용자의 fast mode 기본 설정은 저장되므로, 이 설정을 제거하면 기본 영구 동작이 복원됨.
+
 전체 비활성화: `CLAUDE_CODE_DISABLE_FAST_MODE=1`
 
 ### Rate Limit 동작
 
-Fast mode rate limit 도달 시:
+Fast mode는 표준 Opus와 별도의 rate limit을 가짐. Opus 4.8, 4.7, 4.6의 fast mode는 **동일한 rate limit 풀을 공유**: 어느 모델에서 사용하든 동일한 한도에서 차감됨. rate limit 도달 또는 사용량 크레딧 소진 시:
 1. 자동으로 표준 속도로 폴백
 2. `↯` 아이콘이 회색으로 변경 (쿨다운 표시)
-3. 쿨다운 만료 후 자동 재활성화
+3. 표준 속도와 가격으로 작업 계속
+4. 쿨다운 만료 후 자동 재활성화
+
+수동으로 비활성화하려면 `/fast` 재실행.
+
+### Research Preview
+
+Fast mode는 **연구 미리보기(Research preview)** 기능임:
+- 피드백에 따라 기능이 변경될 수 있음
+- 가용성과 가격은 변경될 수 있음
+- 기반 API 구성이 진화할 수 있음
 
 ---
 
@@ -332,6 +373,14 @@ Claude Code에서 캐시는 사실상 하나의 머신과 디렉토리에 한정
 
 ---
 
+## 현재 모델 확인 (Checking Your Current Model)
+
+현재 사용 중인 모델은 다음 방법으로 확인 가능:
+1. **Status line** (구성된 경우) — 프롬프트 옆에 모델 정보가 표시됨
+2. **`/status`** — 모델 정보와 함께 계정 정보도 표시됨
+
+---
+
 ## 컨텍스트 윈도우 탐색
 
 Claude Code의 컨텍스트 윈도우는 세션에 대한 모든 정보를 담음: 지시사항, 읽은 파일, 응답, 터미널에 표시되지 않는 콘텐츠.
@@ -349,6 +398,14 @@ Claude Code의 컨텍스트 윈도우는 세션에 대한 모든 정보를 담�
 | Hooks | 해당 없음 (코드로 실행, 컨텍스트가 아님) |
 
 현재 컨텍스트 사용량 확인: `/context` 실행. 시작 시 로드된 CLAUDE.md 및 auto memory 확인: `/memory` 실행.
+
+### 컨텍스트 관리 전략
+
+컨텍스트가 한계에 가까워지면 Claude Code가 자동으로 compaction을 수행하므로, 전체 컨텍스트 윈도우가 꽉 차도 세션이 종료되지는 않음. 자동 compaction은 `/compact`와 동일한 방식으로 동작함. 자동 실행 전에 미리 대처할 수 있음:
+
+- **포커스와 함께 compact**: `/compact focus on the auth bug fix`처럼 지시사항과 함께 실행. 긴 새 작업을 시작하기 전에 사용하면, 자동 compaction이 중요한 것을 추측하는 대신 원하는 내용을 요약에 유지함
+- **작업 전환 시 clear**: 관련 없는 작업으로 전환할 때 `/clear` 실행. 이전 대화가 다음에 필요한 파일을 밀어내고 매 메시지마다 토큰을 소모함
+- **큰 읽기는 서브에이전트에 위임**: 연구 작업을 서브에이전트에 보내면 파일 내용이 서브에이전트의 컨텍스트 윈도우에만 있고, 부모 세션에는 요약과 작은 메타데이터 트레일러만 반환됨
 
 ---
 
@@ -413,11 +470,15 @@ export ANTHROPIC_DEFAULT_OPUS_MODEL='claude-opus-4-8[1m]'
 
 ### 커스텀 모델 옵션 추가
 
+`ANTHROPIC_CUSTOM_MODEL_OPTION`을 사용하면 기본 제공 alias를 대체하지 않고 `/model` 피커에 단일 커스텀 항목을 추가할 수 있음. Claude Code가 기본으로 나열하지 않는 모델 ID를 테스트할 때 유용. LLM gateway 배포의 경우 `CLAUDE_CODE_ENABLE_GATEWAY_MODEL_DISCOVERY=1`이 설정되어 있으면 gateway의 `/v1/models` 엔드포인트에서 피커를 자동으로 채우므로, discovery가 비활성화되었거나 원하는 모델을 반환하지 않을 때만 이 변수가 필요함.
+
 ```bash
 export ANTHROPIC_CUSTOM_MODEL_OPTION="my-gateway/claude-opus-4-7"
 export ANTHROPIC_CUSTOM_MODEL_OPTION_NAME="Opus via Gateway"
 export ANTHROPIC_CUSTOM_MODEL_OPTION_DESCRIPTION="Custom deployment routed through the internal LLM gateway"
 ```
+
+커스텀 항목은 `/model` 피커 하단에 표시됨. `ANTHROPIC_CUSTOM_MODEL_OPTION_NAME`과 `ANTHROPIC_CUSTOM_MODEL_OPTION_DESCRIPTION`은 선택 사항. 생략 시 모델 ID가 이름으로 사용되고 설명은 `Custom model (<model-id>)`이 됨. Claude Code는 이 모델 ID에 대한 유효성 검사를 건너뛰므로 API 엔드포인트가 수락하는 모든 문자열을 사용할 수 있음.
 
 ### 버전별 모델 ID 재정의
 
