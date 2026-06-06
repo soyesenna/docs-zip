@@ -141,13 +141,24 @@ Live change detection은 `SKILL.md` 텍스트만 해당됩니다. Skill 폴더�
 
 ### 상위 및 하위 디렉토리 자동 탐색
 
-프로젝트 Skills는 시작 디렉토리와 리포지토리 루트까지의 모든 상위 디렉토리에 있는 `.claude/skills/`에서 로드됩니다. 따라서 하위 디렉토리에서 Claude를 시작해도 루트에 정의된 Skills를 사용할 수 있습니다. 시작 디렉토리 아래 하위 디렉토리의 파일을 작업할 때, Claude Code는 필요에 따라 중첩된 `.claude/skills/` 디렉토리의 Skills도 탐색합니다. 예를 들어 `packages/frontend/`의 파일을 편집하면 `packages/frontend/.claude/skills/`의 Skills도 검색합니다. 이는 패키지마다 자체 Skills가 있는 모노레포 설정을 지원합니다.
+프로젝트 Skills는 **시작 디렉토리**와 **리포지토리 루트까지의 모든 상위 디렉토리**에 있는 `.claude/skills/`에서 로드됩니다. 따라서 하위 디렉토리에서 Claude를 시작해도 루트에 정의된 Skills를 사용할 수 있습니다.
+
+시작 디렉토리 아래 하위 디렉토리의 파일을 작업할 때, Claude Code는 **필요에 따라(on demand)** 중첩된 `.claude/skills/` 디렉토리의 Skills도 탐색합니다. 예를 들어 `packages/frontend/`의 파일을 편집하면 `packages/frontend/.claude/skills/`의 Skills도 검색합니다. 이는 패키지마다 자체 Skills가 있는 모노레포 설정을 지원합니다.
+
+탐색 규칙 요약:
+
+| 탐색 방향 | 조건 | 예시 |
+|----------|------|------|
+| 상위 (시작 -> 루트) | 항상 | `packages/frontend/`에서 시작 -> 루트 `.claude/skills/`까지 로드 |
+| 하위 (시작 -> 중첩) | 해당 경로의 파일 작업 시 | `packages/frontend/` 파일 편집 -> `packages/frontend/.claude/skills/` 탐색 |
 
 ### 추가 디렉토리의 Skills
 
 `--add-dir` 플래그와 `/add-dir` 명령어는 파일 접근 권한을 부여하지만 Skills는 예외입니다: 추가된 디렉토리 내의 `.claude/skills/`가 자동으로 로드됩니다. 이 예외는 `--add-dir`과 `/add-dir`에만 적용됩니다. `settings.json`의 `permissions.additionalDirectories` 설정은 파일 접근만 권한을 부여하며 Skills를 로드하지 않습니다.
 
 다른 `.claude/` 구성(서브에이전트, 명령어, 출력 스타일)은 추가 디렉토리에서 로드되지 않습니다.
+
+> **참고**: `--add-dir` 디렉토리의 CLAUDE.md 파일은 기본적으로 로드되지 않습니다. 이를 로드하려면 환경변수 `CLAUDE_CODE_ADDITIONAL_DIRECTORIES_CLAUDE_MD=1`을 설정하세요.
 
 ---
 
@@ -303,8 +314,6 @@ Summarize this pull request...
 
 치환은 원본 파일에 대해 한 번 실행됩니다. 명령 출력은 일반 텍스트로 삽입되며, 추가 `` !`<command>` `` 플레이스홀더를 위해 다시 스캔되지 않습니다.
 
-인라인 형식은 `!`가 줄의 시작이나 공백 바로 뒤에 나타날 때만 인식됩니다. `!`가 다른 문자 뒤에 오면 (예: `KEY=!`cmd``) 플레이스홀더가 리터럴 텍스트로 남고 명령이 실행되지 않습니다.
-
 멀티라인 명령에는 인라인 대신 ```` ```! ```` 로 시작하는 펜스 코드 블록을 사용합니다:
 
 ````
@@ -316,7 +325,11 @@ git status --short
 ```
 ````
 
+인라인 형식은 `!`가 줄의 시작이나 공백 바로 뒤에 나타날 때만 인식됩니다. `!`가 다른 문자 뒤에 오면 (예: `KEY=!`cmd``) 플레이스홀더가 리터럴 텍스트로 남고 명령이 실행되지 않습니다.
+
 사용자, 프로젝트, Plugin, 추가 디렉토리 소스의 Skills 및 커스텀 명령어에 대해 이 동작을 비활성화하려면 설정에 `"disableSkillShellExecution": true`를 설정합니다. 각 명령은 실행 대신 `[shell command execution disabled by policy]`로 대체됩니다. Bundled 및 관리 Skills는 영향을 받지 않습니다.
+
+> **참고**: Skill이 실행될 때 더 깊은 추론을 요청하려면, Skill 콘텐츠 어디에나 `ultrathink`를 포함하세요. 자세한 내용은 [Use ultrathink for one-off deep reasoning](https://code.claude.com/docs/en/skills)을 참조하세요.
 
 ---
 
@@ -462,6 +475,53 @@ Skills는 대상에 따라 다양한 범위로 배포할 수 있습니다:
 - **프로젝트 Skills**: `.claude/skills/`를 버전 관리에 커밋
 - **Plugins**: Plugin에 `skills/` 디렉토리 생성
 - **Managed**: 관리 설정(Managed Settings)을 통해 조직 전체에 배포
+
+### 시각적 출력 생성 (Generate Visual Output)
+
+Skills는 모든 언어의 스크립트를 번들하고 실행할 수 있어, 단일 프롬프트로는 불가능한 Claude의 기능을 제공합니다. 특히 강력한 패턴은 **시각적 출력 생성**입니다: 데이터 탐색, 디버깅, 리포트 생성을 위해 브라우저에서 열리는 대화형 HTML 파일을 만듭니다.
+
+다음 예제는 코드베이스 탐색기를 만듭니다: 디렉토리를 확장/축소하고, 파일 크기를 한눈에 확인하고, 파일 유형별로 색상으로 식별할 수 있는 대화형 트리 뷰입니다.
+
+**Skill 디렉토리 생성:**
+
+```bash
+mkdir -p ~/.claude/skills/codebase-visualizer/scripts
+```
+
+**`~/.claude/skills/codebase-visualizer/SKILL.md`:**
+
+```markdown
+---
+name: codebase-visualizer
+description: Generate an interactive collapsible tree visualization of your codebase. Use when exploring a new repo, understanding project structure, or identifying large files.
+allowed-tools: Bash(python3 *)
+---
+
+# Codebase Visualizer
+
+Generate an interactive HTML tree view that shows your project's file structure with collapsible directories.
+
+## Usage
+
+Run the visualization script from your project root:
+
+!`python3 ${CLAUDE_SKILL_DIR}/scripts/visualize.py .`
+
+This creates `codebase-map.html` in the current directory and opens it in your default browser.
+
+## What the visualization shows
+
+- **Collapsible directories**: Click folders to expand/collapse
+- **File sizes**: Displayed next to each file
+- **Colors**: Different colors for different file types
+- **Directory totals**: Shows aggregate size of each folder
+```
+
+위 예제에서 스크립트 경로는 `${CLAUDE_SKILL_DIR}`을 사용하여, Skill이 Personal, Project, Plugin 수준 중 어디에 설치되든 올바르게 해석됩니다.
+
+테스트하려면 Claude Code를 프로젝트에서 열고 "Visualize this codebase"라고 요청합니다. Claude가 스크립트를 실행하여 `codebase-map.html`을 생성하고 브라우저에서 엽니다.
+
+이 패턴은 모든 시각적 출력에 적용됩니다: 의존성 그래프, 테스트 커버리지 리포트, API 문서, 데이터베이스 스키마 시각화 등. 번들된 스크립트가 작업을 수행하고 Claude가 오케스트레이션을 처리합니다.
 
 ---
 
