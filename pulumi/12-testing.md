@@ -22,6 +22,10 @@ Pulumi는 범용 프로그래밍 언어로 클라우드 리소스를 프로비�
 | 모킹 필요 | 예 | 아니오 | 아니오 |
 | 접근 방식 | 화이트박스 | 인프라 배포 중 검사 | 블랙박스 |
 
+### 속성 테스트와 Policy as Code
+
+속성 테스트(Property Tests)는 **Policy as Code** 기반으로 동작한다. Pulumi의 정책 팩(Policy Pack)은 TypeScript/JavaScript(Node.js)와 Python으로만 작성할 수 있으며, 각 정책은 테스트가 평가하고 단언하는 **속성(property), 즉 불변식(invariant)**이 된다. 예를 들어 "모든 S3 버킷은 암호화되어야 한다", "보안 그룹은 22번 포트를 인터넷에 공개해서는 안 된다" 등의 규칙을 정책으로 정의하고, `pulumi up` 실행 시 자동으로 검사한다. 자세한 내용은 [Policy as Code 가이드](https://www.pulumi.com/docs/iac/using-pulumi/continuous-delivery/policy-as-code/)를 참조하라.
+
 ---
 
 ## 단위 테스트 (Unit Testing)
@@ -93,7 +97,24 @@ pulumi.runtime.setMocks({
         }
     },
 }, "project", "stack", false);
+// 인수 설명: "project" → 프로젝트 이름, "stack" → 스택 이름,
+// false → dryRun 플래그 (pulumi가 preview 모드로 실행 중인지 여부)
 ```
+
+### 모킹의 제한 사항 (Limitations)
+
+모킹 서버는 전체 Pulumi 엔진을 구현하지 않으므로 다음 기능이 모킹 기반 단위 테스트에서는 실행되지 않는다.
+
+- **Lifecycle Hooks**: 리소스의 `onCreate`, `onUpdate`, `onDelete` 등 생명주기 훅이 실행되지 않는다.
+- **Resource Transforms**: 리소스 변환(transform)이 적용되지 않는다.
+
+이러한 제한을 회피하려면 다음 방법을 고려할 수 있다.
+
+| 회피 방법 | 설명 |
+|-----------|------|
+| 로직 분리 | lifecycle hook이나 transform 내부의 로직을 별도 함수로 분리하여 독립적으로 단위 테스트 |
+| 모킹에서 기대 결과 반환 | hook이나 transform이 처리했을 것으로 예상되는 결과를 모킹에서 직접 반환 |
+| 통합 테스트 사용 | lifecycle hook과 resource transform의 실제 동작은 통합 테스트로 검증 |
 
 **Python 모킹 예제:**
 
@@ -477,7 +498,7 @@ Automation API로 작성된 통합 테스트 예제:
 
 ### 테스트 피라미드 적용
 
-많은 팀에서 세 가지 테스트 접근 방식을 조합하여 사용하는 것이 합리적이다.
+Pulumi는 세 가지 테스트 스타일을 모두 시도해 보고, 품질 목표, 개발 실천 방식, 애플리케이션 스타일에 가장 적합한 것을 선택할 것을 권장한다. 많은 팀에서는 이 세 가지 접근 방식을 **조합**하여 사용하는 것이 합리적이다.
 
 | 테스트 유형 | 역할 | 실행 빈도 |
 |------------|------|----------|
@@ -505,10 +526,10 @@ Automation API로 작성된 통합 테스트 예제:
 |------|-----------|-----------|----------------------|----------------|
 | TypeScript | 예 | 예 | 예 (Go로 작성) | 예 |
 | Python | 예 | 예 | 예 (Go로 작성) | 예 |
-| Go | 예 | 예 | 예 | 예 |
-| C# | 예 | 예 | 예 (Go로 작성) | 예 |
+| Go | 예 | 아니오 | 예 | 예 |
+| C# | 예 | 아니오 | 예 (Go로 작성) | 예 |
 | Java | 예 | 아니오 | 예 (Go로 작성) | 예 |
-| YAML | 아니오 | 예 | 예 (Go로 작성) | 아니오 |
+| YAML | 아니오 | 아니오 | 예 (Go로 작성) | 아니오 |
 
 ### 예제 저장소
 
