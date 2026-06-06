@@ -2,7 +2,7 @@
 
 > CLI 명령어, 플래그, 슬래시 명령어, 대화형 단축키, 키바인딩 설정, 내장 도구 전체 참조
 >
-> **원문**: [CLI Reference](https://code.claude.com/docs/en/cli-reference) | [Commands](https://code.claude.com/docs/en/commands) | [Interactive Mode](https://code.claude.com/docs/en/interactive-mode) | [Keybindings](https://code.claude.com/docs/en/keybindings) | [Tools Reference](https://code.claude.com/docs/en/tools-reference)
+> **원문**: [CLI Reference](https://code.claude.com/docs/en/cli-reference) | [Commands](https://code.claude.com/docs/en/commands) | [Interactive Mode](https://code.claude.com/docs/en/interactive-mode) | [Keybindings](https://code.claude.com/docs/en/keybindings) | [Tools Reference](https://code.claude.com/docs/en/tools-reference) | [Fullscreen](https://code.claude.com/docs/en/fullscreen)
 >
 > **기존 링크**: [CLI Reference - Anthropic](https://docs.anthropic.com/en/docs/claude-code/cli-reference) | [Interactive Mode - Anthropic](https://docs.anthropic.com/en/docs/claude-code/interactive-mode) | [Slash Commands - Anthropic](https://docs.anthropic.com/en/docs/claude-code/slash-commands) | [SDK - Anthropic](https://docs.anthropic.com/en/docs/claude-code/sdk)
 
@@ -92,7 +92,7 @@ Claude Code의 동작을 커스터마이즈하는 명령줄 플래그입니다. 
 | `--model` | 세션 모델 설정. 별칭 (`sonnet`, `opus`) 또는 전체 이름. `model` 설정 및 `ANTHROPIC_MODEL` 오버라이드 | `claude --model claude-sonnet-4-6` |
 | `--name`, `-n` | 세션 표시 이름 설정. `/resume` 및 터미널 제목에 표시 | `claude -n "my-feature-work"` |
 | `--no-chrome` | Chrome 브라우저 통합 비활성화 | `claude --no-chrome` |
-| `--no-session-persistence` | 세션持久化 비활성화. print 모드만 | `claude -p --no-session-persistence "쿼리"` |
+| `--no-session-persistence` | 세션 저장을 비활성화하여 디스크에 기록하지 않고 재개 불가. print 모드만. `CLAUDE_CODE_SKIP_PROMPT_HISTORY` 환경변수로 모든 모드에서 동일 효과 | `claude -p --no-session-persistence "쿼리"` |
 | `--output-format` | print 모드 출력 형식 지정 (`text`, `json`, `stream-json`) | `claude -p "쿼리" --output-format json` |
 | `--permission-mode` | 지정된 권한 모드로 시작. `default`, `acceptEdits`, `plan`, `auto`, `dontAsk`, `bypassPermissions` | `claude --permission-mode plan` |
 | `--permission-prompt-tool` | 비대화형 모드에서 권한 프롬프트를 처리할 MCP 도구 지정 | `claude -p --permission-prompt-tool mcp_auth_tool "쿼리"` |
@@ -214,6 +214,8 @@ Claude Code는 시스템 프롬프트 커스터마이징을 위한 4개의 플�
 | `/sandbox` | 샌드박스 모드 토글 |
 | `/schedule [설명]` | 루틴 생성, 업데이트, 목록, 실행. 별칭: `/routines` |
 | `/scroll-speed` | 마우스 휠 스크롤 속도 조정 |
+| `/pr-comments [PR]` | **v2.1.91에서 제거됨.** PR 코멘트 조회는 Claude에게 직접 요청 |
+| `/privacy-settings` | 개인정보 설정 보기 및 업데이트. Pro 및 Max 플랜 구독자만 사용 가능 |
 | `/security-review` | 현재 브랜치의 보안 취약점 분석 |
 | `/setup-bedrock` | Amazon Bedrock 인증 구성 마법사 |
 | `/setup-vertex` | Google Vertex AI 인증 구성 마법사 |
@@ -358,6 +360,31 @@ Claude Code는 시스템 프롬프트 커스터마이징을 위한 4개의 플�
 
 터미널로 돌아오면 마지막 완료 턴 이후 3분 이상 경과 시 한 줄 요약이 표시됩니다. `/recap`으로 수동 생성. `/config`에서 비활성화 가능.
 
+### PR 리뷰 상태
+
+열린 pull request가 있는 브랜치에서 작업하면 푸터에 클릭 가능한 PR 링크가 표시됩니다 (예: "PR #446"). 링크의 밑줄 색상으로 리뷰 상태를 나타냅니다:
+
+| 색상 | 의미 |
+|------|------|
+| 녹색 | 승인됨 |
+| 노란색 | 리뷰 대기 중 |
+| 빨간색 | 변경 요청됨 |
+| 회색 | 초안 |
+
+PR이 병합되거나 닫히면 뱃지가 사라집니다. macOS에서 `Cmd+click`, Windows/Linux에서 `Ctrl+click`으로 브라우저에서 열기. 상태는 60초마다, 그리고 `gh pr` 또는 `git push` 명령 실행 직후에 갱신됩니다.
+
+### 작업 목록 (Task list)
+
+복잡한 다단계 작업 시 Claude가 작업 목록을 생성하여 진행 상황을 추적합니다. 작업은 터미널 상태 영역에 표시됩니다.
+
+- `Ctrl+T`로 작업 목록 보기 토글. 한 번에 최대 5개 작업 표시
+- 모든 작업 확인 또는 삭제: Claude에게 직접 "show me all tasks" 또는 "clear all tasks" 요청
+- 작업은 컨텍스트 압축 후에도 유지되어 대규모 프로젝트에서 조직 유지에 도움
+- 세션 간 작업 목록 공유: `CLAUDE_CODE_TASK_LIST_ID`를 설정하여 `~/.claude/tasks/`의 명명된 디렉토리 사용
+  ```
+  CLAUDE_CODE_TASK_LIST_ID=my-project claude
+  ```
+
 ---
 
 ## 키바인딩 설정
@@ -427,6 +454,14 @@ Claude Code는 키보드 단축키 커스터마이징을 지원합니다. `/keyb
 | `app:toggleTodos` | Ctrl+T | 작업 목록 토글 |
 | `app:toggleTranscript` | Ctrl+O | 트랜스크립트 토글 |
 
+**History 액션**:
+
+| 액션 | 기본값 | 설명 |
+|------|--------|------|
+| `history:search` | Ctrl+R | 기록 검색 열기 |
+| `history:previous` | Up | 이전 기록 항목 |
+| `history:next` | Down | 다음 기록 항목 |
+
 **Chat 액션** (Chat 컨텍스트):
 
 | 액션 | 기본값 | 설명 |
@@ -435,6 +470,7 @@ Claude Code는 키보드 단축키 커스터마이징을 지원합니다. `/keyb
 | `chat:newline` | Ctrl+J | 줄바꿈 삽입 |
 | `chat:cancel` | Escape | 현재 입력 취소 |
 | `chat:clearInput` | Ctrl+L | 화면 다시 그리기. 풀스크린에서 2초 내 두 번 누르면 `/clear` 실행 |
+| `chat:clearScreen` | Cmd+K | 풀스크린에서 2초 내 두 번 누르면 `/clear` 실행 |
 | `chat:killAgents` | Ctrl+X Ctrl+K | 모든 백그라운드 서브에이전트 종료 |
 | `chat:cycleMode` | Shift+Tab | 권한 모드 순환 |
 | `chat:modelPicker` | Meta+P | 모델 선택기 열기 |
@@ -444,6 +480,42 @@ Claude Code는 키보드 단축키 커스터마이징을 지원합니다. `/keyb
 | `chat:stash` | Ctrl+S | 현재 프롬프트 임시 저장 |
 | `chat:imagePaste` | Ctrl+V (Windows/WSL: Alt+V) | 클립보드 이미지 붙여넣기 |
 | `chat:undo` | Ctrl+_, Ctrl+Shift+- | 마지막 작업 실행 취소 |
+
+**Autocomplete 액션** (Autocomplete 컨텍스트):
+
+| 액션 | 기본값 | 설명 |
+|------|--------|------|
+| `autocomplete:accept` | Tab | 제안 수락 |
+| `autocomplete:dismiss` | Escape | 메뉴 닫기 |
+| `autocomplete:previous` | Up | 이전 제안 |
+| `autocomplete:next` | Down | 다음 제안 |
+
+**Confirmation 액션** (Confirmation 컨텍스트):
+
+| 액션 | 기본값 | 설명 |
+|------|--------|------|
+| `confirm:yes` | Y, Enter | 작업 확인 |
+| `confirm:no` | N, Escape | 작업 거부 |
+| `confirm:previous` | Up | 이전 옵션 |
+| `confirm:next` | Down | 다음 옵션 |
+| `confirm:nextField` | Tab | 다음 필드 |
+| `confirm:previousField` | (없음) | 이전 필드 |
+| `confirm:toggle` | Space | 선택 토글 |
+| `confirm:cycleMode` | Shift+Tab | 권한 모드 순환 |
+| `confirm:toggleExplanation` | Ctrl+E | 권한 설명 토글 |
+
+**Permission 액션** (Confirmation 컨텍스트 — 권한 대화상자):
+
+| 액션 | 기본값 | 설명 |
+|------|--------|------|
+| `permission:toggleDebug` | (없음) | 권한 디버그 정보 토글 |
+
+**Transcript 액션** (Transcript 컨텍스트):
+
+| 액션 | 기본값 | 설명 |
+|------|--------|------|
+| `transcript:toggleShowAll` | Ctrl+E | 모든 콘텐츠 표시 토글 |
+| `transcript:exit` | q, Ctrl+C, Escape | 트랜스크립트 뷰 종료 |
 
 **History Search 액션** (HistorySearch 컨텍스트):
 
@@ -460,6 +532,135 @@ Claude Code는 키보드 단축키 커스터마이징을 지원합니다. `/keyb
 | 액션 | 기본값 | 설명 |
 |------|--------|------|
 | `task:background` | Ctrl+B | 현재 작업 백그라운드 전환 |
+
+**Theme 액션** (ThemePicker 컨텍스트):
+
+| 액션 | 기본값 | 설명 |
+|------|--------|------|
+| `theme:toggleSyntaxHighlighting` | Ctrl+T | 구문 하이라이트 토글 |
+
+**Help 액션** (Help 컨텍스트):
+
+| 액션 | 기본값 | 설명 |
+|------|--------|------|
+| `help:dismiss` | Escape | 도움말 메뉴 닫기 |
+
+**Tabs 액션** (Tabs 컨텍스트):
+
+| 액션 | 기본값 | 설명 |
+|------|--------|------|
+| `tabs:next` | Tab, Right | 다음 탭 |
+| `tabs:previous` | Shift+Tab, Left | 이전 탭 |
+
+**Attachments 액션** (Attachments 컨텍스트):
+
+| 액션 | 기본값 | 설명 |
+|------|--------|------|
+| `attachments:next` | Right | 다음 첨부 |
+| `attachments:previous` | Left | 이전 첨부 |
+| `attachments:remove` | Backspace, Delete | 선택한 첨부 제거 |
+| `attachments:exit` | Down, Escape | 첨부 네비게이션 종료 |
+
+**Footer 액션** (Footer 컨텍스트):
+
+| 액션 | 기본값 | 설명 |
+|------|--------|------|
+| `footer:next` | Right | 다음 푸터 항목 |
+| `footer:previous` | Left | 이전 푸터 항목 |
+| `footer:up` | Up | 위로 이동 (최상단에서 선택 해제) |
+| `footer:down` | Down | 아래로 이동 |
+| `footer:openSelected` | Enter | 선택한 항목 열기 |
+| `footer:clearSelection` | Escape | 푸터 선택 해제 |
+
+**Message Selector 액션** (MessageSelector 컨텍스트):
+
+| 액션 | 기본값 | 설명 |
+|------|--------|------|
+| `messageSelector:up` | Up, K, Ctrl+P | 위로 이동 |
+| `messageSelector:down` | Down, J, Ctrl+N | 아래로 이동 |
+| `messageSelector:top` | Ctrl+Up, Shift+Up, Meta+Up, Shift+K | 맨 위로 |
+| `messageSelector:bottom` | Ctrl+Down, Shift+Down, Meta+Down, Shift+J | 맨 아래로 |
+| `messageSelector:select` | Enter | 메시지 선택 |
+
+**Diff 액션** (DiffDialog 컨텍스트):
+
+| 액션 | 기본값 | 설명 |
+|------|--------|------|
+| `diff:dismiss` | Escape | diff 뷰어 닫기 |
+| `diff:previousSource` | Left | 이전 diff 소스 |
+| `diff:nextSource` | Right | 다음 diff 소스 |
+| `diff:previousFile` | Up, K | 이전 파일; 상세 뷰에서 한 줄 위로 스크롤 |
+| `diff:nextFile` | Down, J | 다음 파일; 상세 뷰에서 한 줄 아래로 스크롤 |
+| `diff:viewDetails` | Enter | diff 세부사항 보기 |
+| `diff:back` | (컨텍스트별) | diff 뷰어에서 뒤로 |
+
+**Model Picker 액션** (ModelPicker 컨텍스트):
+
+| 액션 | 기본값 | 설명 |
+|------|--------|------|
+| `modelPicker:decreaseEffort` | Left | 노력 수준 감소 |
+| `modelPicker:increaseEffort` | Right | 노력 수준 증가 |
+| `modelPicker:thisSessionOnly` | s | 이 세션에만 모델 적용 |
+
+**Select 액션** (Select 컨텍스트):
+
+| 액션 | 기본값 | 설명 |
+|------|--------|------|
+| `select:next` | Down, J, Ctrl+N | 다음 옵션 |
+| `select:previous` | Up, K, Ctrl+P | 이전 옵션 |
+| `select:accept` | Enter | 선택 수락 |
+| `select:cancel` | Escape | 선택 취소 |
+
+**Plugin 액션** (Plugin 컨텍스트):
+
+| 액션 | 기본값 | 설명 |
+|------|--------|------|
+| `plugin:toggle` | Space | 플러그인 선택 토글 |
+| `plugin:install` | I | 선택한 플러그인 설치 |
+| `plugin:favorite` | F | 선택한 플러그인 즐겨찾기 (Installed 탭 상단 정렬) |
+
+**Settings 액션** (Settings 컨텍스트):
+
+| 액션 | 기본값 | 설명 |
+|------|--------|------|
+| `settings:search` | / | 검색 모드 진입 |
+| `settings:retry` | R | 사용량 데이터 다시 로드 (에러 시) |
+| `settings:close` | Enter | 변경 사항 저장 후 닫기. Escape는 변경 사항 폐기 후 닫기 |
+
+**Doctor 액션** (Doctor 컨텍스트):
+
+| 액션 | 기본값 | 설명 |
+|------|--------|------|
+| `doctor:fix` | F | 진단 리포트를 Claude에 보내 문제 수정. 문제 발견 시에만 활성 |
+
+**Voice 액션** (Chat 컨텍스트 — 음성 받아쓰기 활성화 시):
+
+| 액션 | 기본값 | 설명 |
+|------|--------|------|
+| `voice:pushToTalk` | Space | 프롬프트 받아쓰기. `/voice` 모드에 따라 길게 누르거나 탭 |
+
+**Scroll 액션** (Scroll 컨텍스트 — 풀스크린 렌더링 활성화 시):
+
+| 액션 | 기본값 | 설명 |
+|------|--------|------|
+| `scroll:lineUp` | (없음) | 한 줄 위로 스크롤. 마우스 휠이 이 액션 트리거 |
+| `scroll:lineDown` | (없음) | 한 줄 아래로 스크롤. 마우스 휠이 이 액션 트리거 |
+| `scroll:pageUp` | PageUp | 뷰포트 높이의 절반 위로 스크롤 |
+| `scroll:pageDown` | PageDown | 뷰포트 높이의 절반 아래로 스크롤 |
+| `scroll:top` | Ctrl+Home | 대화 시작으로 이동 |
+| `scroll:bottom` | Ctrl+End | 최신 메시지로 이동 후 자동 추적 재활성화 |
+| `scroll:halfPageUp` | (없음) | 뷰포트 절반 위로 (vi 스타일 리바인드용) |
+| `scroll:halfPageDown` | (없음) | 뷰포트 절반 아래로 (vi 스타일 리바인드용) |
+| `scroll:fullPageUp` | (없음) | 뷰포트 전체 위로 스크롤 |
+| `scroll:fullPageDown` | (없음) | 뷰포트 전체 아래로 스크롤 |
+| `selection:copy` | Ctrl+Shift+C / Cmd+C | 선택한 텍스트를 클립보드에 복사 |
+| `selection:clear` | (없음) | 활성 텍스트 선택 해제 |
+| `selection:extendLeft` | Shift+Left | 선택을 왼쪽으로 한 칸 확장 |
+| `selection:extendRight` | Shift+Right | 선택을 오른쪽으로 한 칸 확장 |
+| `selection:extendUp` | Shift+Up | 선택을 위로 한 줄 확장. 상단 도달 시 뷰포트 스크롤 |
+| `selection:extendDown` | Shift+Down | 선택을 아래로 한 줄 확장. 하단 도달 시 뷰포트 스크롤 |
+| `selection:extendLineStart` | Shift+Home | 선택을 줄 시작까지 확장 |
+| `selection:extendLineEnd` | Shift+End | 선택을 줄 끝까지 확장 |
 
 ### 키스트로크 문법
 
@@ -617,6 +818,90 @@ Claude Code는 키바인딩을 검증하고 다음에 대한 경고를 표시합
 | `iw`/`aw`/`i"`/... | 텍스트 오브젝트 선택 |
 | `v`/`V` | 문자/줄 단위 전환 또는 종료 |
 
+### Vim 모드 상호작용
+
+vim 모드와 키바인딩은 독립적으로 동작합니다:
+
+- **Vim 모드**: 텍스트 입력 수준에서 처리 (커서 이동, 모드, 모션)
+- **키바인딩**: 컴포넌트 수준에서 처리 (작업 목록 토글, 제출 등)
+- vim 모드의 `Esc`는 INSERT → NORMAL 전환만 수행하며, `chat:cancel`을 트리거하지 않음
+- 대부분의 `Ctrl+key` 단축키는 vim 모드를 통과하여 키바인딩 시스템으로 전달됨
+- vim NORMAL 모드에서 `?`는 도움말 메뉴 표시 (vim 동작)
+- vim NORMAL 모드에서 `/`는 기록 검색 열기 (표준 모드의 `Ctrl+R`과 동일)
+
+---
+
+## Fullscreen 렌더링
+
+Fullscreen 렌더링은 깜빡임을 제거하고 긴 대화에서 메모리 사용량을 일정하게 유지하며 마우스를 지원하는 대체 렌더링 경로입니다. `vim`이나 `htop`처럼 터미널의 대체 화면 버퍼에 인터페이스를 그리며, 현재 보이는 메시지만 렌더링합니다.
+
+### 활성화
+
+```
+# 세션 내에서
+/tui fullscreen
+
+# 환경변수로
+CLAUDE_CODE_NO_FLICKER=1 claude
+```
+
+`/tui` 명령은 `tui` 설정을 저장하고 대화를 유지한 채 fullscreen으로 재시작합니다. `/tui default`로 비활성화. `CLAUDE_CODE_DISABLE_ALTERNATE_SCREEN=1`로 강제로 클래식 렌더러 사용 가능.
+
+### 주요 변화
+
+| 이전 | 이후 | 설명 |
+|------|------|------|
+| `Cmd+f` 또는 tmux 검색 | `Ctrl+O` 후 `/`로 검색 또는 `[`로 스크롤백에 기록 | 대화 검색 및 리뷰 |
+| 터미널 네이티브 클릭/드래그 | 앱 내 선택, 마우스 놓으면 자동 복사 | 마우스 사용 |
+| `Cmd`-클릭으로 URL 열기 | URL 클릭 | 마우스 사용 |
+
+### 마우스 지원
+
+- 프롬프트 입력 영역 클릭으로 커서 위치 지정
+- `/` 명령 또는 `@` 파일 목록에서 제안 클릭으로 수락
+- 축소된 도구 결과 클릭으로 확장/축소 토글
+- URL 또는 파일 경로 클릭으로 열기
+- 클릭 및 드래그로 텍스트 선택. 더블클릭: 단어 선택, 트리플클릭: 줄 선택
+- 마우스 휠로 대화 스크롤
+
+선택한 텍스트는 마우스 놓을 때 자동으로 클립보드에 복사. `/config`에서 Copy on select 토글로 비활성화 가능. 비활성화 시 `Ctrl+Shift+C`로 수동 복사.
+
+### 스크롤 단축키
+
+| 단축키 | 동작 |
+|--------|------|
+| `PgUp` / `PgDn` | 화면 절반씩 위/아래 스크롤 |
+| `Ctrl+Home` | 대화 시작으로 이동 |
+| `Ctrl+End` | 최신 메시지로 이동 후 자동 추적 재활성화 |
+| 마우스 휠 | 몇 줄씩 스크롤 |
+
+스크롤 속도 조정: `CLAUDE_CODE_SCROLL_SPEED=3` (1~20, vim 기본값 3). `/scroll-speed`로 대화형 조정.
+
+### 마우스 캡처 비활성화
+
+마우스 캡처가 방해가 되면 비활력화하면서 깜빡임 없는 렌더링 유지:
+
+```
+CLAUDE_CODE_NO_FLICKER=1 CLAUDE_CODE_DISABLE_MOUSE=1 claude
+```
+
+마우스 캡처 비활성화 시 `PgUp`/`PgDn`/`Ctrl+Home`/`Ctrl+End` 키보드 스크롤은 여전히 동작.
+
+### 트랜스크립트 모드 탐색
+
+`Ctrl+O`로 트랜스크립트 모드 전환. `less` 스타일 탐색 및 검색:
+
+| 키 | 동작 |
+|----|------|
+| `/` | 검색 열기 |
+| `n` / `N` | 다음/이전 일치 항목 |
+| `j`/`k` 또는 ↑/↓ | 한 줄 스크롤 |
+| `g`/`G` 또는 Home/End | 맨 위/아래로 |
+| `Ctrl+u` / `Ctrl+d` | 반 페이지 스크롤 |
+| `Ctrl+b` / `Ctrl+f` 또는 Space/b | 전체 페이지 스크롤 |
+| `[` | 전체 대화를 터미널 네이티브 스크롤백에 기록 |
+| `v` | 대화를 임시 파일로 저장하고 `$VISUAL`/`$EDITOR`로 열기 |
+
 ---
 
 ## 내장 도구
@@ -667,6 +952,53 @@ Claude Code가 코드베이스를 이해하고 수정하는 데 사용하는 빌
 | `Workflow` | 다수의 서브에이전트를 오케스트레이션하는 동적 워크플로우 실행 | 예 |
 | `Write` | 파일 생성 또는 덮어쓰기 | 예 |
 
+### PowerShell 도구 (Windows)
+
+Windows에서 PowerShell 명령을 네이티브로 실행합니다. Git Bash 없이 Windows에서는 자동 활성화, Git Bash 설치 환경에서는 점진적 배포 중. Linux, macOS, WSL에서는 옵트인.
+
+**활성화**: `CLAUDE_CODE_USE_POWERSHELL_TOOL=1` 환경변수 또는 `settings.json`:
+
+```json
+{
+  "env": {
+    "CLAUDE_CODE_USE_POWERSHELL_TOOL": "1"
+  }
+}
+```
+
+- Windows에서 `0`으로 설정하면 배포에서 옵아웃. Linux/macOS/WSL에서는 PowerShell 7+ 필요 (`pwsh`)
+- Windows에서 `pwsh.exe`(PowerShell 7+) 자동 감지, 없으면 `powershell.exe`(5.1) 폴백
+- PowerShell 활성화 시 기본 쉘로 처리. Git Bash 설치 시 Bash 도구도 POSIX 스크립트용으로 사용 가능
+- `-ExecutionPolicy Bypass`로 프로세스 범위에서 실행. 그룹 정책 `MachinePolicy`/`UserPolicy`는 오버라이드하지 않음
+- 존중하려면 `CLAUDE_CODE_POWERSHELL_RESPECT_EXECUTION_POLICY=1` 설정
+
+**셸 선택 설정**:
+
+| 설정 | 설명 |
+|------|------|
+| `"defaultShell": "powershell"` | 대화형 `!` 명령을 PowerShell로 라우팅 |
+| `"shell": "powershell"` (훅) | 해당 훅을 PowerShell에서 실행 |
+| `shell: powershell` (스킬 프론트매터) | `` !`command` `` 블록을 PowerShell에서 실행 |
+
+**프리뷰 제한사항**: PowerShell 프로필이 로드되지 않음. Windows에서 샌드박싱 미지원.
+
+### Monitor 도구
+
+Monitor 도구는 Claude가 백그라운드에서 무언가를 감시하고 변화 시 대화를 일시정지하지 않고 반응할 수 있게 합니다.
+
+**사용 사례**:
+- 로그 파일 테일링 및 에러 발생 시 플래그
+- PR 또는 CI 작업 상태 폴링 및 변화 시 리포트
+- 디렉토리 파일 변경 감시
+- 장기 실행 스크립트 출력 추적
+
+Claude가 감시용 작은 스크립트를 작성하여 백그라운드에서 실행하고, 각 출력 라인이 도착하는 대로 수신합니다. 같은 세션에서 계속 작업 가능하며 이벤트 발생 시 Claude가 끼어듭니다.
+
+- Monitor는 Bash와 동일한 권한 규칙 사용
+- Amazon Bedrock, Google Vertex AI, Microsoft Foundry에서는 사용 불가
+- `DISABLE_TELEMETRY` 또는 `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC` 설정 시 비활성화
+- 플러그인이 활성 상태일 때 자동으로 시작되는 모니터 선언 가능 (플러그인 모니터 참조)
+
 ### 권한 규칙 형식
 
 | 규칙 형식 | 적용 도구 | 세부 사항 |
@@ -688,6 +1020,7 @@ Claude Code가 코드베이스를 이해하고 수정하는 데 사용하는 빌
 
 - [Chrome 확장](https://code.claude.com/docs/en/chrome) — 브라우저 자동화 및 웹 테스트
 - [대화형 모드](https://code.claude.com/docs/en/interactive-mode) — 단축키, 입력 모드, 대화형 기능
+- [Fullscreen 렌더링](https://code.claude.com/docs/en/fullscreen) — 깜빡임 없는 렌더링, 마우스 지원
 - [빠른 시작](https://code.claude.com/docs/en/quickstart) — Claude Code 시작하기
 - [일반 워크플로우](https://code.claude.com/docs/en/common-workflows) — 고급 워크플로우 및 패턴
 - [설정](https://code.claude.com/docs/en/settings) — 구성 옵션
