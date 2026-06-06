@@ -27,7 +27,7 @@ Claude Code는 Anthropic이 개발한 에이전트 기반 코딩 도구입니다
 | 05 | [스킬 (Skills)](./05-slash-commands.md) | SKILL.md 포맷, 커스텀 슬래시 명령어, 번들 스킬, scope hierarchy |
 | 06 | [훅 (Hooks)](./06-hooks.md) | 이벤트 핸들러, 5가지 훅 타입, 필터링, 백그라운드 실행 |
 | 07 | [MCP 통합](./07-mcp.md) | Model Context Protocol, OAuth, Tool Search, WebSocket, 자동 재연결 |
-| 08 | [서브에이전트](./08-subagents.md) | 커스텀 에이전트 정의, frontmatter 필드, 모델 선택, isolation |
+| 08 | [서브에이전트 및 에이전트 팀](./08-subagents.md) | 커스텀 에이전트 정의, 에이전트 팀, frontmatter, 모델 선택, isolation |
 | 09 | [메모리](./09-memory.md) | CLAUDE.md, .claude/rules/, 자동 메모리, AGENTS.md 통합 |
 
 ### 통합 및 플랫폼
@@ -37,7 +37,7 @@ Claude Code는 Anthropic이 개발한 에이전트 기반 코딩 도구입니다
 | 10 | [IDE 통합](./10-ide-integrations.md) | VS Code, JetBrains 확장, @-mentions, 프롬프트 박스 |
 | 11 | [SDK](./11-sdk.md) | 서브프로세스 SDK, Headless 모드, --bare, 구조화된 출력 |
 | 12 | [GitHub Actions](./12-github-actions.md) | CI/CD 파이프라인, GitLab CI/CD, 스킬 사용, 커스텀 GitHub App |
-| 23 | [플랫폼](./23-platforms.md) | 데스크톱 앱, 웹, Chrome, Remote Control, Slack, 음성 입력 |
+| 23 | [플랫폼](./23-platforms.md) | 데스크톱 앱, 웹, Chrome, Remote Control, Channels, Devcontainer, Slack, 음성 입력 |
 | 25 | [Computer Use](./25-computer-use.md) | CLI에서 화면 제어, 네이티브 앱 검증, UI 테스트, 시뮬레이터 구동 |
 
 ### 모델 및 출력
@@ -52,16 +52,18 @@ Claude Code는 Anthropic이 개발한 에이전트 기반 코딩 도구입니다
 
 | # | 문서 | 설명 |
 | --- | --- | --- |
-| 15 | [일반 워크플로우](./15-common-workflows.md) | 모범 사례, 스케줄링, 서브에이전트 리서치, 대규모 코드베이스 |
+| 15 | [일반 워크플로우](./15-common-workflows.md) | 탐색→계획→코딩 워크플로우, 프롬프트 작성법, 모범 사례, 대규모 코드베이스 |
 | 20 | [Agent SDK](./20-agent-sdk.md) | TypeScript/Python SDK, 에이전트 루프, 커스텀 도구, 스트리밍, 마이그레이션 |
 | 21 | [Dynamic Workflows](./21-dynamic-workflows.md) | 병렬 에이전트 오케스트레이션, Agent Teams, Agent View, /goal |
 | 22 | [세션 및 워크트리](./22-sessions-worktrees.md) | 세션 관리, git worktree 격리, 체크포인트, 딥 링크 |
+| 26 | [Routines 및 예약 작업](./26-routines-scheduling.md) | Routines, Scheduled Tasks, CronCreate, /loop, ScheduleWakeup |
+| 27 | [Ultraplan & Ultrareview](./27-ultraplan-ultrareview.md) | 클라우드 기반 계획 수립, 다중 에이전트 병렬 코드 리뷰, 세션 리캡 |
 
 ### 보안 및 정책
 
 | # | 문서 | 설명 |
 | --- | --- | --- |
-| 13 | [보안](./13-security.md) | 보안 모델, 샌드박싱, 권한 모드, 클라우드 실행 보안 |
+| 13 | [보안](./13-security.md) | 보안 모델, 샌드박싱, 권한 모드, 데이터 사용, 법률/규정준수, ZDR |
 | 24 | [엔터프라이즈 관리](./24-enterprise-admin.md) | 관리형 설정, IAM, LLM 게이트웨이, 비용/사용량 모니터링, 규정 준수 |
 
 ### 문제 해결
