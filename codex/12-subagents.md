@@ -3,6 +3,7 @@
 > 서브에이전트 워크플로우로 Codex를 병렬 작업에 활용하는 방법, 커스텀 에이전트 정의, 팀 구성 패턴, 모델 선택 가이드
 
 **원문**: [Subagents – Codex](https://developers.openai.com/codex/subagents) | [Subagent Concepts](https://developers.openai.com/codex/concepts/subagents) | [Multi-agents Concepts](https://developers.openai.com/codex/concepts/multi-agents)
+> **참고**: 원문 중 Building AI Teams 페이지(https://developers.openai.com/codex/building-ai-teams)는 현재 403 Forbidden으로 공개 접근이 불가합니다.
 
 ---
 
@@ -77,23 +78,19 @@ Then call spawn_agents_on_csv with:
 
 ### 멀티 에이전트 (실험적)
 
-멀티 에이전트 워크플로우는 현재 **실험적(experimental)**이며 명시적으로 활성화해야 합니다.
+> **주의**: 서브에이전트 워크플로우는 공식 문서에서 "experimental and may change as subagent support evolves"라고 명시되어 있습니다. 이 문서에 설명된 기능은 향후 변경될 수 있습니다.
+> (근거: [Subagents – Codex](https://developers.openai.com/codex/subagents))
 
-CLI에서 `/experimental`을 입력한 뒤 **Multi-agents**를 활성화하고 Codex를 재시작합니다.
+공식 문서에서 멀티 에이전트(multi-agents)는 서브에이전트와 동일한 기능의 개념적 설명 페이지로 제공됩니다. 서브에이전트가 설정 및 실무 중심의 문서라면, 멀티 에이전트 개념 페이지는 모델 선택과 추론 설정에 집중합니다.
 
-또는 설정 파일(`~/.codex/config.toml`)에 직접 추가합니다.
-
-```toml
-[features]
-multi_agent = true
-```
+**참고**: 이 문서의 이전 버전에서 `/experimental` CLI 명령어와 `[features] multi_agent = true` 설정을 멀티 에이전트 활성화 방법으로 설명했으나, 이 설정은 공식 문서 어디에서도 확인되지 않았습니다. 현재 릴리스에서는 서브에이전트 워크플로우가 기본적으로 활성화되어 있습니다.
 
 ### 자동 스폰 여부 비교
 
 | 버전 | 자동 스폰 | 비고 |
 | --- | --- | --- |
 | **서브에이전트 (현재)** | 사용자가 명시적으로 요청할 때만 | "spawn two agents", "delegate this work in parallel", "use one agent per point" 등 직접 지시 필요 |
-| **멀티 에이전트 (실험적)** | Codex가 자동으로 판단하거나 사용자가 명시적 요청 | 장시간 실행 명령/폴링 워크플로우에 `monitor` 역할 활용 |
+| **멀티 에이전트 (개념)** | 서브에이전트와 동일 | 별도의 활성화 없이 서브에이전트 기능과 공유 |
 
 ---
 
@@ -138,7 +135,8 @@ Codex는 다음 빌트인 에이전트를 제공합니다.
 | `default` | 범용 폴백 에이전트 |
 | `worker` | 구현 및 수정에 집중하는 실행 중심 에이전트 |
 | `explorer` | 읽기 중심 코드베이스 탐색 에이전트 |
-| `monitor` | 장시간 실행 명령/작업 모니터링 역할 (대기/폴링에 최적화). 멀티 에이전트(실험적)에서만 제공 |
+
+> **참고**: 이전 버전에서 `monitor` 빌트인 에이전트를 문서화했으나, 공식 subagents 문서와 multi-agents 개념 문서 어디에서도 `monitor` 에이전트에 대한 언급이 확인되지 않았습니다. 공식 빌트인 에이전트는 위 세 가지뿐입니다.
 
 ### 커스텀 에이전트 파일
 
@@ -149,7 +147,7 @@ Codex는 다음 빌트인 에이전트를 제공합니다.
 | 개인용 | `~/.codex/agents/` |
 | 프로젝트 범위 | `.codex/agents/` |
 
-각 파일은 하나의 커스텀 에이전트를 정의합니다. Codex는 이 파일들을 스폰된 세션의 구성 레이어로 로드하므로, 일반 Codex 세션 config와 동일한 설정을 오버라이드할 수 있습니다.
+각 파일은 하나의 커스텀 에이전트를 정의합니다. Codex는 이 파일들을 스폰된 세션의 구성 레이어로 로드하므로, 일반 Codex 세션 config와 동일한 설정을 오버라이드할 수 있습니다. 다만 이 방식은 전용 에이전트 매니페스트보다 무거울 수 있으며, **포맷이 작성 및 공유가 성숙해짐에 따라 변경될 수 있습니다**. TOML 파일 형식에 의존하여 자동화를 구축할 때 이 점을 고려하세요. (근거: [Subagents – Codex](https://developers.openai.com/codex/subagents))
 
 ### 커스텀 에이전트 파일 스키마
 
@@ -184,62 +182,45 @@ nickname_candidates = ["Atlas", "Delta", "Echo"]
 
 ---
 
-## 멀티 에이전트 아키텍처 — 역할 기반 구성 (실험적)
+## 멀티 에이전트 개념 — 모델 선택 및 추론 설정
 
-멀티 에이전트 모드에서는 `[agents]` 섹션에서 역할(role) 기반으로 에이전트를 구성합니다. 로컬 설정(`~/.codex/config.toml`) 또는 프로젝트별 설정(`.codex/config.toml`)에 정의합니다.
+공식 multi-agents 개념 문서는 서브에이전트와 동일한 워크플로우에 대한 모델 선택과 추론 설정 가이드를 제공합니다. 핵심 내용은 다음과 같습니다.
 
-### 역할 스키마
+### 모델 선택 (Multi-agents 개념 기준)
 
-각 역할은 Codex가 이 에이전트를 언제 사용할지에 대한 가이드(`description`)를 제공하고, 선택적으로 역할별 config 파일(`config_file`)을 로드합니다.
+공식 multi-agents 개념 문서에서 권장하는 모델:
 
-| 필드 | 타입 | 필수 | 설명 |
-| --- | --- | --- | --- |
-| `[agents.<name>]` | table | No | 역할 선언. `<name>`이 에이전트 실행(spawn) 시 `agent_type`이 됨 |
-| `agents.<name>.description` | string | No | Codex가 역할을 선택할 때 참고하는 가이드 |
-| `agents.<name>.config_file` | string (path) | No | 해당 역할로 실행(spawn)된 에이전트에 적용할 TOML config 레이어 경로 |
+| 모델 | 용도 | 특징 |
+| --- | --- | --- |
+| `gpt-5.3-codex` | 더 강한 추론이 필요한 에이전트 | 코드 리뷰, 보안 분석, 다단계 구현, 모호한 요구사항 작업에 적합 |
+| `gpt-5.3-codex-spark` | 속도를 우선하는 에이전트 | 탐색, 읽기 중심 스캔, 빠른 요약. 병렬 워커에 적합 |
 
-**주의사항**:
+> **API 사용자 참고**: API를 통해 Codex를 사용하는 경우 **GPT-5.2-Codex**를 사용하세요. (근거: [Multi-agents Concepts](https://developers.openai.com/codex/concepts/multi-agents))
 
-- Codex는 `[agents.<name>]`의 알 수 없는 필드를 거부합니다.
-- 상대적 `config_file` 경로는 역할을 정의한 `config.toml` 기준으로 해석됩니다.
-- Codex는 config 로드 시 `agents.<name>.config_file`을 검증하며, 기존 파일을 가리켜야 합니다.
-- 역할 이름이 빌트인 역할(예: `explorer`)과 일치하면 사용자 정의 역할이 우선합니다.
-- config 파일을 로드할 수 없으면 파일을 수정할 때까지 에이전트 실행(spawn)이 실패할 수 있습니다.
-- 역할에서 설정하지 않은 구성은 부모 세션에서 상속됩니다.
+### 서브에이전트 개념 문서의 모델 가이드
 
-### 역할 정의 예시
+공식 subagents 개념 문서에서 권장하는 모델:
 
-```toml
-# .codex/config.toml
-[agents]
-max_threads = 6
-max_depth = 1
+| 모델 | 용도 |
+| --- | --- |
+| `gpt-5.5` | 대부분의 작업 시작점. 모호하고 다단계적인 작업에 강점 |
+| `gpt-5.4` | GPT-5.4에 고정된 워크플로우. 강력한 코딩, 추론, 도구 사용 |
+| `gpt-5.4-mini` | 속도와 효율성 우선. 탐색, 읽기 중심 스캔, 병렬 워커에 적합 |
+| `gpt-5.3-codex-spark` | 거의 즉각적인 텍스트 전용 반복 (ChatGPT Pro, research preview) |
 
-[agents.explorer]
-description = "Read-only codebase explorer for gathering evidence before changes are proposed."
-config_file = "agents/explorer.toml"
+> **모델 이름 불일치 안내**: 공식 문서의 subagents 설정 페이지 예시에서는 `gpt-5.3-codex-spark`, `gpt-5.4`, `gpt-5.4-mini`를 사용하고, subagents 개념 페이지는 `gpt-5.5` 시작을 권장하며, multi-agents 개념 페이지는 `gpt-5.3-codex` 시리즈만 언급합니다. 세 문서 간 모델 이름에 차이가 있으므로, 최신 Models 페이지에서 현재 사용 가능한 모델을 확인하는 것을 권장합니다.
 
-[agents.reviewer]
-description = "PR reviewer focused on correctness, security, and missing tests."
-config_file = "agents/reviewer.toml"
+### 추론 노력 (`model_reasoning_effort`)
 
-[agents.docs_researcher]
-description = "Documentation specialist that uses the docs MCP server to verify APIs and framework behavior."
-config_file = "agents/docs-researcher.toml"
-```
+두 문서가 공통으로 권장하는 추론 노력 설정:
 
-역할별 config 파일 예시 (`agents/reviewer.toml`):
+| 값 | 용도 |
+| --- | --- |
+| `high` | 복잡한 논리 추적, 가정 검증, 엣지 케이스 처리 (리뷰어, 보안 에이전트 등) |
+| `medium` | 대부분의 에이전트에 대한 균형 잡힌 기본값 |
+| `low` | 간단한 작업에서 속도가 가장 중요할 때 |
 
-```toml
-model = "gpt-5.5"
-model_reasoning_effort = "high"
-sandbox_mode = "read-only"
-developer_instructions = """
-Review code like an owner.
-Prioritize correctness, security, behavior regressions, and missing test coverage.
-Lead with concrete findings, include reproduction steps when possible, and avoid style-only comments unless they hide a real bug.
-"""
-```
+추론 노력이 높을수록 응답 시간과 토큰 사용량이 증가하지만 복잡한 작업의 품질이 향상될 수 있습니다.
 
 ---
 
@@ -253,8 +234,8 @@ Lead with concrete findings, include reproduction steps when possible, and avoid
 
 | 역할 | 책임 | 모델 | reasoning | sandbox |
 | --- | --- | --- | --- | --- |
-| `pr_explorer` / `explorer` | 코드베이스 매핑, 증거 수집 | `gpt-5.3-codex-spark` 또는 `gpt-5.4-mini` | `medium` | `read-only` |
-| `reviewer` | 정확성, 보안, 테스트 리스크 탐색 | `gpt-5.5` 또는 `gpt-5.4` | `high` | `read-only` |
+| `pr_explorer` / `explorer` | 코드베이스 매핑, 증거 수집 | `gpt-5.3-codex-spark` | `medium` | `read-only` |
+| `reviewer` | 정확성, 보안, 테스트 리스크 탐색 | `gpt-5.4` | `high` | `read-only` |
 | `docs_researcher` | 프레임워크/API 문서 확인 (MCP 서버 활용) | `gpt-5.4-mini` | `medium` | `read-only` |
 
 서브에이전트 방식의 커스텀 에이전트 파일 예시:
@@ -460,29 +441,17 @@ Codex는 에이전트 간 오케스트레이션을 처리합니다.
 
 ### `/agent` — 에이전트 스레드 전환
 
-CLI에서 활성 에이전트 스레드 간 전환하고 진행 중인 스레드를 검사합니다.
+CLI에서 활성 에이전트 스레드 간 전환하고 진행 중인 스레드를 검사합니다. 서브에이전트를 조종(steer), 중지(stop), 완료된 에이전트 스레드를 닫으려면 Codex에 직접 요청할 수도 있습니다.
 
-### `/experimental` — 실험적 기능 활성화
-
-멀티 에이전트 워크플로우 등 실험적 기능을 켭니다. **Multi-agents**를 활성화한 후 Codex를 재시작해야 합니다.
-
-### `/ps` — 실행 중인 에이전트 확인
-
-현재 실행 중인 에이전트 스레드를 확인합니다.
-
-### `/stop` — 에이전트 중지
-
-실행 중인 서브에이전트를 중지합니다. Codex에 직접 요청하여 실행 중인 서브에이전트를 조종(steer), 중지(stop), 또는 완료된 에이전트 스레드를 닫을 수도 있습니다.
-
-### `wait` 도구
-
-장시간 실행 명령이나 폴링 워크플로우에 사용합니다. 호출당 최대 1시간까지 폴링 윈도우를 지원합니다. (멀티 에이전트 실험 모드에서 제공)
+> **참고**: 이전 버전에서 `/experimental`, `/ps`, `/stop` CLI 명령어와 `wait` 도구를 문서화했으나, 이 명령어와 도구는 공식 subagents 문서와 multi-agents 개념 문서 어디에서도 확인되지 않았습니다. 현재 공식 문서에서 확인된 유일한 에이전트 관련 CLI 명령어는 `/agent`입니다.
 
 ---
 
 ## 모델 및 추론 설정 가이드
 
 서브에이전트와 멀티 에이전트는 동일한 모델 선택 철학을 공유합니다. **대부분의 Codex 작업은 `gpt-5.5`로 시작하는 것을 권장합니다.** 속도와 비용이 중요한 가벼운 서브에이전트 작업에는 `gpt-5.4-mini`를, ChatGPT Pro에서 거의 즉각적인 텍스트 전용 반복이 필요하면 `gpt-5.3-codex-spark`를 사용하세요.
+
+> **API 사용자 참고**: API를 통해 Codex를 사용하는 경우 **GPT-5.2-Codex**를 사용하세요. (근거: [Multi-agents Concepts](https://developers.openai.com/codex/concepts/multi-agents))
 
 모델이나 `model_reasoning_effort`를 고정하지 않으면 Codex가 작업에 맞게 균형을 잡아 선택합니다. 예를 들어 빠른 스캔에는 `gpt-5.4-mini`를 선호하고, 더 까다로운 추론에는 더 높은 노력의 `gpt-5.5` 구성을 선택할 수 있습니다. 더 세밀한 제어가 필요하면 프롬프트에서 직접 지시하거나 에이전트 파일에서 `model`과 `model_reasoning_effort`를 설정하세요.
 
@@ -582,19 +551,23 @@ the findings by category with file references.
 
 ## 서브에이전트 vs 멀티 에이전트 비교
 
-현재 Codex 문서에서 서브에이전트(subagents)와 멀티 에이전트(multi-agents)는 동일한 기능의 다른 버전으로 보입니다. 주요 차이점은 다음과 같습니다.
+현재 Codex 문서에서 서브에이전트(subagents)와 멀티 에이전트(multi-agents)는 동일한 워크플로우에 대한 서로 다른 관점의 설명입니다. 서브에이전트 문서가 설정과 실무 중심이라면, 멀티 에이전트 문서는 개념과 모델 선택에 집중합니다.
 
 | 구분 | 서브에이전트 (Subagents) | 멀티 에이전트 (Multi-agents) |
 | --- | --- | --- |
-| 상태 | 현재 릴리스, 기본 활성화 | 실험적, 명시적 활성화 필요 |
-| 활성화 방법 | 기본 활성화 | `/experimental` 또는 `[features] multi_agent = true` |
-| 에이전트 정의 방식 | 독립 TOML 파일 (`~/.codex/agents/` 또는 `.codex/agents/`) | `[agents.<name>]` 역할 테이블 + `config_file` |
-| 필수 필드 | `name`, `description`, `developer_instructions` | `description` (선택), `config_file` (선택) |
-| 자동 스폰 | 사용자 명시적 요청만 | Codex 자동 판단 또는 사용자 명시적 요청 |
-| `monitor` 역할 | 제공 안 함 | 장시간 실행/폴링에 최적화된 `monitor` 역할 제공 |
-| `wait` 도구 | 명시되지 않음 | 호출당 최대 1시간 폴링 지원 |
-| UI 지원 | Codex App + CLI | CLI만 (App/IDE는 예정) |
-| 용어 | subagent, agent thread | multi-agent, sub-agent, agent thread |
-| 모델 | `gpt-5.5`, `gpt-5.4`, `gpt-5.4-mini`, `gpt-5.3-codex-spark` | `gpt-5.3-codex`, `gpt-5.3-codex-spark` |
+| 문서 위치 | [codex/subagents](https://developers.openai.com/codex/subagents) | [codex/concepts/multi-agents](https://developers.openai.com/codex/concepts/multi-agents) |
+| 초점 | 설정, 커스텀 에이전트 정의, 예시, CSV 배치 | 개념 설명, 모델 선택, 추론 설정 |
+| 상태 | 현재 릴리스, 기본 활성화 | 동일한 워크플로우의 개념적 설명 |
+| 에이전트 정의 방식 | 독립 TOML 파일 (`~/.codex/agents/` 또는 `.codex/agents/`) | 설정 방식은 subagents 문서 참조 |
+| 필수 필드 | `name`, `description`, `developer_instructions` | 동일 |
+| 자동 스폰 | 사용자 명시적 요청만 | 동일 |
+| 빌트인 에이전트 | `default`, `worker`, `explorer` | 동일 |
+| CLI 명령어 | `/agent` | 동일 |
+| UI 지원 | Codex App + CLI (IDE는 예정) | 동일 |
+| 권장 모델 | `gpt-5.5` 시작, `gpt-5.4-mini` (경량), `gpt-5.3-codex-spark` (저지연) | `gpt-5.3-codex` (강한 추론), `gpt-5.3-codex-spark` (속도) |
 
-> **참고**: 두 문서는 동일한 기능의 다른 버전에 대한 것으로 보입니다. 서브에이전트 문서가 최신 버전을, 멀티 에이전트 문서가 이전 실험 버전을 설명할 가능성이 높습니다. 프로젝트에서는 서브에이전트 방식(독립 TOML 파일)을 우선 사용하는 것을 권장합니다.
+> **주의**: 이전 버전에서 두 기능을 별개의 것으로 비교하며 `monitor` 역할, `wait` 도구, `/experimental` 명령어, `[agents.<name>]` 역할 스키마 등을 멀티 에이전트 전용 기능으로 문서화했으나, 이 내용은 공식 문서에서 확인되지 않았습니다.
+>
+> **실험적 특성**: 서브에이전트 워크플로우는 공식 문서에서 "experimental and may change as subagent support evolves"라고 명시되어 있습니다. (근거: [Subagents – Codex](https://developers.openai.com/codex/subagents))
+>
+> **API 대체 모델**: API를 통해 Codex를 사용하는 경우 GPT-5.2-Codex를 사용하세요. (근거: [Multi-agents Concepts](https://developers.openai.com/codex/concepts/multi-agents))
