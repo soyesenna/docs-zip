@@ -1,6 +1,6 @@
 # 09. 메모리 시스템 (Memory)
 
-> **참조**: [How Claude remembers your project - Claude Code Docs](https://code.claude.com/docs/en/memory) | [Explore the .claude directory - Claude Code Docs](https://code.claude.com/docs/en/claude-directory) | [Manage Claude's memory - Anthropic](https://docs.anthropic.com/en/docs/claude-code/memory)
+> **참조**: [How Claude remembers your project - Claude Code Docs](https://code.claude.com/docs/en/memory) | [Explore the .claude directory - Claude Code Docs](https://code.claude.com/docs/en/claude-directory)
 
 ---
 
@@ -16,10 +16,14 @@
 - [--add-dir 플래그](#--add-dir-플래그)
 - [.claude/rules/ 디렉토리](#clauderrules-디렉토리)
 - [/memory 명령어](#memory-명령어)
+- [# 단축키로 메모리 빠르게 추가](#-단축키로-메모리-빠르게-추가)
 - [/init 명령어](#init-명령어)
 - [대규모 팀을 위한 CLAUDE.md 관리](#대규모-팀을-위한-claudemd-관리)
 - [Auto Memory](#auto-memory)
 - [.claude/ 디렉토리 구조](#claude-디렉토리-구조)
+- [애플리케이션 데이터 자동 정리](#애플리케이션-데이터-자동-정리)
+- [보관됨 (자동 정리 대상 외)](#보관됨-자동-정리-대상-외)
+- [로컬 데이터 삭제](#로컬-데이터-삭제)
 - [모범 사례](#모범-사례)
 - [포함 및 제외 가이드](#포함-및-제외-가이드)
 - [문제 해결](#문제-해결)
@@ -64,10 +68,10 @@ CLAUDE.md 파일은 여러 위치에 존재할 수 있으며, 각각 다른 범�
 
 | 범위 | 위치 | 목적 | 활용 사례 | 공유 대상 |
 |------|------|------|-----------|----------|
-| **관리형 정책** | macOS: `/Library/Application Support/ClaudeCode/CLAUDE.md`<br>Linux/WSL: `/etc/claude-code/CLAUDE.md`<br>Windows: `C:\Program Files\ClaudeCode\CLAUDE.md` | IT/DevOps가 관리하는 조직 전체 지침 | 회사 코딩 표준, 보안 정책, 컴플라이언스 요구사항 | 조직 내 모든 사용자 |
+| **관리형 정책** | macOS: `/Library/Application Support/ClaudeCode/CLAUDE.md`<br>Linux/WSL: `/etc/claude-code/CLAUDE.md`<br>Windows: `C:\ProgramData\ClaudeCode\CLAUDE.md` | IT/DevOps가 관리하는 조직 전체 지침 | 회사 코딩 표준, 보안 정책, 컴플라이언스 요구사항 | 조직 내 모든 사용자 |
 | **사용자 지침** | `~/.claude/CLAUDE.md` | 모든 프로젝트에 적용되는 개인 설정 | 코드 스타일링 선호도, 개인 도구 단축키 | 본인만 (모든 프로젝트) |
 | **프로젝트 지침** | `./CLAUDE.md` 또는 `./.claude/CLAUDE.md` | 프로젝트의 팀 공유 지침 | 프로젝트 아키텍처, 코딩 표준, 공통 워크플로우 | 소스 컨트롤을 통한 팀원 |
-| **로컬 지침** | `./CLAUDE.local.md` | 프로젝트별 개인 설정 (`.gitignore`에 추가) | 샌드박스 URL, 테스트 데이터 | 본인만 (현재 프로젝트) |
+| **로컬 지침** | `./CLAUDE.local.md` | _(Deprecated)_ 프로젝트별 개인 설정 (`.gitignore`에 추가) | 샌드박스 URL, 테스트 데이터 | 본인만 (현재 프로젝트) |
 
 ### 계층 로딩 순서
 
@@ -81,6 +85,18 @@ CLAUDE.md 파일은 여러 위치에 존재할 수 있으며, 각각 다른 범�
 ```
 
 발견된 모든 파일은 서로를 재정의하지 않고 컨텍스트에 연결됩니다. 디렉토리 트리 전체에서 내용은 파일시스템 루트에서 작업 디렉토리 방향으로 정렬됩니다. 각 디렉토리 내에서 `CLAUDE.local.md`는 `CLAUDE.md` 다음에 추가됩니다.
+
+### 로딩 상세 규칙
+
+| 로딩 규칙 | 설명 |
+| --- | --- |
+| **상위 디렉토리** | 작업 디렉토리 상위의 CLAUDE.md 및 CLAUDE.local.md는 시작 시 전체 로드 |
+| **하위 디렉토리** | 작업 디렉토리 하위의 파일은 Claude가 해당 디렉토리의 파일을 읽을 때 온디맨드 로드 |
+| **연결 방식** | 재정의가 아닌 컨텍스트에 순차적으로 연결 (concat) |
+| **정렬 순서** | 파일시스템 루트에서 작업 디렉토리 방향. 실행 위치에 가까운 지침이 마지막에 읽힘 |
+| **로컬 파일 위치** | 각 디렉토리 내에서 `CLAUDE.local.md`는 `CLAUDE.md` 다음에 추가 |
+| **모노레포 제외** | `claudeMdExcludes`로 관련 없는 팀의 CLAUDE.md 건너뛰기 가능 |
+| **Import 결합** | `@path` import로 추가 파일을 로드 (최대 5단계 깊이) |
 
 ---
 
@@ -137,12 +153,12 @@ CLAUDE.md 파일은 `@path/to/import` 구문을 사용하여 추가 파일을 �
 |------|------|
 | **상대 경로** | CLAUDE.md 파일 위치를 기준으로 상대 경로 사용 가능 |
 | **절대 경로** | `~/.claude/...` 와 같은 절대 경로 사용 가능 |
-| **재귀 깊이** | 최대 4단계까지 재귀적 Import 가능 |
+| **재귀 깊이** | 최대 5단계까지 재귀적 Import 가능 |
 | **코드 블록 제외** | 마크다운 코드 스팬(`` ` ``)과 코드 블록 내의 Import는 평가되지 않음 |
 
 ### Import 활용 팁
 
-사용자 홈 디렉토리의 파일을 Import하는 것은 팀원 각자가 개별 지침을 제공하는 편리한 방법입니다. 이전에는 `CLAUDE.local.md`가 비슷한 목적이었으나, Import 기능이 여러 git worktree에서 더 잘 동작하므로 이제 Import 사용이 권장됩니다.
+사용자 홈 디렉토리의 파일을 Import하는 것은 팀원 각자가 개별 지침을 제공하는 편리한 방법입니다. `CLAUDE.local.md`는 이전에 비슷한 목적이었으나, Import 기능이 여러 git worktree에서 더 잘 동작하므로 현재는 deprecated 되었으며 Import 사용이 권장됩니다.
 
 ---
 
@@ -169,6 +185,14 @@ ln -s AGENTS.md CLAUDE.md
 Windows에서 symlink 생성에는 관리자 권한 또는 개발자 모드가 필요하므로, 대신 `@AGENTS.md` import를 사용하세요.
 
 이미 `AGENTS.md`가 있는 리포지토리에서 `/init`을 실행하면, Claude는 이를 읽고 관련 부분을 생성된 `CLAUDE.md`에 반영합니다. `.cursorrules`, `.devin/rules/`, `.windsurfrules` 등 다른 도구 설정 파일도 함께 읽습니다.
+
+### AGENTS.md vs CLAUDE.md 전략 비교
+
+| 전략 | 명령어 | 장단점 |
+| --- | --- | --- |
+| **Import** | CLAUDE.md에 `@AGENTS.md` 작성 후 Claude-specific 내용 추가 가능 | 가장 유연. 두 도구가 동일한 지침 공유 |
+| **Symlink** | `ln -s AGENTS.md CLAUDE.md` | 간단하지만 Claude-specific 내용 추가 불가 |
+| **/init** | `/init` 실행 | 기존 AGENTS.md + 다른 도구 설정을 자동 통합. 별도 CLAUDE.md 생성 |
 
 ---
 
@@ -219,6 +243,28 @@ your-project/
 ```
 
 `paths` frontmatter가 없는 규칙은 `.claude/CLAUDE.md`와 동일한 우선순위로 시작 시 로드됩니다.
+
+### 규칙 파일 포맷 (Frontmatter)
+
+규칙 파일은 선택적으로 YAML frontmatter를 포함할 수 있습니다. 현재 공식 문서에서 지원하는 frontmatter 필드는 `paths`뿐입니다.
+
+```markdown
+---
+paths:
+  - "src/api/**/*.ts"
+  - "lib/**/*.ts"
+---
+
+# 규칙 제목
+
+- 규칙 내용
+```
+
+| Frontmatter 필드 | 유형 | 필수 | 설명 |
+| --- | --- | --- | --- |
+| `paths` | 문자열 배열 | 아니오 | 규칙이 적용될 파일 경로 glob 패턴. 생략 시 모든 파일에 무조건 적용 |
+
+Frontmatter가 없는 규칙 파일도 정상적으로 동작하며, 모든 파일에 무조건 로드됩니다.
 
 ### Path-specific 규칙
 
@@ -299,6 +345,20 @@ Claude에게 무언가를 기억해달라고 요청하면(예: "pnpm을 사용�
 
 ---
 
+## # 단축키로 메모리 빠르게 추가
+
+입력을 `#` 문자로 시작하면 메모리를 가장 빠르게 추가할 수 있습니다. 어떤 메모리 파일에 저장할지 선택하는 프롬프트가 나타납니다.
+
+예시:
+
+```
+> # pnpm을 사용해, npm 말고
+```
+
+이렇게 입력하면 저장할 메모리 파일(CLAUDE.md, CLAUDE.local.md 등)을 선택할 수 있으며, 선택한 파일에 해당 내용이 추가됩니다.
+
+---
+
 ## /init 명령어
 
 코드베이스에 CLAUDE.md 파일을 부트스트랩합니다.
@@ -325,7 +385,7 @@ Claude에게 무언가를 기억해달라고 요청하면(예: "pnpm을 사용�
 |----|----------|
 | **macOS** | `/Library/Application Support/ClaudeCode/CLAUDE.md` |
 | **Linux/WSL** | `/etc/claude-code/CLAUDE.md` |
-| **Windows** | `C:\Program Files\ClaudeCode\CLAUDE.md` |
+| **Windows** | `C:\ProgramData\ClaudeCode\CLAUDE.md` |
 
 배포는 구성 관리 시스템을 통해 진행합니다:
 
@@ -450,6 +510,19 @@ Auto memory는 머신 로컬입니다. 동일한 git 리포지토리 내의 모�
 
 Claude는 세션 중에 메모리 파일을 읽고 씁니다. Claude Code 인터페이스에서 "Writing memory" 또는 "Recalled memory"가 보이면, Claude가 `~/.claude/projects/<project>/memory/`를 적극적으로 업데이트하거나 읽고 있는 것입니다.
 
+### 세션 간 메모리 지속 메커니즘
+
+Auto memory의 지속은 다음 구조로 보장됩니다:
+
+| 구성 요소 | 역할 | 지속 여부 |
+| --- | --- | --- |
+| `MEMORY.md` | 메모리 디렉토리의 인덱스. 모든 세션 시작 시 최대 200줄/25KB 로드 | 세션 종료 후에도 디스크에 유지 |
+| 토픽 파일 (예: `debugging.md`) | 상세 정보 저장. Claude가 필요할 때 온디맨드로 읽음 | 세션 종료 후에도 디스크에 유지 |
+| `<project>` 경로 파생 | git 리포지토리 경로에서 파생. 동일 리포지토리의 모든 worktree와 하위 디렉토리가 하나의 메모리 공유 | 리포지토리 기준으로 일관성 유지 |
+| `MEMORY.md` 갱신 | Claude가 세션 중 디렉토리 내 파일을 읽고 쓰며, 무엇이 어디에 저장되었는지 `MEMORY.md`로 추적 | 매 세션마다 갱신 |
+
+Subagent도 자체 auto memory를 유지할 수 있습니다. 자세한 내용은 subagent 설정을 참조하세요.
+
 ### 메모리 감사 및 편집
 
 Auto memory 파일은 일반 마크다운으로 언제든 편집하거나 삭제할 수 있습니다. 세션 내에서 `/memory`를 실행하여 메모리 파일을 탐색하고 엽니다.
@@ -477,6 +550,12 @@ Windows에서 `~/.claude`는 `%USERPROFILE%\.claude`로 확인됩니다. `CLAUDE
 | `agents/*.md` | 프로젝트 및 전역 | O | 자체 프롬프트와 도구를 가진 서브에이전트 정의 |
 | `workflows/*.js` | 프로젝트 및 전역 | O | 동적 워크플로 스크립트 |
 | `agent-memory/<name>/` | 프로젝트 및 전역 | O | 서브에이전트용 영구 메모리 |
+| `.worktreeinclude` | 프로젝트 전용 | O | 새 worktree에 복사할 gitignore 파일 목록 |
+| `commands/*.md` | 프로젝트 및 전역 | O | 단일 파일 프롬프트 (skills와 동일 메커니즘) |
+| `output-styles/*.md` | 프로젝트 및 전역 | O | Claude의 응답 포맷을 변경하는 커스텀 system-prompt 섹션 |
+| `~/.claude.json` | 전역 전용 | X | 앱 상태, OAuth, UI 토글, 개인 MCP 서버 |
+| `keybindings.json` | 전역 전용 | X | 커스텀 키보드 단축키 |
+| `themes/*.json` | 전역 전용 | X | 커스텀 컬러 테마 |
 | `projects/<project>/memory/` | 전역 전용 | X | Auto memory: Claude가 세션 간 스스로 작성하는 메모 |
 
 ### 애플리케이션 데이터
@@ -487,12 +566,78 @@ Windows에서 `~/.claude`는 `%USERPROFILE%\.claude`로 확인됩니다. `CLAUDE
 
 | 경로 (`~/.claude/` 하위) | 내용 |
 | --- | --- |
-| `projects/<project>/<session>.jsonl` | 전체 대화 트랜스크립트 |
-| `projects/<project>/<session>/subagents/` | 서브에이전트 대화 트랜스크립트 |
-| `file-history/<session>/` | Claude가 변경한 파일의 사전 편집 스냅샷 |
+| `projects/<project>/<session>.jsonl` | 전체 대화 트랜스크립트 (모든 메시지, 도구 호출, 도구 결과) |
+| `projects/<project>/<session>/subagents/` | 서브에이전트 대화 트랜스크립트 (부모 세션 만료 시 함께 삭제) |
+| `projects/<project>/<session>/tool-results/` | 대용량 도구 출력이 분리 저장된 파일 |
+| `file-history/<session>/` | Claude가 변경한 파일의 사전 편집 스냅샷 (체크포인트 복원에 사용) |
 | `plans/` | plan mode에서 작성된 계획 파일 |
-| `debug/` | 세션별 디버그 로그 |
+| `debug/` | 세션별 디버그 로그 (`--debug` 또는 `/debug`로 시작 시에만 작성) |
 | `paste-cache/`, `image-cache/` | 대용량 붙여넣기 및 첨부 이미지의 내용 |
+| `session-env/` | 세션별 환경 메타데이터 |
+| `tasks/` | 세션별 작업 목록 (task tools에서 작성) |
+| `shell-snapshots/` | Bash 도구에서 사용하는 캡처된 셸 환경 (정상 종료 시 제거, 스윕은 비정상 종료 후 잔여분 정리) |
+| `backups/` | 설정 마이그레이션 전 타임스탬프가 찍힌 `~/.claude.json` 백업 복사본 |
+| `feedback-bundles/` | `/feedback`에서 서드파티 공급자에 대해 작성된 수정된 트랜스크립트 아카이브 (Anthropic 계정 팀에 전송용) |
+| `todos/`, `statsig/`, `logs/` | 레거시 디렉토리 (현재 버전에서는 더 이상 작성되지 않음. 스윕이 내용물과 빈 디렉토리를 제거) |
+
+### 보관됨 (자동 정리 대상 외)
+
+다음 경로는 자동 정리에 포함되지 않으며 무기한 보관됩니다.
+
+| 경로 (`~/.claude/` 하위) | 내용 |
+| --- | --- |
+| `history.jsonl` | 입력한 모든 프롬프트 기록 (타임스탬프 및 프로젝트 경로 포함). 위쪽 화살표 키 회상에 사용 |
+| `stats-cache.json` | `/usage`에 표시되는 집계된 토큰 및 비용 카운트 |
+| `remote-settings.json` | 조직의 서버 관리 설정 캐시 복사본. 조직에서 구성한 경우에만 존재. 매 실행 시 새로고침됨 |
+
+### 일반 텍스트 저장
+
+트랜스크립트와 기록은 저장 시 암호화되지 않습니다. OS 파일 권한이 유일한 보호 수단입니다. 도구가 `.env` 파일을 읽거나 명령이 자격 증명을 출력하면 해당 값이 `projects/<project>/<session>.jsonl`에 기록됩니다. 노출을 줄이려면:
+
+- `cleanupPeriodDays`를 낮춰 트랜스크립트 보관 기간 단축
+- `CLAUDE_CODE_SKIP_PROMPT_HISTORY` 환경 변수를 설정하여 모든 모드에서 트랜스크립트 및 프롬프트 기록 작성 건너뛰기. 비대화형 모드에서는 `-p`와 함께 `--no-session-persistence`를 전달하거나, Agent SDK에서 `persistSession: false`를 설정 가능
+- 권한 규칙을 사용하여 자격 증명 파일 읽기 거부
+
+### 로컬 데이터 삭제
+
+`claude project purge`를 실행하여 특정 프로젝트의 Claude Code 상태를 삭제할 수 있습니다. 이 명령은 Claude Code v2.1.124 이상이 필요합니다. 삭제 대상:
+
+- `projects/` 아래의 트랜스크립트 및 auto memory
+- 세션별 `tasks/`, `debug/`, `file-history/` 항목
+- `history.jsonl`의 일치하는 프롬프트 행
+- `~/.claude.json`의 프로젝트 항목
+
+명령어는 전체 삭제 계획을 출력하고 삭제 전 확인을 요청합니다.
+
+```bash
+# 삭제 계획 미리보기 (실제 삭제 없음)
+claude project purge ~/work/my-repo --dry-run
+
+# 확인 프롬프트와 함께 삭제
+claude project purge ~/work/my-repo
+
+# 경로 생략 시 인터랙티브 목록에서 프로젝트 선택
+claude project purge
+
+# 스크립트용 확인 프롬프트 건너뛰기
+claude project purge ~/work/my-repo --yes
+```
+
+`--all`을 전달하면 모든 프로젝트의 상태를 일괄 삭제하며, `history.jsonl`을 필터링 대신 통째로 삭제합니다. `-i`를 전달하면 삭제 계획을 항목별로 단계별 확인할 수 있습니다.
+
+이 명령은 `shell-snapshots/`와 `backups/`는 프로젝트 범위가 아니므로 그대로 두며, 계획 출력에서 경고합니다. 일치하는 상태가 없으면 종료 코드 1로 종료됩니다.
+
+| 삭제 대상 | 손실되는 것 |
+| --- | --- |
+| `~/.claude/projects/` | 과거 세션의 이어하기(Resume), 계속하기(Continue), 되감기(Rewind) |
+| `~/.claude/history.jsonl` | 위쪽 화살표 프롬프트 회상 |
+| `~/.claude/file-history/` | 과거 세션의 체크포인트 복원 |
+| `~/.claude/stats-cache.json` | `/usage`에 표시되는 과거 통계 |
+| `~/.claude/remote-settings.json` | 없음. 다음 실행 시 다시 가져옴 |
+| `~/.claude/debug/`, `plans/`, `paste-cache/`, `image-cache/`, `session-env/`, `tasks/`, `shell-snapshots/`, `backups/` | 사용자에게 보이는 기능에 영향 없음 |
+| `~/.claude/todos/`, `statsig/`, `logs/` | 없음. 현재 버전에서 사용하지 않는 레거시 디렉토리 |
+
+`~/.claude.json`, `~/.claude/settings.json`, `~/.claude/plugins/`은 삭제하지 마세요: 인증, 설정, 설치된 플러그인 정보가 포함되어 있습니다.
 
 ---
 
@@ -597,4 +742,4 @@ CLAUDE.md 콘텐츠는 시스템 프롬프트의 일부가 아닌 시스템 프�
 
 ## 요약
 
-Claude Code의 메모리 시스템은 세션 간 일관성을 제공하는 핵심 기능입니다. CLAUDE.md 파일은 사용자가 작성하는 지속적 지침이며, auto memory는 Claude가 스스로 학습 내용을 축적하는 메커니즘입니다. 계층적 구조, Import 기능(최대 4단계), `.claude/rules/`를 통한 path-specific 규칙, managed CLAUDE.md를 통한 조직 전체 배포를 이해하는 것이 중요합니다. CLAUDE.md의 블록 수준 HTML 주석은 컨텍스트 주입 전에 제거되며, auto memory는 `MEMORY.md` 엔트리포인트 기반으로 최대 200줄/25KB가 로드됩니다. 정기적인 검토와 업데이트를 통해 항상 최신 상태를 유지하세요.
+Claude Code의 메모리 시스템은 세션 간 일관성을 제공하는 핵심 기능입니다. CLAUDE.md 파일은 사용자가 작성하는 지속적 지침이며, auto memory는 Claude가 스스로 학습 내용을 축적하는 메커니즘입니다. 계층적 구조(관리형 정책 > 사용자 > 프로젝트 > 로컬), Import 기능(최대 5단계), `.claude/rules/`를 통한 path-specific 규칙(frontmatter `paths` 필드), managed CLAUDE.md를 통한 조직 전체 배포를 이해하는 것이 중요합니다. CLAUDE.md의 블록 수준 HTML 주석은 컨텍스트 주입 전에 제거되며, auto memory는 `MEMORY.md` 엔트리포인트 기반으로 최대 200줄/25KB가 로드되고 토픽 파일은 온디맨드로 읽힙니다. `.claude/` 디렉토리는 `.worktreeinclude`, `commands/`, `output-styles/`, `keybindings.json`, `themes/` 등의 파일도 포함하며, 애플리케이션 데이터는 `cleanupPeriodDays`(기본 30일)에 따라 자동 정리되거나 무기한 보관됩니다. 정기적인 검토와 업데이트를 통해 항상 최신 상태를 유지하세요.
