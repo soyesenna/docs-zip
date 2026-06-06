@@ -20,9 +20,9 @@
 ### 공통 사항
 
 - 모두 Anthropic 클라우드 인프라에서 실행되므로 **Amazon Bedrock, Google Cloud Vertex AI, Microsoft Foundry**에서는 사용할 수 없습니다
-- 모두 **Claude Code on the web 계정**과 **GitHub 저장소**가 필요합니다
+- 모두 **Claude Code on the web 계정**이 필요합니다. Ultraplan은 **GitHub 저장소**가 필요하지만, Ultrareview는 인자 없이 실행하는 기본 모드(브랜치 diff 리뷰)에서는 GitHub 없이도 동작하며, PR 모드에서만 `github.com` 원격이 필요합니다
 - Ultraplan은 Claude.ai 계정 인증이 필요하며, Ultrareview도 Claude.ai 계정 인증이 필요합니다 (API 키만으로는 불가)
-- **Zero Data Retention**이 활성화된 조직에서는 사용할 수 없습니다
+- **Ultrareview**는 **Zero Data Retention**이 활성화된 조직에서는 사용할 수 없습니다. Ultraplan에는 이 제한이 공식 문서에 명시되어 있지 않습니다
 
 ---
 
