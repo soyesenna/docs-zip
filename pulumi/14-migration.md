@@ -39,9 +39,11 @@
 | Azure ARM Templates / Bicep | O | O | O |
 | Kubernetes YAML / Helm | O | O | O |
 | Serverless Framework | O | O | O |
-| AWS CDK | O | O | O |
+| AWS CDK | O | O | O* |
 | CDKTF (deprecated) | O | O | O |
 | 기타 (수동 프로비저닝 등) | O | O | - |
+
+> **CDK 변환(O*) 각주**: AWS CDK는 `pulumi convert --from cdk` 같은 독립적 변환 도구를 제공하지 않는다. CDK 마이그레이션은 Neo(자동 변환), CDK Adapter(공존), 수동 import+재작성 세 가지 경로만 지원된다. 매트릭스의 O*는 Neo를 통한 자동 변환만 해당됨을 의미한다. Terraform(`--from terraform`), ARM(`--from arm`), Kubernetes(`--from kubernetes`)는 실제 `pulumi convert` 대상이 존재한다.
 
 ---
 
@@ -185,6 +187,34 @@ pulumi import --from terraform ./terraform.tfstate
 # AWS VPC 모듈 추가
 pulumi package add terraform-module terraform-aws-modules/vpc/aws 5.19.0 vpc
 ```
+
+> 출처: https://www.pulumi.com/docs/iac/comparisons/terraform/
+
+### Pulumi Cloud를 Terraform State Backend로 사용 (Store Terraform State)
+
+Terraform/OpenTofu를 계속 사용하면서도 Pulumi Cloud의 암호화 상태 관리, 업데이트 히스토리, 상태 잠금, RBAC, 감사 정책을 활용할 수 있다. 이 경로는 기존 Terraform 워크플로를 유지하면서 점진적으로 Pulumi 생태계로 전환하고자 하는 팀에 적합하다.
+
+```bash
+# Pulumi Cloud를 Terraform state backend로 구성
+terraform {
+  backend "pulumi" {
+    # Pulumi Cloud 조직 및 프로젝트 설정
+  }
+}
+```
+
+자세한 내용은 [Pulumi Cloud as a Terraform State Backend](https://www.pulumi.com/docs/iac/get-started/terraform/terraform-state-backend/)를 참조하라.
+
+### Terraform Provider를 Pulumi에서 직접 사용 (Any Terraform Provider)
+
+Pulumi는 [Terraform Bridge](https://www.pulumi.com/docs/iac/concepts/providers/any-terraform-provider/)를 통해 Terraform Registry에 게시된 모든 Provider를 Pulumi Provider로 변환하여 사용할 수 있다. 이를 통해 Terraform 전용 생태계의 리소스를 Pulumi 프로그램에서 관리할 수 있다. Pulumi Registry의 많은 Provider가 이 방식으로 구축되었다.
+
+```bash
+# Terraform Provider를 Pulumi에서 사용
+pulumi package add terraform-provider <provider-name>
+```
+
+이 기능은 기존 Terraform Provider 자산을 Pulumi로 즉시 활용할 수 있게 해주므로, 마이그레이션 과정에서 Provider 호환성 문제를 해결하는 핵심 경로이다.
 
 TypeScript 예제:
 
@@ -504,33 +534,345 @@ pulumi-terraform-migrate  # 별도 도구
 
 > 출처: https://www.pulumi.com/docs/iac/guides/migration/migrating-to-pulumi/from-kubernetes/
 
+Pulumi는 Kubernetes 설정을 원하는 언어로 작성할 수 있을 뿐 아니라, 기존 Kubernetes 및 Helm YAML 설정 파일을 그대로 재사용할 수도 있다. 이를 통해 기존 YAML을 재작성하거나, Pulumi 코드로 새로 작성하거나, 하이브리드 접근을 취할 수 있으며, 모든 경우에 Pulumi를 배포 오케스트레이션으로 표준화할 수 있다.
+
 ### 마이그레이션 경로 선택
 
 | 경로 | 방식 | 설명 |
 |------|------|------|
-| **기존 YAML 그대로 배포** | `ConfigFile`, `ConfigGroup` | YAML 재작성 없이 Pulumi에서 오케스트레이션 |
-| **YAML로 렌더링** | Pulumi에서 YAML 출력 | Pulumi로 작성하되 기존 `kubectl`/GitOps 파이프라인으로 배포 |
+| **기존 YAML 그대로 배포** | `ConfigFile`, `ConfigGroup` (v2 API) | YAML 재작성 없이 Pulumi에서 오케스트레이션 |
+| **Helm Chart 배포** | `Chart` 리소스 (클라이언트 사이드 렌더) / `Release` 리소스 (Helm SDK) | Helm Chart를 Pulumi에서 직접 관리 |
+| **YAML로 렌더링** | `renderYamlToDirectory` | Pulumi로 작성하되 기존 `kubectl`/GitOps 파이프라인으로 배포 |
 | **변환** | `pulumi convert --from kubernetes` | YAML을 Pulumi 프로그램 코드로 변환 |
 | **임포트** | `pulumi import` | 실행 중인 클러스터 리소스를 Pulumi 관리로 편입 |
 
-### 기존 Kubernetes YAML 그대로 배포
+### 기존 Kubernetes YAML 그대로 배포 (ConfigFile / ConfigGroup)
 
-Kubernetes provider의 `yaml` 모듈은 두 가지 리소스 타입을 제공한다:
+Kubernetes provider의 `yaml.v2` 모듈은 두 가지 리소스 타입을 제공한다:
 
 | 리소스 타입 | 용도 |
 |-------------|------|
 | `ConfigFile` | 단일 Kubernetes YAML 파일 배포 |
 | `ConfigGroup` | 여러 Kubernetes YAML 파일을 묶어서 배포 |
 
-### YAML 렌더링 (역방향 호환)
+기본적으로 리소스 이름은 그대로 사용되며, `resourcePrefix`로 이름을 재지정할 수 있다. `transforms` 콜백을 `ResourceOptions`로 전달하여 배포 전에 리소스 설정을 즉석에서 수정할 수도 있다.
 
-Pulumi 프로그램을 Kubernetes YAML로 렌더링할 수도 있다. 이를 통해 범용 프로그래밍 언어로 설정을 작성하면서도 기존 `kubectl`이나 GitOps 파이프라인으로 배포할 수 있다.
+#### 단일 YAML 파일 배포 (ConfigFile)
+
+```bash
+# Kubernetes Guestbook 예제 YAML 다운로드
+curl -L --remote-name \
+    https://raw.githubusercontent.com/kubernetes/examples/master/web/guestbook/all-in-one/guestbook-all-in-one.yaml
+```
+
+TypeScript 예제:
+
+```typescript
+import * as k8s from "@pulumi/kubernetes";
+
+// 단일 YAML 파일에서 리소스 생성
+const guestbook = new k8s.yaml.v2.ConfigFile("guestbook", {
+    file: "guestbook-all-in-one.yaml",
+});
+
+// getResource로 내부 리소스에 접근
+const frontend = guestbook.getResource("v1/Service", "frontend");
+export const privateIp = frontend.spec.clusterIP;
+```
+
+Python 예제:
+
+```python
+from pulumi_kubernetes.yaml.v2 import ConfigFile
+
+guestbook = ConfigFile("guestbook", file="guestbook-all-in-one.yaml")
+
+# getResource로 내부 리소스에 접근
+frontend = guestbook.get_resource("v1/Service", "frontend")
+pulumi.export("private_ip", frontend.spec["cluster_ip"])
+```
+
+`getResource` 함수를 사용하면 YAML 내부의 리소스를 타입과 이름으로 조회하여 속성에 접근할 수 있다. 반환값은 리소스 타입에 따라 강타입으로 제공된다.
+
+#### 여러 YAML 파일 배포 (ConfigGroup)
+
+```bash
+# 여러 YAML 파일 다운로드
+mkdir yaml
+curl -L --remote-name \
+    "https://raw.githubusercontent.com/kubernetes/examples/master/web/guestbook/{frontend-deployment,frontend-service,redis-master-deployment,redis-master-service,redis-replica-deployment,redis-replica-service}.yaml"
+```
+
+TypeScript 예제:
+
+```typescript
+import * as k8s from "@pulumi/kubernetes";
+import * as path from "path";
+
+const guestbook = new k8s.yaml.v2.ConfigGroup("guestbook", {
+    files: [path.join("yaml", "*.yaml")],
+});
+
+const frontend = guestbook.getResource("v1/Service", "frontend");
+export const privateIp = frontend.spec.clusterIP;
+```
+
+Python 예제:
+
+```python
+from pulumi_kubernetes.yaml.v2 import ConfigGroup
+
+guestbook = ConfigGroup("guestbook", files=["yaml/*.yaml"])
+frontend = guestbook.get_resource("v1/Service", "frontend")
+pulumi.export("private_ip", frontend.spec["cluster_ip"])
+```
+
+### Helm Chart 배포
+
+Pulumi는 Helm Chart를 사용하는 두 가지 방식을 지원한다:
+
+| 방식 | 리소스 타입 | 특징 |
+|------|-------------|------|
+| **Chart 리소스 (클라이언트 사이드)** | `k8s.helm.v3.Chart` | 템플릿을 렌더링하여 직접 적용. `getResource`로 내부 리소스 접근 가능 |
+| **Release 리소스 (Helm SDK)** | `k8s.helm.v3.Release` | Helm SDK를 내장하여 네이티브 Helm Release 관리. `pulumi import`로 기존 Release 임포트 가능 |
+
+#### Chart 리소스로 Helm Chart 배포
+
+Chart 리소스는 `ConfigFile`/`ConfigGroup`과 유사하게 템플릿을 클라이언트 사이드에서 렌더링하여 직접 적용한다. 서버 사이드 컴포넌트 없이 Kubernetes 인증 설정만으로 프로비저닝이 이루어진다.
+
+주요 옵션:
+- `chart`: Chart 이름 (필수, 예: `"wordpress"`)
+- `repo`: Helm 저장소 URL (예: `"https://charts.bitnami.com/bitnami"`)
+- `version`: Chart 버전 (기본: 최신)
+- `values`: Chart 값 설정 (키/값 딕셔너리)
+- `fetchOpts`: fetch 동작 제어 옵션
+- `resourcePrefix`: 리소스 이름 접두사
+- `namespace`: 모든 리소스를 특정 네임스페이스에 배치
+- `transformations`: 리소스 변환 콜백
+
+TypeScript 예제 (WordPress Chart 배포):
+
+```typescript
+import * as k8s from "@pulumi/kubernetes";
+
+const wordpress = new k8s.helm.v3.Chart("wpdev", {
+    fetchOpts: {
+        repo: "https://charts.bitnami.com/bitnami"
+    },
+    chart: "wordpress",
+});
+
+// getResource로 Service 접근
+const frontend = wordpress.getResource("v1/Service", "default/wpdev-wordpress");
+export const frontendIp = frontend.status.loadBalancer.ingress[0].ip;
+```
+
+Python 예제:
+
+```python
+from pulumi_kubernetes.helm.v3 import Chart, ChartOpts
+
+wordpress = Chart('wpdev', ChartOpts(
+    fetch_opts={'repo': 'https://charts.bitnami.com/bitnami'},
+    chart='wordpress',
+))
+
+frontend = wordpress.get_resource('v1/Service', 'default/wpdev-wordpress')
+pulumi.export('frontend_ip', frontend.status.load_balancer.ingress[0].ip)
+```
+
+#### Release 리소스로 Helm Chart 배포
+
+Release 리소스는 Pulumi Kubernetes Provider에 내장된 Helm SDK를 사용하여 완전한 Helm Release 관리를 제공한다. `Chart` 리소스와 달리 내부 Kubernetes 리소스에 대한 참조를 포함하지 않으며, Release 상태만 Pulumi state에 저장된다.
+
+주요 옵션:
+- `chart`: Chart 이름 (필수)
+- `repositoryOpts`: 저장소 URL 및 인증 정보
+- `version`: Chart 버전
+- `values`: Chart 값 설정
+- `skipAwait`: 리소스 가용성 대기 건너뛰기 (기본: false)
+- `timeout`: 대기 시간 초과
+
+TypeScript 예제:
+
+```typescript
+import * as k8s from "@pulumi/kubernetes";
+import * as pulumi from "@pulumi/pulumi";
+
+const wordpress = new k8s.helm.v3.Release("wpdev", {
+    chart: "wordpress",
+    repositoryOpts: {
+        repo: "https://charts.bitnami.com/bitnami",
+    },
+});
+
+const svc = k8s.core.v1.Service.get("wpdev-wordpress",
+    pulumi.interpolate`${wordpress.status.namespace}/${wordpress.status.name}-wordpress`);
+export const frontendIp = svc.status.loadBalancer.ingress[0].ip;
+```
+
+Python 예제:
+
+```python
+from pulumi import Output
+from pulumi_kubernetes.core.v1 import Service
+from pulumi_kubernetes.helm.v3 import Release, ReleaseArgs, RepositoryOptsArgs
+
+wordpress = Release("wpdev", ReleaseArgs(
+    chart="wordpress",
+    repository_opts=RepositoryOptsArgs(
+        repo="https://charts.bitnami.com/bitnami",
+    ),
+))
+
+srv = Service.get("wpdev-wordpress",
+    Output.concat(wordpress.status.namespace, "/", wordpress.status.name, "-wordpress"))
+pulumi.export("frontendIP", srv.status.load_balancer.ingress[0].ip)
+```
+
+Release 리소스는 `pulumi import` 명령으로 기존 Helm Release를 임포트하는 것도 지원한다.
+
+### Configuration Transformations (transforms)
+
+`transforms` 콜백을 사용하면 YAML 배포 시 리소스 설정을 즉석에서 수정할 수 있다. 예를 들어, 기본적으로 LoadBalancer가 없는 서비스에 `type: LoadBalancer`를 추가할 수 있다.
+
+TypeScript 예제:
+
+```typescript
+import * as k8s from "@pulumi/kubernetes";
+
+const guestbook = new k8s.yaml.v2.ConfigFile("guestbook", {
+    file: "guestbook-all-in-one.yaml",
+}, {
+    transforms: [async (args) => {
+        if (args.type === "kubernetes:core/v1:Service" &&
+                (args.props as any)?.metadata?.name === "frontend") {
+            const props = args.props as any;
+            props.spec = { ...props.spec, type: "LoadBalancer" };
+            return { props, opts: args.opts };
+        }
+    }],
+});
+
+const frontend = guestbook.getResource("v1/Service", "frontend");
+export const publicIp = frontend.status.loadBalancer.ingress[0].ip;
+```
+
+Python 예제:
+
+```python
+import pulumi
+from pulumi_kubernetes.yaml.v2 import ConfigFile
+
+def make_frontend_public(args):
+    if (args.type_ == "kubernetes:core/v1:Service" and
+            args.props.get("metadata", {}).get("name") == "frontend"):
+        props = dict(args.props)
+        spec = dict(props.get("spec", {}))
+        spec["type"] = "LoadBalancer"
+        props["spec"] = spec
+        return pulumi.ResourceTransformResult(props=props, opts=args.opts)
+
+guestbook = ConfigFile("guestbook",
+    file="guestbook-all-in-one.yaml",
+    opts=pulumi.ResourceOptions(transforms=[make_frontend_public]))
+
+frontend = guestbook.get_resource("v1/Service", "frontend")
+pulumi.export("public_ip", frontend.status["load_balancer"]["ingress"][0]["ip"])
+```
+
+이 예제는 `ConfigFile`을 사용하지만, `ConfigGroup`과 Helm `Chart` 리소스 타입에서도 동일한 transform 동작이 사용 가능하다.
+
+### YAML 렌더링 (renderYamlToDirectory)
+
+Pulumi 프로그램을 Kubernetes YAML로 렌더링할 수 있다. 이를 통해 범용 프로그래밍 언어로 설정을 작성하면서도 기존 `kubectl`이나 GitOps 파이프라인으로 배포할 수 있다.
+
+명시적 Kubernetes Provider 객체의 `renderYamlToDirectory` 속성을 설정하면, `pulumi up` 실행 시 클러스터에 배포하는 대신 YAML 파일로 출력한다.
+
+TypeScript 예제:
+
+```typescript
+import * as k8s from "@pulumi/kubernetes";
+
+// renderYamlToDirectory가 설정된 Provider 생성
+const renderProvider = new k8s.Provider("k8s-yaml-renderer", {
+    renderYamlToDirectory: "yaml",
+});
+
+// NGINX Deployment + LoadBalancer Service
+const labels = { "app": "nginx" };
+const dep = new k8s.apps.v1.Deployment("nginx-dep", {
+    spec: {
+        selector: { matchLabels: labels },
+        replicas: 1,
+        template: {
+            metadata: { labels: labels },
+            spec: { containers: [{ name: "nginx", image: "nginx" }] },
+        },
+    },
+}, { provider: renderProvider });
+const svc = new k8s.core.v1.Service("nginx-svc", {
+    spec: {
+        type: "LoadBalancer",
+        selector: labels,
+        ports: [{ port: 80 }],
+    },
+}, { provider: renderProvider });
+```
+
+Python 예제:
+
+```python
+from pulumi import ResourceOptions
+from pulumi_kubernetes import Provider
+from pulumi_kubernetes.apps.v1 import Deployment
+from pulumi_kubernetes.core.v1 import Service
+
+render_provider = Provider('k8s-yaml-rendered', render_yaml_to_directory='yaml')
+
+labels = { 'app': 'nginx' }
+dep = Deployment('nginx-dep',
+    spec={
+        'selector': { 'matchLabels': labels },
+        'replicas': 1,
+        'template': {
+            'metadata': { 'labels': labels },
+            'spec': { 'containers': [{ 'name': 'nginx', 'image': 'nginx' }] },
+        },
+    }, opts=ResourceOptions(provider=render_provider))
+svc = Service('nginx-svc',
+    spec={
+        'type': 'LoadBalancer',
+        'selector': labels,
+        'ports': [{'port': 80}],
+    }, opts=ResourceOptions(provider=render_provider))
+```
+
+`pulumi up` 실행 후 `yaml/` 디렉터리에 YAML 파일이 생성된다:
+
+```
+yaml/
+├── 0-crd
+└── 1-manifest
+    ├── deployment-nginx-dep-xj8peqh3.yaml
+    └── service-nginx-svc-nsnetbz3.yaml
+```
+
+```bash
+# kubectl로 배포
+kubectl apply -f "yaml/0-crd"
+kubectl apply -f "yaml/1-manifest"
+```
+
+> **주의**: YAML 렌더링 시 리소스가 클러스터에 생성되지 않으므로 서버 사이드에서 계산되는 정보(예: Service의 IP 할당)는 사용할 수 없다. Secret 값은 렌더링된 매니페스트에 평문으로 나타난다.
 
 ### Kubernetes YAML 변환
 
 ```bash
-pulumi convert --from kubernetes --language typescript
+pulumi convert --from kubernetes --language typescript --out <output_dir>
 ```
+
+변환기에 대한 자세한 내용은 [pulumi-converter-kubernetes 저장소](https://github.com/pulumi/pulumi-converter-kubernetes)를 참조하라.
 
 ---
 
@@ -569,6 +911,217 @@ Serverless Framework는 `sls deploy` 실행 시 CloudFormation 템플릿을 생�
 | `resources.Resources` (S3) | `aws.s3.BucketV2` |
 | `resources.Resources` (SES) | `aws.ses.DomainIdentity`, `aws.ses.EmailIdentity` |
 | Stages (`--stage dev`) | Pulumi stacks (`pulumi stack select dev`) |
+
+### 마이그레이션 예제: serverless.yml을 Pulumi 코드로 변환
+
+다음은 Lambda 함수 + HTTP API 엔드포인트 + DynamoDB 테이블로 구성된 전형적인 `serverless.yml`과 이에 대응하는 Pulumi 프로그램 예제이다.
+
+**serverless.yml 원본:**
+
+```yaml
+service: my-api
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+  stage: dev
+  environment:
+    ORDERS_TABLE: !Ref OrdersTable
+
+functions:
+  createOrder:
+    handler: src/handlers/createOrder.handler
+    events:
+      - httpApi:
+          path: /orders
+          method: post
+
+resources:
+  Resources:
+    OrdersTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:service}-orders-${self:provider.stage}
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+```
+
+**Pulumi TypeScript 변환:**
+
+```typescript
+import * as pulumi from "@pulumi/pulumi";
+import * as aws from "@pulumi/aws";
+
+const stage = pulumi.getStack();
+
+// DynamoDB 테이블
+const ordersTable = new aws.dynamodb.Table("orders-table", {
+    name: `my-api-orders-${stage}`,
+    billingMode: "PAY_PER_REQUEST",
+    hashKey: "id",
+    attributes: [{ name: "id", type: "S" }],
+});
+
+// Lambda 실행 역할
+const lambdaRole = new aws.iam.Role("create-order-role", {
+    assumeRolePolicy: aws.iam.assumeRolePolicyForPrincipal({
+        Service: "lambda.amazonaws.com",
+    }),
+    managedPolicyArns: [aws.iam.ManagedPolicy.AWSLambdaBasicExecutionRole],
+});
+
+const lambdaPolicy = new aws.iam.RolePolicy("create-order-policy", {
+    role: lambdaRole.id,
+    policy: ordersTable.arn.apply(arn => JSON.stringify({
+        Version: "2012-10-17",
+        Statement: [{
+            Effect: "Allow",
+            Action: ["dynamodb:PutItem", "dynamodb:GetItem", "dynamodb:Query"],
+            Resource: arn,
+        }],
+    })),
+});
+
+// Lambda 함수
+const createOrderFn = new aws.lambda.Function("create-order", {
+    runtime: aws.lambda.Runtime.NodeJS20dX,
+    handler: "src/handlers/createOrder.handler",
+    role: lambdaRole.arn,
+    code: new pulumi.asset.FileArchive("./app"),
+    environment: {
+        variables: {
+            ORDERS_TABLE: ordersTable.name,
+        },
+    },
+});
+
+// HTTP API (API Gateway v2)
+const api = new aws.apigatewayv2.Api("api", {
+    protocolType: "HTTP",
+});
+
+const integration = new aws.apigatewayv2.Integration("create-order-integration", {
+    apiId: api.id,
+    integrationType: "AWS_PROXY",
+    integrationUri: createOrderFn.arn,
+    payloadFormatVersion: "2.0",
+});
+
+const route = new aws.apigatewayv2.Route("create-order-route", {
+    apiId: api.id,
+    routeKey: "POST /orders",
+    target: pulumi.interpolate`integrations/${integration.id}`,
+});
+
+const apiStage = new aws.apigatewayv2.Stage("api-stage", {
+    apiId: api.id,
+    name: "$default",
+    autoDeploy: true,
+});
+
+const lambdaPermission = new aws.lambda.Permission("api-lambda-permission", {
+    action: "lambda:InvokeFunction",
+    function: createOrderFn.name,
+    principal: "apigateway.amazonaws.com",
+    sourceArn: pulumi.interpolate`${api.executionArn}/*/*`,
+});
+
+export const endpoint = api.apiEndpoint;
+export const tableName = ordersTable.name;
+```
+
+**Pulumi Python 변환:**
+
+```python
+import json
+import pulumi
+import pulumi_aws as aws
+
+stage = pulumi.get_stack()
+
+# DynamoDB 테이블
+orders_table = aws.dynamodb.Table("orders-table",
+    name=f"my-api-orders-{stage}",
+    billing_mode="PAY_PER_REQUEST",
+    hash_key="id",
+    attributes=[aws.dynamodb.TableAttributeArgs(name="id", type="S")],
+)
+
+# Lambda 실행 역할
+lambda_role = aws.iam.Role("create-order-role",
+    assume_role_policy=json.dumps({
+        "Version": "2012-10-17",
+        "Statement": [{
+            "Action": "sts:AssumeRole",
+            "Effect": "Allow",
+            "Principal": {"Service": "lambda.amazonaws.com"},
+        }],
+    }),
+    managed_policy_arns=[aws.iam.ManagedPolicy.AWS_LAMBDA_BASIC_EXECUTION_ROLE],
+)
+
+lambda_policy = aws.iam.RolePolicy("create-order-policy",
+    role=lambda_role.id,
+    policy=orders_table.arn.apply(lambda arn: json.dumps({
+        "Version": "2012-10-17",
+        "Statement": [{
+            "Effect": "Allow",
+            "Action": ["dynamodb:PutItem", "dynamodb:GetItem", "dynamodb:Query"],
+            "Resource": arn,
+        }],
+    })),
+)
+
+# Lambda 함수
+create_order_fn = aws.lambda_.Function("create-order",
+    runtime=aws.lambda_.Runtime.NODE_JS20D_X,
+    handler="src/handlers/createOrder.handler",
+    role=lambda_role.arn,
+    code=pulumi.FileArchive("./app"),
+    environment=aws.lambda_.FunctionEnvironmentArgs(
+        variables={"ORDERS_TABLE": orders_table.name},
+    ),
+)
+
+# HTTP API (API Gateway v2)
+api = aws.apigatewayv2.Api("api", protocol_type="HTTP")
+
+integration = aws.apigatewayv2.Integration("create-order-integration",
+    api_id=api.id,
+    integration_type="AWS_PROXY",
+    integration_uri=create_order_fn.arn,
+    payload_format_version="2.0",
+)
+
+route = aws.apigatewayv2.Route("create-order-route",
+    api_id=api.id,
+    route_key="POST /orders",
+    target=integration.id.apply(lambda id: f"integrations/{id}"),
+)
+
+api_stage = aws.apigatewayv2.Stage("api-stage",
+    api_id=api.id,
+    name="$default",
+    auto_deploy=True,
+)
+
+lambda_permission = aws.lambda_.Permission("api-lambda-permission",
+    action="lambda:InvokeFunction",
+    function=create_order_fn.name,
+    principal="apigateway.amazonaws.com",
+    source_arn=api.execution_arn.apply(lambda arn: f"{arn}/*/*"),
+)
+
+pulumi.export("endpoint", api.api_endpoint)
+pulumi.export("table_name", orders_table.name)
+```
+
+이 예제는 serverless.yml의 Lambda 함수, IAM 역할, DynamoDB 테이블, API Gateway v2 설정이 Pulumi에서 어떻게 표현되는지를 보여준다. Pulumi에서는 프로그래밍 언어의 모든 기능(재사용 가능한 함수, 루프, 조건문, 테스트 등)을 활용할 수 있다.
 
 ### Serverless Framework 스택 출력값 참조 (공존)
 
