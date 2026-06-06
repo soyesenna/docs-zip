@@ -312,6 +312,7 @@ Claude Code는 프롬프트 캐싱을 자동으로 관리함. 비활성화하지
 |------|------|
 | 모델 전환 | `/model`로 모델 변경 시 전체 캐시 미스 |
 | Effort level 변경 | `/effort`로 변경 시 전체 캐시 미스 |
+| **Fast mode 활성화** | 캐시 키의 일부인 요청 헤더가 추가되어 전체 캐시 미스 발생. 미캐시된 입력 토큰이 fast mode 요금으로 청구되므로, 세션 중간보다 시작 시 활성화하는 것이 비용 효율적 |
 | MCP 서버 연결/해제 | 도구 정의가 prefix에 로드된 경우 무효화 |
 | 플러그인 활성화/비활성화 | MCP 서버를 제공하는 플러그인의 경우 무효화 |
 | 전체 도구 거부(deny) | `Bash` 등 도구명 자체를 deny 규칙에 추가 시 무효화 |
@@ -492,7 +493,21 @@ export ANTHROPIC_CUSTOM_MODEL_OPTION_DESCRIPTION="Custom deployment routed throu
 }
 ```
 
-### 고정 모델의 기능 선언
+### 고정 모델의 표시 이름 및 기능 사용자 정의
+
+서드파티 프로바이더에서 모델을 고정하면 프로바이더별 ID가 `/model` 피커에 그대로 표시되며, Claude Code가 해당 모델이 지원하는 기능을 인식하지 못할 수 있음. 각 고정 모델에 대해 컴패니언 환경변수로 표시 이름을 재정의하고 기능을 선언할 수 있음.
+
+이 변수들은 Bedrock, Vertex AI, Foundry 같은 서드파티 프로바이더에서 적용됨. `_NAME` 및 `_DESCRIPTION` 변수는 `ANTHROPIC_BASE_URL`이 LLM 게이트웨이를 가리킬 때도 적용됨. `api.anthropic.com`에 직접 연결할 때는 효과가 없음.
+
+| 환경변수 | 설명 |
+|----------|------|
+| `ANTHROPIC_DEFAULT_OPUS_MODEL_NAME` | 고정된 Opus 모델의 `/model` 피커 표시 이름. 미설정 시 모델 ID가 기본값 |
+| `ANTHROPIC_DEFAULT_OPUS_MODEL_DESCRIPTION` | 고정된 Opus 모델의 `/model` 피커 표시 설명. 미설정 시 `Custom Opus model`이 기본값 |
+| `ANTHROPIC_DEFAULT_OPUS_MODEL_SUPPORTED_CAPABILITIES` | 고정된 Opus 모델이 지원하는 기능의 쉼표로 구분된 목록 |
+
+동일한 `_NAME`, `_DESCRIPTION`, `_SUPPORTED_CAPABILITIES` 접미사가 `ANTHROPIC_DEFAULT_SONNET_MODEL`, `ANTHROPIC_DEFAULT_HAIKU_MODEL`, `ANTHROPIC_CUSTOM_MODEL_OPTION`에도 사용 가능.
+
+Claude Code는 모델 ID를 알려진 패턴과 매칭하여 effort level, 확장 사고 등의 기능을 활성화함. Bedrock ARN이나 커스텀 배포 이름 같은 프로바이더별 ID는 종종 이 패턴과 매칭되지 않아 지원 기능이 비활성화됨. `_SUPPORTED_CAPABILITIES`를 설정하여 Claude Code에 해당 모델이 실제로 지원하는 기능을 알릴 수 있음:
 
 | 기능 값 | 활성화 |
 |---------|--------|
@@ -502,3 +517,14 @@ export ANTHROPIC_CUSTOM_MODEL_OPTION_DESCRIPTION="Custom deployment routed throu
 | `thinking` | 확장 사고 |
 | `adaptive_thinking` | 작업 복잡도에 따라 동적으로 사고를 할당하는 적응형 추론 |
 | `interleaved_thinking` | 도구 호출 사이의 사고 |
+
+`_SUPPORTED_CAPABILITIES`가 설정되면 나열된 기능은 활성화되고 나열되지 않은 기능은 해당 고정 모델에 대해 비활성화됨. 변수가 설정되지 않으면 Claude Code는 모델 ID 기반 내장 감지로 폴백함.
+
+다음 예시는 Opus를 Bedrock 커스텀 모델 ARN으로 고정하고, 친근한 이름을 설정하며, 기능을 선언함:
+
+```bash
+export ANTHROPIC_DEFAULT_OPUS_MODEL='arn:aws:bedrock:us-east-1:123456789012:custom-model/abc'
+export ANTHROPIC_DEFAULT_OPUS_MODEL_NAME='Opus via Bedrock'
+export ANTHROPIC_DEFAULT_OPUS_MODEL_DESCRIPTION='Opus 4.7 routed through a Bedrock custom endpoint'
+export ANTHROPIC_DEFAULT_OPUS_MODEL_SUPPORTED_CAPABILITIES='effort,xhigh_effort,max_effort,thinking,adaptive_thinking,interleaved_thinking'
+```
