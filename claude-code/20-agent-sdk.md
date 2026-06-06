@@ -31,10 +31,11 @@ Agent SDK는 Claude Code를 라이브러리로 사용하여 프로덕션급 AI �
 
 | 구분 | Agent SDK | Client SDK | Claude Code CLI | Managed Agents |
 | --- | --- | --- | --- | --- |
-| 실행 환경 | 사용자 프로세스 | 사용자 프로세스 | 터미널 | Anthropic 인프라 |
+| 실행 환경 | 사용자 프로세스 | 사용자 프로세스 | 터미널 | Anthropic 관리 인프라 |
 | 인터페이스 | Python/TypeScript 라이브러리 | API 직접 호출 | CLI | REST API |
-| 도구 실행 | 자동 (내장) | 수동 구현 | 자동 (내장) | Anthropic 관리 |
-| 적합한 용도 | 프로덕션 자동화, CI/CD | 저수준 API 제어 | 대화형 개발 | 호스팅 에이전트 |
+| 도구 실행 | 자동 (내장) | 수동 구현 | 자동 (내장) | Claude가 트리거, 사용자가 실행·반환 |
+| 세션 상태 | 로컬 파일시스템 JSONL | 해당 없음 | 로컬 파일시스템 | Anthropic 호스팅 이벤트 로그 |
+| 적합한 용도 | 프로덕션 자동화, CI/CD | 저수준 API 제어 | 대화형 개발 | 호스팅 샌드박스, 장기 실행 에이전트 |
 
 ---
 
@@ -154,34 +155,38 @@ function query({
 | 필드 | 타입 | 기본값 | 설명 |
 | --- | --- | --- | --- |
 | `allowedTools` | `string[]` | `[]` | 자동 승인할 도구 목록 |
-| `disallowedTools` | `string[]` | `[]` | 차단할 도구 목록 |
+| `disallowedTools` | `string[]` | `[]` | 항상 거부할 도구. `bypassPermissions`에서도 적용 |
 | `permissionMode` | `PermissionMode` | `'default'` | 권한 모드 |
+| `canUseTool` | `CanUseTool` | `undefined` | 커스텀 권한 콜백 |
 | `model` | `string` | CLI 기본값 | 사용할 모델 |
-| `maxTurns` | `number` | 제한 없음 | 최대 도구 사용 횟수 |
-| `maxBudgetUsd` | `number` | 제한 없음 | 최대 비용 (USD) |
+| `fallbackModel` | `string` | `undefined` | 주 모델 실패 시 폴백 모델 |
+| `maxTurns` | `number` | `undefined` | 최대 도구 사용 턴 수 |
+| `maxBudgetUsd` | `number` | `undefined` | 최대 비용 (USD) |
 | `effort` | `'low'/'medium'/'high'/'xhigh'/'max'` | `'high'` | 추론 노력 수준 |
-| `systemPrompt` | `string \| {type:'preset', preset:'claude_code'}` | `undefined` | 시스템 프롬프트 |
+| `systemPrompt` | `string \| {type:'preset', preset:'claude_code', append?, excludeDynamicSections?}` | `undefined` | 시스템 프롬프트 |
 | `mcpServers` | `Record<string, McpServerConfig>` | `{}` | MCP 서버 설정 |
 | `agents` | `Record<string, AgentDefinition>` | `undefined` | 프로그래밍 방식 서브에이전트 |
 | `hooks` | `Partial<Record<HookEvent, HookCallbackMatcher[]>>` | `{}` | 훅 콜백 |
-| `settingSources` | `SettingSource[]` | CLI 기본값 (전체) | 파일시스템 설정 소스 |
+| `settingSources` | `SettingSource[]` | CLI 기본값 (전체) | 파일시스템 설정 소스. `[]`로 전체 비활성화 가능 |
 | `cwd` | `string` | `process.cwd()` | 작업 디렉토리 |
 | `resume` | `string` | `undefined` | 재개할 세션 ID |
-| `forkSession` | `boolean` | `false` | 세션 포크 여부 |
+| `forkSession` | `boolean` | `false` | `resume` 시 새 세션 ID로 분기 |
 | `sandbox` | `SandboxSettings` | `undefined` | 샌드박스 설정 |
 | `plugins` | `SdkPluginConfig[]` | `[]` | 플러그인 설정 |
-| `skills` | `string[] \| 'all'` | `undefined` | 활성 스킬 |
 | `thinking` | `ThinkingConfig` | `{type:'adaptive'}` | 확장 사고 설정 |
-| `onElicitation` | `(request, options) => Promise<ElicitationResult>` | `undefined` | MCP elicitation 요청 콜백 |
-| `agentProgressSummaries` | `boolean` | `false` | 서브에이전트 진행 요약 생성 |
-| `taskBudget` | `{ total: number }` | `undefined` | _Alpha._ API 측 태스크 토큰 예산 |
 | `tools` | `string[] \| {type:'preset', preset:'claude_code'}` | `undefined` | 도구 가용성 제어 |
 | `toolConfig` | `ToolConfig` | `undefined` | 내장 도구 동작 설정 |
-| `forwardSubagentText` | `boolean` | `false` | 서브에이전트 텍스트/사고 블록 전달 |
-| `includeHookEvents` | `boolean` | `false` | 훅 수명 주기 이벤트 포함 |
+| `includePartialMessages` | `boolean` | `false` | 스트리밍 부분 메시지 포함 |
 | `promptSuggestions` | `boolean` | `false` | 턴 후 프롬프트 예측 제안 |
 | `persistSession` | `boolean` | `true` | `false` 시 디스크 세션 영속화 비활성화 |
 | `strictMcpConfig` | `boolean` | `false` | `mcpServers`만 사용, 프로젝트 `.mcp.json` 등 무시 |
+| `outputFormat` | `{type: 'json_schema', schema: JSONSchema}` | `undefined` | 구조화된 출력 형식 |
+| `sessionStore` | `SessionStore` | `undefined` | 외부 세션 스토리지 백엔드 |
+| `enableFileCheckpointing` | `boolean` | `false` | 파일 변경 추적 및 복원 활성화 |
+| `continue` | `boolean` | `false` | 가장 최근 대화 계속 |
+| `env` | `Record<string, string>` | `process.env` | 환경 변수 |
+| `betas` | `SdkBeta[]` | `[]` | 베타 기능 활성화 |
+| `agent` | `string` | `undefined` | 메인 스레드 에이전트 이름 |
 
 ### `startup()` — Pre-warm
 
@@ -193,7 +198,7 @@ for await (const message of warm.query("What files are here?")) {
 }
 ```
 
-### Query 객체 메서드 (17개)
+### Query 객체 메서드
 
 `query()` 반환값은 `AsyncGenerator<SDKMessage>`를 확장한 `Query` 객체.
 
@@ -201,32 +206,20 @@ for await (const message of warm.query("What files are here?")) {
 | --- | --- |
 | `interrupt()` | 쿼리 중단 (스트리밍 입력 모드만) |
 | `rewindFiles(userMessageId, opts?)` | 파일 복원. `enableFileCheckpointing: true` 필요 |
-| `setPermissionMode(mode)` | 권한 모드 변경 |
-| `setModel(model?)` | 모델 변경 |
-| `applyFlagSettings(settings)` | 런타임 설정 병합 (TS만) |
-| `initializationResult()` | 전체 초기화 결과 |
+| `setPermissionMode(mode)` | 권한 모드 변경 (스트리밍 입력 모드만) |
+| `setModel(model?)` | 모델 변경 (스트리밍 입력 모드만) |
+| `initializationResult()` | 전체 초기화 결과 (명령어, 모델, 계정 정보 등) |
 | `supportedCommands()` | 슬래시 명령어 목록 |
 | `supportedModels()` | 모델 목록 |
 | `supportedAgents()` | 서브에이전트 목록 |
 | `mcpServerStatus()` | MCP 서버 상태 |
+| `accountInfo()` | 계정 정보 (이메일, 조직, 구독 유형) |
 | `reconnectMcpServer(name)` | MCP 서버 재연결 |
 | `toggleMcpServer(name, enabled)` | MCP 서버 토글 |
-| `setMcpServers(servers)` | MCP 서버 동적 교체 |
+| `setMcpServers(servers)` | MCP 서버 동적 교체 (추가/제거/오류 결과 반환) |
 | `streamInput(stream)` | 스트리밍 입력 |
 | `stopTask(taskId)` | 백그라운드 태스크 중단 |
 | `close()` | 쿼리 종료 및 프로세스 정리 |
-
-### `applyFlagSettings()` — 런타임 설정 변경
-
-런타임에 세션의 플래그 설정 레이어에 설정을 병합한다. 다음 턴부터 적용: `model`, `effortLevel`, `permissions`, `hooks`, `agent`. 시스템 프롬프트는 런타임 변경 불가.
-
-```typescript
-const q = query({ prompt: messageStream });
-await q.applyFlagSettings({ model: "claude-opus-4-6" }); // 오버라이드
-await q.applyFlagSettings({ model: null });              // 폴백
-```
-
-> Python SDK는 `applyFlagSettings()`를 제공하지 않는다.
 
 ### 메시지 타입 (30+)
 
@@ -357,6 +350,7 @@ async with ClaudeSDKClient() as client:
 | `reconnect_mcp_server(name)` | MCP 서버 재연결 |
 | `toggle_mcp_server(name, enabled)` | MCP 서버 토글 |
 | `stop_task(task_id)` | 백그라운드 태스크 중단 |
+| `get_server_info()` | 서버 정보 (세션 ID, 기능 등) |
 | `disconnect()` | 연결 종료 |
 
 ### `ClaudeAgentOptions` 주요 필드
@@ -369,12 +363,12 @@ async with ClaudeSDKClient() as client:
 | `model` | `str \| None` | 사용할 모델 |
 | `max_turns` | `int \| None` | 최대 턴 수 |
 | `max_budget_usd` | `float \| None` | 최대 비용 (USD) |
-| `effort` | `EffortLevel` | 추론 노력 수준 |
+| `effort` | `Literal["low", "medium", "high", "max"]` | 추론 노력 수준 |
 | `system_prompt` | `str \| SystemPromptPreset` | 시스템 프롬프트 |
 | `mcp_servers` | `dict[str, McpServerConfig]` | MCP 서버 설정 |
 | `agents` | `dict[str, AgentDefinition]` | 서브에이전트 정의 |
 | `hooks` | `dict[HookEvent, list[HookMatcher]]` | 훅 설정 |
-| `setting_sources` | `list[SettingSource]` | 설정 소스 제어 |
+| `setting_sources` | `list[SettingSource] \| None` | 설정 소스 제어. 생략 시 아무 설정도 로드하지 않음 (Python SDK 기본값: `None`) |
 | `cwd` | `str \| Path` | 작업 디렉토리 |
 | `resume` | `str \| None` | 재개할 세션 ID |
 | `sandbox` | `SandboxSettings` | 샌드박스 설정 |
@@ -405,7 +399,7 @@ async with ClaudeSDKClient() as client:
 | `low` | 최소 추론, 빠른 응답 | 파일 조회, 디렉토리 나열 |
 | `medium` | 균형 잡힌 추론 | 일반 편집, 표준 작업 |
 | `high` | 철저한 분석 | 리팩토링, 디버깅 |
-| `xhigh` | 확장된 추론 깊이 | 코딩/에이전트 작업, Opus 4.7 권장 |
+| `xhigh` | 확장된 추론 깊이 (TS만) | 코딩/에이전트 작업, Opus 4.7 권장 |
 | `max` | 최대 추론 깊이 | 심층 분석이 필요한 다단계 문제 |
 
 ### ResultMessage 하위타입
@@ -606,15 +600,19 @@ options = ClaudeAgentOptions(
 
 | 필드 | 필수 | 설명 |
 | --- | --- | --- |
-| `description` | Yes | 에이전트 사용 시기 |
+| `description` | Yes | 에이전트 사용 시기 (자연어) |
 | `prompt` | Yes | 시스템 프롬프트 |
 | `tools` | No | 허용 도구 (생략 시 부모 상속) |
-| `model` | No | 모델 오버라이드 (`sonnet`, `opus`, `haiku`, `inherit`) |
+| `disallowedTools` | No | 명시적으로 차단할 도구 (TS만) |
+| `model` | No | 모델 오버라이드 (`sonnet`, `opus`, `haiku`, `inherit` 또는 전체 모델 ID) |
+| `mcpServers` | No | 에이전트 전용 MCP 서버 (이름 참조 또는 인라인 설정) |
+| `skills` | No | 프리로드할 스킬 |
+| `initialPrompt` | No | 메인 스레드 에이전트 시 자동 제출될 첫 사용자 턴 |
 | `maxTurns` | No | 최대 턴 수 |
 | `background` | No | 백그라운드 실행 |
-| `effort` | No | 추론 노력 수준 |
+| `memory` | No | 메모리 소스 (`user`, `project`, `local`) |
+| `effort` | No | 추론 노력 수준 (이름 또는 정수) |
 | `permissionMode` | No | 권한 모드 |
-| `skills` | No | 프리로드할 스킬 |
 
 ---
 
@@ -652,12 +650,11 @@ options = ClaudeAgentOptions(system_prompt={"type": "preset", "preset": "claude_
 
 ### 권한 평가 순서
 
-1. `disallowed_tools` bare 이름 -> 도구 정의 제거
-2. `disallowed_tools` 범위 규칙 -> 매칭 호출 거부
-3. `allowed_tools` -> 자동 승인
-4. 훅 (`PreToolUse`) -> 커스텀 로직
-5. 권한 모드 -> 나머지 처리
-6. `canUseTool` 콜백 -> 런타임 승인
+1. 훅 ([`PreToolUse`](#18-훅)) -> allow, deny, continue 결정
+2. `disallowed_tools` 거부 규칙 -> 매칭 시 즉시 차단 (`bypassPermissions`에서도 적용)
+3. 권한 모드 -> `bypassPermissions`은 여기서 모두 승인, `acceptEdits`은 파일 작업 승인 등
+4. `allowed_tools` 허용 규칙 -> 매칭 시 자동 승인
+5. `canUseTool` 콜백 -> 런타임 승인 (`dontAsk` 모드에서는 건너뛰고 거부)
 
 ### `canUseTool` 콜백
 
@@ -673,30 +670,29 @@ canUseTool: async (toolName, input, { signal, suggestions }) => {
 
 ## 18. 훅
 
-### 훅 이벤트 (20개)
+### 훅 이벤트
 
-| 이벤트 | 발생 시점 | 주요 용도 |
-| --- | --- | --- |
-| `PreToolUse` | 도구 실행 전 | 입력 검증, 차단, **defer** 지원 |
-| `PostToolUse` | 도구 실행 후 | 출력 감사 |
-| `PostToolUseFailure` | 도구 실행 실패 | 오류 로깅 |
-| `PostToolBatch` | 배치 완료 후 | 결과 집계 |
-| `UserPromptSubmit` | 프롬프트 전송 | 컨텍스트 주입 |
-| `Stop` | 에이전트 종료 | 결과 검증 |
-| `SubagentStart` | 서브에이전트 시작 | 병렬 작업 추적 |
-| `SubagentStop` | 서브에이전트 완료 | 결과 집계 |
-| `PreCompact` | 컨텍스트 압축 전 | 트랜스크립트 아카이빙 |
-| `SessionStart` | 세션 시작 | 초기화 |
-| `SessionEnd` | 세션 종료 | 정리 |
-| `PermissionRequest` | 권한 결정 필요 | 프로그래밍 방식 권한, **defer** |
-| `Notification` | 알림 | 외부 전달 |
-| `Setup` | 초기화/유지보수 | 세션 구성 |
-| `TeammateIdle` | 팀원 유휴 | 작업 분배 |
-| `TaskCompleted` | 태스크 완료 | 진행 추적 |
-| `ConfigChange` | 설정 변경 | 핫 리로드 |
-| `WorktreeCreate` | 워크트리 생성 | 격리 추적 |
-| `WorktreeRemove` | 워크트리 제거 | 리소스 정리 |
-| `MessageDisplay` | 메시지 표시 | UI 렌더링 |
+| 이벤트 | Python | TypeScript | 발생 시점 | 주요 용도 |
+| --- | --- | --- | --- | --- |
+| `PreToolUse` | Yes | Yes | 도구 실행 전 | 입력 검증, 차단, **defer** 지원 |
+| `PostToolUse` | Yes | Yes | 도구 실행 후 | 출력 감사 |
+| `PostToolUseFailure` | Yes | Yes | 도구 실행 실패 | 오류 로깅 |
+| `PostToolBatch` | No | Yes | 배치 완료 후 | 결과 집계 |
+| `UserPromptSubmit` | Yes | Yes | 프롬프트 전송 | 컨텍스트 주입 |
+| `Stop` | Yes | Yes | 에이전트 종료 | 결과 검증 |
+| `SubagentStart` | Yes | Yes | 서브에이전트 시작 | 병렬 작업 추적 |
+| `SubagentStop` | Yes | Yes | 서브에이전트 완료 | 결과 집계 |
+| `PreCompact` | Yes | Yes | 컨텍스트 압축 전 | 트랜스크립트 아카이빙 |
+| `PermissionRequest` | Yes | Yes | 권한 결정 필요 | 프로그래밍 방식 권한, **defer** |
+| `Notification` | Yes | Yes | 알림 | 외부 전달 |
+| `SessionStart` | No | Yes | 세션 시작 | 초기화 |
+| `SessionEnd` | No | Yes | 세션 종료 | 정리 |
+| `Setup` | No | Yes | 초기화/유지보수 | 세션 구성 |
+| `TeammateIdle` | No | Yes | 팀원 유휴 | 작업 분배 |
+| `TaskCompleted` | No | Yes | 태스크 완료 | 진행 추적 |
+| `ConfigChange` | No | Yes | 설정 변경 | 핫 리로드 |
+| `WorktreeCreate` | No | Yes | 워크트리 생성 | 격리 추적 |
+| `WorktreeRemove` | No | Yes | 워크트리 제거 | 리소스 정리 |
 
 ### PermissionRequest 훅과 defer
 
