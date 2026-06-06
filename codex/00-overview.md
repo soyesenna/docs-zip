@@ -2,7 +2,7 @@
 
 > OpenAI의 에이전트 기반 코딩 도구, Codex CLI에 대한 종합 가이드
 
-**참조**: [developers.openai.com/codex](https://developers.openai.com/codex) | [github.com/openai/codex](https://github.com/openai/codex)
+**참조**: [developers.openai.com/codex](https://developers.openai.com/codex) | [developers.openai.com/codex/models](https://developers.openai.com/codex/models) | [developers.openai.com/codex/changelog](https://developers.openai.com/codex/changelog) | [developers.openai.com/codex/feature-maturity](https://developers.openai.com/codex/feature-maturity) | [github.com/openai/codex](https://github.com/openai/codex)
 
 ---
 
@@ -23,6 +23,7 @@ ChatGPT Plus, Pro, Business, Edu, Enterprise 플랜에 Codex가 포함되어 있
 | **CLI** | 터미널에서 직접 실행하는 풀스크린 TUI. 대화형으로 코드를 작성하고 검토 |
 | **IDE 확장** | VS Code, Cursor, Windsurf에서 사이드바 패널로 동작 |
 | **Codex App** | macOS/Windows 데스크톱 앱 (`codex app`으로 실행 또는 별도 다운로드) |
+| **Amazon Bedrock** | AWS 관리 인증·결제로 Codex를 로컬에서 실행. Bedrock을 모델 프로바이더로 구성 |
 
 ### 클라우드 환경
 
@@ -122,6 +123,11 @@ codex --cd /path/to/project "버그를 찾아줘"
 | **Apps (앱 연동)** | GitHub, Slack, Linear 등 서드파티 앱과 연동 | [Integrations 문서](https://developers.openai.com/codex/integrations) |
 | **Sandbox (샌드박스)** | 명령어 실행을 격리된 환경에서 수행하여 시스템 보호 | [Sandbox 문서](https://developers.openai.com/codex/sandboxing) |
 | **Subagents (서브에이전트)** | 큰 작업을 병렬로 분산 처리 | [Subagents 문서](https://developers.openai.com/codex/subagents) |
+| **Sites** | 웹사이트, 대시보드, 내부 도구, 게임 등을 빌드하고 배포 (Preview) | [Sites 문서](https://developers.openai.com/codex/sites) |
+| **Goal Mode** | 장기 실행 목표를 설정하고 시간·일 단위로 Codex가 자율 진행 | 관련 문서 참조 |
+| **Chrome Extension** | Chrome 탭에서 Codex가 앱·웹사이트를 병렬로 조작 | [Chrome extension 문서](https://developers.openai.com/codex/app/chrome-extension) |
+| **Appshots** | macOS에서 Command 키 두 번으로 최상단 앱 창을 Codex에 전송 | [Appshots 문서](https://developers.openai.com/codex/app/appshots) |
+| **Codex Security** | 플러그인 + 클라우드 보안으로 위협 모델 강화 | [Codex Security 문서](https://developers.openai.com/codex/codex-security) |
 | **AGENTS.md** | 프로젝트별 지속적 명령어 파일로 Codex 동작 가이드 | [AGENTS.md 문서](https://developers.openai.com/codex/agents-md) |
 
 ---
@@ -130,10 +136,12 @@ codex --cd /path/to/project "버그를 찾아줘"
 
 | 모델 | 용도 |
 | --- | --- |
-| **gpt-5.5** | 대부분의 작업에 권장되는 최신 프론티어 모델 |
-| **GPT-5.3-Codex-Spark** | ChatGPT Pro 구독자용 빠른 작업 (연구 프리뷰) |
-| **gpt-4.1** | 범용 코딩 작업 |
-| **gpt-4.1-mini** | 가벼운 작업 |
+| **gpt-5.5** | 복잡한 코딩, Computer Use, 지식 작업, 리서치 워크플로우에 권장되는 최신 프론티어 모델 |
+| **gpt-5.4** | 강력한 코딩·추론·도구 사용·에이전트 워크플로우를 갖춘 범용 프론티어 모델 |
+| **gpt-5.4-mini** | 빠르고 효율적인 미니 모델. 가벼운 작업 및 서브에이전트에 적합 |
+| **gpt-5.3-codex-spark** | ChatGPT Pro 구독자 전용. 거의 즉각적인 실시간 코딩 반복에 최적화 (연구 프리뷰, 텍스트 전용) |
+
+> **Deprecated 모델 경고**: `gpt-5.2` 및 `gpt-5.3-codex` 모델은 ChatGPT 로그인 시 더 이상 사용되지 않습니다(deprecated). 스크립트, 설정 파일, `codex exec --model` 명령에서 해당 모델을 참조하고 있다면 위 권장 모델로 업데이트하세요. 일부 deprecated 모델은 API에서 여전히 사용할 수 있습니다. 자세한 내용은 [Codex Models 문서](https://developers.openai.com/codex/models)를 참조하세요.
 
 세션 중 `/model` 명령으로 모델을 전환할 수 있습니다.
 
@@ -143,7 +151,10 @@ codex --cd /path/to/project "버그를 찾아줘"
 
 | 리소스 | URL |
 | --- | --- |
-| Codex 공식 문서 | [developers.openai.com/codex](https://developers.openai.com/codex) |
+| Codex 개요 | [developers.openai.com/codex/overview](https://developers.openai.com/codex/overview) |
+| Codex 모델 | [developers.openai.com/codex/models](https://developers.openai.com/codex/models) |
+| Changelog | [developers.openai.com/codex/changelog](https://developers.openai.com/codex/changelog) |
+| Feature Maturity | [developers.openai.com/codex/feature-maturity](https://developers.openai.com/codex/feature-maturity) |
 | GitHub 리포지토리 | [github.com/openai/codex](https://github.com/openai/codex) |
 | 빠른 시작 | [developers.openai.com/codex/quickstart](https://developers.openai.com/codex/quickstart) |
 | CLI 기능 | [developers.openai.com/codex/cli/features](https://developers.openai.com/codex/cli/features) |
@@ -151,11 +162,15 @@ codex --cd /path/to/project "버그를 찾아줘"
 | 설정 가이드 | [developers.openai.com/codex/config-file/config-basics](https://developers.openai.com/codex/config-file/config-basics) |
 | 인증 | [developers.openai.com/codex/authentication](https://developers.openai.com/codex/authentication) |
 | 요금 | [developers.openai.com/codex/pricing](https://developers.openai.com/codex/pricing) |
+| Amazon Bedrock 배포 | [developers.openai.com/codex/deployment/amazon-bedrock](https://developers.openai.com/codex/deployment/amazon-bedrock) |
+| Chrome Extension | [developers.openai.com/codex/app/chrome-extension](https://developers.openai.com/codex/app/chrome-extension) |
+| Appshots | [developers.openai.com/codex/app/appshots](https://developers.openai.com/codex/app/appshots) |
+| Codex Security | [developers.openai.com/codex/codex-security](https://developers.openai.com/codex/codex-security) |
+| Sites | [developers.openai.com/codex/sites](https://developers.openai.com/codex/sites) |
 | 챗지피티 Codex | [chatgpt.com/codex](https://chatgpt.com/codex) |
-| GitHub 설치 가이드 | [github.com/openai/codex - docs/install.md](https://github.com/openai/codex/blob/main/docs/install.md) |
 | 커뮤니티 (Discord) | [discord.gg/openai](https://discord.gg/openai) |
 
 ---
 
-> **최종 업데이트**: 2026-06-05
-> **출처**: [developers.openai.com/codex](https://developers.openai.com/codex), [github.com/openai/codex](https://github.com/openai/codex)
+> **최종 업데이트**: 2026-06-06
+> **출처**: [developers.openai.com/codex/overview](https://developers.openai.com/codex/overview), [developers.openai.com/codex/models](https://developers.openai.com/codex/models), [developers.openai.com/codex/changelog](https://developers.openai.com/codex/changelog), [developers.openai.com/codex/feature-maturity](https://developers.openai.com/codex/feature-maturity), [github.com/openai/codex](https://github.com/openai/codex)
