@@ -22,7 +22,18 @@ Claude Code는 **Model Context Protocol (MCP)** 을 통해 수백 개의 외부 
 
 ---
 
-## 2. MCP 서버 설치 4가지 방법
+## 2. MCP 서버 찾기 및 빌드
+
+**Anthropic Directory**에서 검토된 커넥터를 찾을 수 있습니다. Directory 커넥터는 Claude Code와 동일한 MCP 인프라를 사용하므로, 나열된 원격 서버는 `claude mcp add`로 바로 추가할 수 있습니다.
+
+직접 서버를 빌드하려면:
+- **MCP server guide**에서 프로토콜 기본 사항 확인
+- **Claude connector building docs**에서 인증, 테스트, Directory 제출 방법 확인
+- 공식 **`mcp-server-dev` 플러그인**으로 Claude에게 서버 스캐폴딩을 맡길 수도 있습니다
+
+---
+
+## 3. MCP 서버 설치 4가지 방법
 
 ### 방법 1: 원격 HTTP 서버
 
@@ -94,7 +105,7 @@ claude mcp add --transport stdio db -- npx -y @bytebase/dbhub \
 
 ---
 
-## 3. 서버 관리 명령어
+## 4. 서버 관리 명령어
 
 ```bash
 # 모든 구성된 서버 목록
@@ -146,7 +157,34 @@ MCP 서버가 세션에 직접 메시지를 푸시하여 CI 결과, 모니터링
 
 ---
 
-## 4. 설치 스코프 3가지 및 우선순위
+## 5. JSON 구성으로 MCP 서버 추가 (`claude mcp add-json`)
+
+JSON 구성이 있는 MCP 서버를 직접 추가할 수 있습니다. `claude mcp add` 명령어로 지원하지 않는 고급 옵션(WebSocket 등)을 설정할 때 유용합니다.
+
+```bash
+# 기본 문법
+claude mcp add-json <name> '<json-configuration>'
+
+# WebSocket 서버 추가 예시
+claude mcp add-json events-server \
+  '{"type":"ws","url":"wss://mcp.example.com/socket","headers":{"Authorization":"Bearer YOUR_TOKEN"}}'
+
+# HTTP 서버 추가 예시
+claude mcp add-json my-api \
+  '{"type":"http","url":"https://api.example.com/mcp","headers":{"Authorization":"Bearer YOUR_TOKEN"}}'
+```
+
+`.mcp.json`, `~/.claude.json`, `claude mcp add-json`에서 `type` 필드는 `http`의 별칭으로 `streamable-http`도 허용합니다. MCP 사양이 이 전송에 `streamable-http`라는 이름을 사용하므로, 서버 문서에서 복사한 구성이 수정 없이 작동합니다.
+
+---
+
+## 6. Claude Desktop에서 MCP 서버 가져오기
+
+Claude Desktop에서 이미 MCP 서버를 구성한 경우, Claude Code로 가져올 수 있습니다. Claude Desktop의 `claude_desktop_config.json`에 있는 서버 구성을 Claude Code에서 사용 가능한 형식으로 변환하여 추가합니다.
+
+---
+
+## 7. 설치 스코프 3가지 및 우선순위
 
 MCP 서버는 세 가지 스코프 수준에서 구성할 수 있습니다. 관리자는 관리 구성을 통해 엔터프라이즈 수준에서도 배포할 수 있습니다.
 
@@ -208,7 +246,7 @@ claude mcp add --transport http hubspot --scope user https://mcp.hubspot.com/ant
 
 ---
 
-## 5. .mcp.json 파일 형식
+## 8. .mcp.json 파일 형식
 
 프로젝트 스코프 서버는 `.mcp.json` 파일로 관리됩니다.
 
@@ -276,7 +314,7 @@ claude mcp add --transport http hubspot --scope user https://mcp.hubspot.com/ant
 
 ---
 
-## 6. 환경변수 확장
+## 9. 환경변수 확장
 
 `.mcp.json` 파일에서 환경변수 확장을 지원합니다. 팀이 구성을 공유하면서 머신별 경로와 API 키 등을 유연하게 관리할 수 있습니다.
 
@@ -299,7 +337,7 @@ claude mcp add --transport http hubspot --scope user https://mcp.hubspot.com/ant
 
 ---
 
-## 7. 플러그인 제공 MCP 서버
+## 10. 플러그인 제공 MCP 서버
 
 플러그인은 MCP 서버를 번들로 포함할 수 있으며, 플러그인이 활성화되면 자동으로 도구와 통합을 제공합니다.
 
@@ -342,7 +380,7 @@ claude mcp add --transport http hubspot --scope user https://mcp.hubspot.com/ant
 
 ---
 
-## 8. Claude Code 자체를 MCP 서버로 사용
+## 11. Claude Code 자체를 MCP 서버로 사용
 
 Claude Code 자체를 MCP 서버로 실행하여 다른 애플리케이션에서 연결할 수 있습니다.
 
@@ -370,7 +408,7 @@ claude mcp serve
 
 ---
 
-## 9. MCP 출력 제한
+## 12. MCP 출력 제한
 
 MCP 도구가 대량의 출력을 생성할 때 토큰 사용을 관리합니다.
 
@@ -379,6 +417,7 @@ MCP 도구가 대량의 출력을 생성할 때 토큰 사용을 관리합니다
 | **출력 경고 임계값** | MCP 도구 출력이 10,000 토큰 초과 시 경고 표시 |
 | **기본 최대 제한** | 25,000 토큰 |
 | **설정 변수** | `MAX_MCP_OUTPUT_TOKENS` 환경변수 |
+| **적용 범위** | `MAX_MCP_OUTPUT_TOKENS`는 자체 한도를 선언하지 않은 도구에 적용됨. `anthropic/maxResultSizeChars`를 설정한 도구는 `MAX_MCP_OUTPUT_TOKENS` 값과 관계없이 해당 값을 텍스트 콘텐츠에 사용. 이미지 데이터를 반환하는 도구는 여전히 `MAX_MCP_OUTPUT_TOKENS`의 적용을 받음 |
 
 ```bash
 # MCP 출력 제한 증가
@@ -391,9 +430,27 @@ claude
 - 상세한 보고서 또는 문서 생성
 - 광범위한 로그 파일 또는 디버깅 정보
 
+### 개별 도구 출력 한도 상향 (`anthropic/maxResultSizeChars`)
+
+MCP 서버를 개발하는 경우, 도구의 `tools/list` 응답 항목에 `_meta["anthropic/maxResultSizeChars"]`를 설정하여 개별 도구가 기본 디스크 저장 임계값보다 큰 결과를 반환할 수 있도록 허용할 수 있습니다. Claude Code는 해당 도구의 임계값을 주석에 지정된 값까지 올리며, **최대 500,000자**가 하드 상한선입니다.
+
+이는 데이터베이스 스키마나 전체 파일 트리와 같이 본질적으로 크지만 필요한 출력을 반환하는 도구에 유용합니다. 주석이 없으면 기본 임계값을 초과하는 결과는 디스크에 저장되고 대화에서 파일 참조로 대체됩니다.
+
+```json
+{
+  "name": "get_schema",
+  "description": "전체 데이터베이스 스키마를 반환합니다",
+  "_meta": {
+    "anthropic/maxResultSizeChars": 200000
+  }
+}
+```
+
+이 주석은 텍스트 콘텐츠에 대해 `MAX_MCP_OUTPUT_TOKENS`와 독립적으로 적용되므로, 사용자가 이 주석을 선언한 도구에 대해 환경변수를 올릴 필요가 없습니다. 이미지 데이터를 반환하는 도구는 여전히 토큰 제한의 적용을 받습니다.
+
 ---
 
-## 10. 엔터프라이즈 MCP 설정
+## 13. 엔터프라이즈 MCP 설정
 
 조직에서 MCP 서버를 중앙 집중식으로 제어할 수 있습니다. IT 관리자가 승인된 MCP 서버를 배포하고, 사용자가 임의로 서버를 추가하지 못하도록 제한할 수 있습니다.
 
@@ -426,7 +483,7 @@ claude
 
 ---
 
-## 11. 허용/차단 목록 상세
+## 14. 허용/차단 목록 상세
 
 관리 설정 파일에서 `allowedMcpServers`와 `deniedMcpServers`를 사용하여 사용자가 구성할 수 있는 MCP 서버를 제어합니다.
 
@@ -522,7 +579,7 @@ claude
 
 ---
 
-## 12. MCP 서버 개발 기본
+## 15. MCP 서버 개발 기본
 
 ### Node.js MCP 서버 예제
 
@@ -560,7 +617,7 @@ claude mcp add --transport stdio my-server -- node /path/to/server.js
 
 ---
 
-## 13. 실전 예제
+## 16. 실전 예제
 
 ### 예제 1: 파일시스템 MCP 서버
 
@@ -631,7 +688,7 @@ claude mcp add --transport sse monitoring https://monitoring.mycompany.com/sse \
 
 ---
 
-## 14. MCP 리소스 및 프롬프트
+## 17. MCP 리소스 및 프롬프트
 
 ### MCP 리소스 참조
 
@@ -649,7 +706,7 @@ MCP 서버가 노출하는 프롬프트는 Claude Code에서 슬래시 명령어
 
 ---
 
-## 15. 원격 MCP 서버 인증 (OAuth 2.0)
+## 18. 원격 MCP 서버 인증 (OAuth 2.0)
 
 많은 클라우드 기반 MCP 서버는 인증이 필요합니다. Claude Code는 OAuth 2.0을 통한 안전한 연결을 지원합니다.
 
@@ -774,7 +831,7 @@ Claude Code는 `headersHelper` 실행 시 다음 환경변수를 설정합니다
 
 ---
 
-## 16. 도구 검색 (Tool Search) — 지연 로딩
+## 19. 도구 검색 (Tool Search) — 지연 로딩
 
 도구 검색은 MCP 도구 정의를 Claude가 필요로 할 때까지 지연시켜 컨텍스트 사용량을 최소화합니다. 세션 시작 시에는 도구 이름과 서버 지침만 로드되므로, MCP 서버를 더 많이 추가해도 컨텍스트 창에 미치는 영향이 최소화됩니다.
 
@@ -854,7 +911,7 @@ ENABLE_TOOL_SEARCH=false claude
 
 ---
 
-## 17. Claude.ai 커넥터에서 MCP 서버 사용
+## 20. Claude.ai 커넥터에서 MCP 서버 사용
 
 Claude.ai 계정으로 Claude Code에 로그인한 경우, Claude.ai에서 추가한 MCP 서버(커넥터)가 Claude Code에서 자동으로 사용 가능합니다.
 
@@ -882,7 +939,7 @@ Claude Code에서 추가한 서버는 동일한 URL을 가리키는 claude.ai �
 
 ---
 
-## 18. MCP Elicitation (유도 요청에 응답)
+## 21. MCP Elicitation (유도 요청에 응답)
 
 MCP 서버는 작업 중 사용자에게 구조화된 입력을 요청(유도)할 수 있습니다. 서버가 단독으로 얻을 수 없는 정보가 필요할 때, Claude Code는 대화형 대화상자를 표시하고 사용자의 응답을 서버에 다시 전달합니다. 별도의 구성이 필요하지 않으며, 서버가 요청하면 유도 대화상자가 자동으로 나타납니다.
 
