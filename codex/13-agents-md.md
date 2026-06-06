@@ -1,9 +1,9 @@
 # Codex CLI - AGENTS.md 가이드
 
 > **원문**
-> - Custom instructions with AGENTS.md: https://developers.openai.com/codex/guides/agents-md/
 > - Customization: https://developers.openai.com/codex/concepts/customization
 > - Memories: https://developers.openai.com/codex/memories
+> - Chronicle: https://developers.openai.com/codex/memories/chronicle
 
 ---
 
@@ -20,8 +20,9 @@
 9. [유지 관리 팁](#9-유지-관리-팁)
 10. [고급 활용](#10-고급-활용)
 11. [Memories와의 관계](#11-memories와의-관계)
-12. [커스터마이제이션 빌드 순서](#12-커스터마이제이션-빌드-순서)
-13. [문제 해결](#13-문제-해결)
+12. [Chronicle (연구 미리보기)](#12-chronicle-연구-미리보기)
+13. [커스터마이제이션 빌드 순서](#13-커스터마이제이션-빌드-순서)
+14. [문제 해결](#14-문제-해결)
 
 ---
 
@@ -387,7 +388,9 @@ Memories는 Codex가 이전 스레드에서 학습한 유용한 컨텍스트를 
 | 필수 팀 규칙 | 여기에 보관 | 보조적 회상 레이어 |
 | 가용성 | 항상 활성 | 비활성화 가능 |
 
-### Memories 설정
+### Memories 활성화
+
+Memories는 기본적으로 비활성화되어 있습니다. Codex 앱 설정에서 활성화하거나, `config.toml`에서 설정할 수 있습니다.
 
 ```toml
 # ~/.codex/config.toml
@@ -395,24 +398,157 @@ Memories는 Codex가 이전 스레드에서 학습한 유용한 컨텍스트를 
 memories = true
 ```
 
-> Memories는 기본적으로 비활성화되어 있으며, 유럽 경제 지역, 영국, 스위스에서는 출시 시점에 사용할 수 없습니다.
+> Memories는 유럽 경제 지역(EEA), 영국, 스위스에서는 출시 시점에 사용할 수 없습니다.
 
-### Memories 주요 설정
+### Memories 동작 방식
+
+Memories를 활성화하면 Codex는 적격한 이전 스레드의 유용한 컨텍스트를 로컬 메모리 파일로 변환합니다. 동작의 주요 특징은 다음과 같습니다.
+
+- 활성 상태이거나 수명이 짧은 세션은 건너뜁니다.
+- 생성된 메모리 필드에서 시크릿을 자동으로 제거(redact)합니다.
+- 메모리는 스레드 종료 후 즉시 갱신되지 않고 **백그라운드에서 갱신**됩니다.
+- 스레드가 종료되더라도 메모리가 바로 업데이트되지 않을 수 있습니다. Codex는 아직 진행 중인 작업을 요약하지 않도록 **스레드가 충분히 idle 상태가 될 때까지 대기**합니다.
+- Codex rate-limit 남은 비율이 설정된 임계값 미만이면 메모리 생성 백그라운드 패스를 건너뛰어, 한도에 근접했을 때 할당량을 소비하지 않습니다.
+
+### Memory 저장소
+
+Codex는 메모리를 Codex 홈 디렉토리(기본 `~/.codex`) 아래에 저장합니다. 주 메모리 파일은 `~/.codex/memories/`에 위치하며, 요약, 지속 항목, 최근 입력, 이전 스레드의 지원 증거를 포함합니다.
+
+이 파일들은 생성된 상태 파일입니다. 문제 해결이나 Codex 홈 디렉토리를 공유하기 전에 검사할 수 있지만, 직접 편집하는 것을 주된 제어 수단으로 의존하지 마십시오.
+
+### 스레드별 메모리 제어 (`/memories`)
+
+Codex 앱과 Codex TUI에서 `/memories` 명령을 사용하여 **현재 스레드의 메모리 동작을 제어**할 수 있습니다.
+
+| 제어 항목 | 설명 |
+|-----------|------|
+| 기존 메모리 사용 여부 | 현재 스레드에서 기존 메모리를 읽어올지 결정 |
+| 메모리 생성 허용 여부 | Codex가 현재 스레드를 향후 메모리 생성 입력으로 사용할지 결정 |
+
+**핵심**: 스레드 수준의 선택은 글로벌 메모리 설정을 변경하지 않습니다. 각 스레드에서 독립적으로 메모리 사용/생성을 제어할 수 있습니다.
+
+### Memories 설정
+
+Memories 관련 설정은 `config.toml`의 `[memories]` 섹션에서 관리합니다.
 
 | 설정 | 설명 |
 |------|------|
-| `memories.generate_memories` | 새 스레드를 메모리 생성 입력으로 저장할지 여부 |
-| `memories.use_memories` | 기존 메모리를 미래 세션에 주입할지 여부 |
-| `memories.disable_on_external_context` | MCP/웹 검색을 사용한 스레드를 메모리 생성에서 제외 |
-| `memories.min_rate_limit_remaining_percent` | 메모리 생성 시작 전 최소 남은 rate-limit 비율 |
+| `memories.generate_memories` | 새로 생성된 스레드를 메모리 생성 입력으로 저장할지 여부 제어 |
+| `memories.use_memories` | Codex가 기존 메모리를 미래 세션에 주입할지 여부 제어 |
+| `memories.disable_on_external_context` | `true`면 MCP 도구 호출, 웹 검색, 도구 검색 등 외부 컨텍스트를 사용한 스레드를 메모리 생성에서 제외. 기존 `memories.no_memories_if_mcp_or_web_search` 키도 여전히 별칭(alias)으로 허용됨 |
+| `memories.min_rate_limit_remaining_percent` | 메모리 생성이 시작되기 전 필요한 최소 Codex rate-limit 남은 비율 제어 |
 | `memories.extract_model` | 스레드별 메모리 추출에 사용할 모델 오버라이드 |
 | `memories.consolidation_model` | 전역 메모리 통합에 사용할 모델 오버라이드 |
+
+### Memories 보안 경고
+
+> **주의**: 메모리에 시크릿을 저장하지 마십시오. Codex는 생성된 메모리 필드에서 시크릿을 자동으로 제거하지만, Codex 홈 디렉토리나 생성된 메모리 아티팩트를 공유하기 전에 메모리 파일을 반드시 검토해야 합니다.
 
 공식 문서에서는 **필수 팀 지침은 `AGENTS.md`나 체크인된 문서에 보관**하고, memories는 유용한 로컬 회상 레이어로 활용할 것을 권장합니다.
 
 ---
 
-## 12. 커스터마이제이션 빌드 순서
+## 12. Chronicle (연구 미리보기)
+
+> **연구 미리보기**: Chronicle은 **opt-in 연구 미리보기**(opt-in research preview) 상태입니다. 활성화 전에 현재 리스크를 이해하기 위해 개인정보 및 보안 섹션을 반드시 검토하십시오.
+
+Chronicle은 화면의 컨텍스트를 활용하여 Codex memories를 보강합니다. Codex에 프롬프트할 때 이 메모리들이 작업 중인 내용을 이해하는 데 도움을 주어, 컨텍스트를 다시 설명할 필요를 줄여줍니다.
+
+### 가용성 및 제한
+
+| 항목 | 내용 |
+|------|------|
+| 상태 | Opt-in 연구 미리보기 (opt-in research preview) |
+| 플랫폼 | macOS 전용 |
+| 구독 | ChatGPT Pro 전용 |
+| 미제공 지역 | EU, 영국, 스위스 |
+| 필요 권한 | macOS Screen Recording, Accessibility |
+
+### Chronicle의 역할
+
+Chronicle은 화면의 최근 컨텍스트를 사용하여 메모리 빌딩을 개선함으로써, Codex와 작업할 때 다시 설명해야 하는 컨텍스트의 양을 줄이도록 설계되었습니다.
+
+- **화면에 있는 것 활용**: Codex가 현재 보고 있는 것을 이해하여 시간과 컨텍스트 전환을 절약
+- **누락된 컨텍스트 채우기**: 제로부터 컨텍스트를 정성껏 작성할 필요 없이 Chronicle이 간극을 메워줌
+- **도구와 워크플로 기억**: Codex에 사용할 도구를 설명할 필요 없이, 작업하면서 학습하여 장기적으로 시간 절약
+
+Codex는 Chronicle을 추가 컨텍스트 제공용으로 사용합니다. 특정 파일, Slack 스레드, Google Doc, 대시보드, PR 등 더 나은 소스가 있을 때는 Chronicle으로 소스를 식별한 후 해당 소스를 직접 사용합니다.
+
+### Chronicle 설정
+
+1. Codex 앱에서 Settings 엽니다.
+2. **Personalization**으로 이동하여 **Memories**가 활성화되어 있는지 확인합니다.
+3. Memories 설정 아래에서 **Chronicle**을 켭니다.
+4. 동의 대화상자를 검토하고 **Continue**를 선택합니다.
+5. macOS Screen Recording 및 Accessibility 권한을 부여합니다.
+6. 설정이 완료되면 **Try it out**을 선택하거나 새 스레드를 시작합니다.
+
+**권한 문제 해결**: macOS에서 Screen Recording 또는 Accessibility 권한이 거부되었다고 보고하면, System Settings > Privacy & Security > Screen Recording 또는 Accessibility에서 Codex를 활성화하십시오. 조직이나 macOS에 의해 권한이 제한된 경우, 제한이 해제되고 Codex가 필요한 권한을 받은 후 Chronicle이 시작됩니다.
+
+**설정이 보이지 않는 경우**: Chronicle 설정이 보이지 않으면 Chronicle이 포함된 Codex 앱 빌드를 사용 중인지, Settings > Personalization에서 Memories가 활성화되어 있는지 확인하십시오. 설정이 완료되지 않으면:
+1. Codex에 Screen Recording 및 Accessibility 권한이 있는지 확인
+2. Codex 앱을 종료하고 다시 열기
+3. Settings > Personalization에서 Chronicle 상태 확인
+
+### Pause/Resume 제어
+
+Chronicle이 화면 컨텍스트를 사용하여 메모리를 생성하는 시점을 제어할 수 있습니다.
+
+| 제어 | 방법 |
+|------|------|
+| 일시 정지 | Codex 메뉴 바 아이콘에서 **Pause Chronicle** 선택 |
+| 재개 | Codex 메뉴 바 아이콘에서 **Resume Chronicle** 선택 |
+| 완전 비활성화 | Settings > Personalization > Memories에서 Chronicle 끄기 |
+
+미팅 전이나 메모리로 기록하고 싶지 않은 민감한 콘텐츠를 볼 때 Chronicle을 일시 정지하십시오. 스레드별로 메모리 사용 여부도 제어할 수 있습니다.
+
+### Rate Limit 소모
+
+Chronicle은 샌드박스된 에이전트를 백그라운드에서 실행하여 캡처된 화면 이미지로부터 메모리를 생성합니다. 이 에이전트들은 **현재 rate limit을 빠르게 소모**합니다.
+
+### 개인정보 및 보안
+
+#### 화면 캡처
+
+Chronicle은 화면 캡처를 사용하며, 화면에 표시된 민감한 정보를 포함할 수 있습니다. 마이크나 시스템 오디오에는 접근하지 않습니다.
+
+- 타인의 동의 없이 미팅이나 대화를 녹음하는 데 Chronicle을 사용하지 마십시오.
+- 기억하고 싶지 않은 콘텐츠를 볼 때는 Chronicle을 일시 정지하십시오.
+
+#### 데이터 저장 위치
+
+| 데이터 유형 | 저장 위치 | 보존 기간 |
+|-------------|-----------|-----------|
+| 화면 캡처 | `$TMPDIR/chronicle/screen_recording/` (임시) | 6시간 이상 된 캡처는 자동 삭제 |
+| Chronicle 메모리 | `$CODEX_HOME/memories_extensions/chronicle/` (일반적으로 `~/.codex/memories_extensions/chronicle/`) | 사용자가 삭제할 때까지 |
+
+Chronicle이 생성하는 메모리는 다른 Codex memories와 동일한 **암호화되지 않은(unencrypted) Markdown 파일**입니다. 읽고 수정할 수 있으며, Codex에게 검색을 요청할 수도 있습니다. 무언가를 잊게 하려면 폴더 내의 해당 파일을 삭제하거나, Markdown 파일을 선택적으로 편집하여 제거할 정보를 삭제하십시오. 수동으로 새 정보를 추가해서는 안 됩니다.
+
+#### OpenAI와 공유되는 데이터
+
+Chronicle은 화면 컨텍스트를 로컬에서 캡처한 후, 주기적으로 Codex를 사용하여 최근 활동을 메모리로 요약합니다. 메모리 생성을 위해 Chronicle은 이 화면 컨텍스트에 접근할 수 있는 임시 Codex 세션을 시작합니다. 해당 세션은 선택된 스크린샷 프레임, 스크린샷에서 추출한 OCR 텍스트, 타이밍 정보, 관련 시간 윈도우의 로컬 파일 경로를 처리할 수 있습니다.
+
+- 메모리 생성에 사용된 화면 캡처는 기기에 임시로 저장되며, 서버에서 처리된 후 메모리를 생성합니다.
+- 법적으로 요구되지 않는 한 서버에 스크린샷을 처리 후에도 저장하지 않으며, 학습에 사용하지 않습니다.
+- 생성된 메모리는 `$CODEX_HOME/memories_extensions/chronicle/`에 로컬로 저장된 Markdown 파일입니다.
+- 향후 세션에서 Codex가 메모리를 사용할 때, 관련 메모리 내용이 해당 세션의 컨텍스트로 포함될 수 있으며, ChatGPT 설정에서 허용된 경우 모델 개선에 사용될 수 있습니다.
+
+#### 프롬프트 인젝션 리스크
+
+Chronicle 사용은 화면 콘텐츠로부터의 **프롬프트 인젝션 공격 위험을 증가**시킵니다. 예를 들어, 악의적인 에이전트 지침이 포함된 사이트를 탐색하면 Codex가 해당 지침을 따를 수 있습니다.
+
+### Chronicle 모델 설정
+
+Chronicle은 다른 Memories와 동일한 모델을 사용합니다. 특정 모델을 구성하지 않으면 기본 Codex 모델을 사용합니다. 특정 모델을 선택하려면 `config.toml`에서 `consolidation_model`을 업데이트합니다.
+
+```toml
+[memories]
+consolidation_model = "gpt-5.4-mini"
+```
+
+---
+
+## 13. 커스터마이제이션 빌드 순서
 
 공식 문서에서 권장하는 커스터마이제이션 적용 순서입니다.
 
@@ -432,10 +568,10 @@ memories = true
 
 ---
 
-## 13. 문제 해결
+## 14. 문제 해결
 
 | 문제 | 원인 | 해결 방법 |
-|------|------|------|
+|------|------|-----------|
 | 아무것도 로드되지 않음 | 잘못된 디렉토리이거나 파일이 비어 있음 | 올바른 리포지토리에 있는지 확인. `codex status`로 워크스페이스 루트 확인. 파일에 내용이 있는지 확인 |
 | 잘못된 가이드가 나타남 | 상위 디렉토리나 Codex 홈에 `AGENTS.override.md`가 있음 | override 파일을 찾아 이름 변경 또는 삭제 |
 | Fallback 파일명이 무시됨 | 설정에 오타가 있거나 Codex를 재시작하지 않음 | `project_doc_fallback_filenames`에 오타가 없는지 확인 후 Codex 재시작 |
@@ -450,3 +586,4 @@ memories = true
 - 공식 문서에서 `AGENTS.md`를 **작게 유지(Keep it small)** 할 것을 권장합니다.
 - `AGENTS.md`는 피드백 루프로 활용해야 합니다. 에이전트가 잘못된 가정을 하면 `AGENTS.md`에서 수정하고, 에이전트에게 업데이트를 요청하십시오.
 - Memories는 보조적 회상 레이어이며, 필수 팀 규칙의 유일한 출처로 사용해서는 안 됩니다.
+- Memories에 시크릿을 저장하지 마십시오. Codex 홈 디렉토리나 메모리 아티팩트를 공유하기 전에 반드시 검토하십시오.
