@@ -2,7 +2,7 @@
 
 > 설정 파일 계층, config.toml 기본 구조, 주요 섹션, 세분화된 승인 정책, 인증, 환경 변수, 권한 프로필, 실행 규칙, 빠른 모드
 
-**참조**: [developers.openai.com/codex/config/config-basics](https://developers.openai.com/codex/config/config-basics) | [developers.openai.com/codex/config/advanced-config](https://developers.openai.com/codex/config/advanced-config) | [developers.openai.com/codex/config/config-reference](https://developers.openai.com/codex/config/config-reference) | [developers.openai.com/codex/config/environment-variables](https://developers.openai.com/codex/config/environment-variables) | [developers.openai.com/codex/permissions](https://developers.openai.com/codex/permissions) | [developers.openai.com/codex/rules](https://developers.openai.com/codex/rules) | [developers.openai.com/codex/speed](https://developers.openai.com/codex/speed) | [developers.openai.com/codex/hooks](https://developers.openai.com/codex/hooks)
+**참조**: [developers.openai.com/codex/config-basic/](https://developers.openai.com/codex/config-basic/) | [developers.openai.com/codex/config-advanced/](https://developers.openai.com/codex/config-advanced/) | [developers.openai.com/codex/config-reference/](https://developers.openai.com/codex/config-reference/) | [developers.openai.com/codex/environment-variables/](https://developers.openai.com/codex/environment-variables/) | [developers.openai.com/codex/permissions](https://developers.openai.com/codex/permissions) | [developers.openai.com/codex/rules](https://developers.openai.com/codex/rules) | [developers.openai.com/codex/speed](https://developers.openai.com/codex/speed) | [developers.openai.com/codex/hooks](https://developers.openai.com/codex/hooks)
 
 ---
 
@@ -74,7 +74,7 @@ model = "gpt-5.5"
 
 # Reasoning effort (reasoning 모델에만 적용)
 # 값: "minimal" | "low" | "medium" | "high" | "xhigh"
-reasoning_effort = "medium"
+model_reasoning_effort = "medium"
 
 # Reasoning 요약 모드
 # 값: "auto" | "concise" | "detailed" | "none"
@@ -95,7 +95,7 @@ service_tier = "default"
 | 파라미터 | 값 | 설명 |
 | --- | --- | --- |
 | `model` | 모델 슬러그 문자열 | 사용할 모델 (예: `"gpt-5.5"`, `"gpt-5.4"`) |
-| `reasoning_effort` | `minimal`, `low`, `medium`, `high`, `xhigh` | Reasoning 모델의 추론 강도 |
+| `model_reasoning_effort` | `minimal`, `low`, `medium`, `high`, `xhigh` | Reasoning 모델의 추론 강도 |
 | `model_reasoning_summary` | `auto`, `concise`, `detailed`, `none` | Reasoning 요약 생성 모드 |
 | `model_verbosity` | `low`, `medium`, `high` | 모델 출력의 상세도 |
 | `review_model` | 모델 슬러그 문자열 | 리뷰에 사용할 모델 |
@@ -123,7 +123,7 @@ base_url = "http://localhost:11434"
 | --- | --- | --- |
 | `model_providers.<id>.provider` | 문자열 | 제공자 유형 (예: `"lmstudio"`, `"ollama"`) |
 | `model_providers.<id>.base_url` | 문자열 | 제공자 API 엔드포인트 URL |
-| `model_providers.<id>.api_key_env` | 문자열 | API 키 환경 변수명 |
+| `model_providers.<id>.env_key` | 문자열 | 제공자 API 키를 공급하는 환경 변수명 |
 
 ### sandbox_mode - 샌드박스 모드
 
@@ -143,7 +143,7 @@ sandbox_mode = "workspace-write"
 
 ```toml
 # 승인 정책
-# 값: "untrusted" | "on-request" | "on-failure" (deprecated) | "never" | { granular 설정 }
+# 값: "untrusted" | "on-request" | "never" | { reject = { sandbox_approval = bool, rules = bool, mcp_elicitations = bool } }
 approval_policy = "on-request"
 ```
 
@@ -151,11 +151,36 @@ approval_policy = "on-request"
 | --- | --- |
 | `untrusted` | 모든 명령에 승인 필요 |
 | `on-request` | 샌드박스 외부 작업에만 승인 요청 |
-| `on-failure` | **Deprecated** — 실패 시에만 승인 요청. 사용이 권장되지 않음 |
 | `never` | 승인 없이 자동 실행 |
-| `granular` | 세분화된 승인 규칙 적용 (객체 형태) |
+| `{ reject = { ... } }` | 특정 프롬프트 카테고리를 자동 거부하며 나머지는 대화형으로 유지 |
 
-> **Deprecated 경고**: `on-failure` 정책은 더 이상 권장되지 않습니다. 향후 버전에서 제거될 수 있습니다.
+> **참고**: `on-failure`는 더 이상 유효한 값이 아닙니다. 대화형 실행에는 `on-request`를, 비대화형 실행에는 `never`를 사용하세요.
+
+#### reject 객체
+
+`approval_policy`를 객체 형태로 설정하면 특정 프롬프트 카테고리를 자동 거부할 수 있습니다.
+
+```toml
+[approval_policy]
+# 기본 승인 정책
+# ...
+
+[approval_policy.reject]
+# 샌드박스 승격 승인 프롬프트 자동 거부
+sandbox_approval = true
+
+# execpolicy prompt 규칙에 의해 트리거된 승인 자동 거부
+rules = true
+
+# MCP elicitation 프롬프트 자동 거부
+mcp_elicitations = true
+```
+
+| reject 필드 | 타입 | 설명 |
+| --- | --- | --- |
+| `sandbox_approval` | `boolean` | `true` 시 샌드박스 승격 승인 프롬프트를 자동 거부 |
+| `rules` | `boolean` | `true` 시 execpolicy `prompt` 규칙에 의한 승인을 자동 거부 |
+| `mcp_elicitations` | `boolean` | `true` 시 MCP elicitation 프롬프트를 자동 거부 |
 
 ### approvals_reviewer - 승인 검토자
 
@@ -182,43 +207,46 @@ unified_exec = true
 # 셸 스냅샷
 shell_snapshot = true
 
-# 하위 에이전트
-subagents = false
+# 셸 도구
+shell_tool = true
 
-# 스마트 승인
-smart_approvals = false
+# 실행 취소
+undo = true
 
-# 앱
-apps = false
+# 웹 검색 요청
+web_search_request = false
 
-# 다중 에이전트
-multi_agent = false
+# apply_patch 자유형식
+apply_patch_freeform = false
 
-# 메모리
-memories = false
+# 샌드박스에서 실행 정책 적용
+exec_policy = true
 
-# 훅 (기본 활성화)
-hooks = true
+# 원격 모델 목록 새로고침
+remote_models = false
 
-# Fast mode
-fast_mode = false
+# 원격 압축 (ChatGPT 인증만)
+remote_compaction = true
 ```
 
-| 플래그 | 기본값 | 설명 |
-| --- | --- | --- |
-| `unified_exec` | `true` | 통합 실행기 사용 |
-| `shell_snapshot` | `true` | 셸 스냅샷 활성화 |
-| `subagents` | `false` | 하위 에이전트 활성화 |
-| `smart_approvals` | `false` | 스마트 승인 활성화 |
-| `apps` | `false` | 앱 연동 활성화 |
-| `multi_agent` | `false` | 다중 에이전트 모드 활성화 |
-| `memories` | `false` | 메모리 기능 활성화 |
-| `hooks` | `true` | 훅 프레임워크 활성화 |
-| `fast_mode` | `false` | Fast mode 활성화 (`service_tier = "fast"`와 함께 사용) |
+| 플래그 | 기본값 | 성숙도 | 설명 |
+| --- | --- | --- | --- |
+| `apply_patch_freeform` | `false` | Experimental | 자유형 `apply_patch` 도구 포함 |
+| `elevated_windows_sandbox` | `false` | Experimental | 권한 상승 Windows 샌드박스 파이프라인 사용 |
+| `exec_policy` | `true` | Experimental | `shell`/`unified_exec`에 규칙 검사 적용 |
+| `experimental_windows_sandbox` | `false` | Experimental | Windows 제한 토큰 샌드박스 사용 |
+| `remote_compaction` | `true` | Experimental | 원격 압축 활성화 (ChatGPT 인증만) |
+| `remote_models` | `false` | Experimental | 준비 상태 표시 전 원격 모델 목록 새로고침 |
+| `shell_snapshot` | `false` | Beta | 셸 환경 스냅샷으로 반복 명령 속도 향상 |
+| `shell_tool` | `true` | Stable | 기본 `shell` 도구 활성화 |
+| `unified_exec` | `false` | Beta | 통합 PTY 기반 실행 도구 사용 |
+| `undo` | `true` | Stable | 턴별 git ghost 스냅샷으로 undo 활성화 |
+| `web_search_request` | `false` | Stable | 모델이 웹 검색을 요청할 수 있도록 허용 |
 
-> 사용 가능한 기능 플래그는 버전에 따라 다를 수 있습니다.
-> `codex features list` 명령으로 현재 사용 가능한 기능을 확인하세요.
-> 훅 비활성화 시 `[features] hooks = false`로 설정합니다. `codex_hooks`는 deprecated 별칭입니다.
+> 생략한 기능 키는 기본값을 유지합니다.
+> `config.toml`의 `[features]`에 `feature_name = true`를 추가하거나, CLI에서 `codex --enable feature_name`으로 활성화할 수 있습니다.
+> 여러 기능을 동시에 활성화하려면 `codex --enable feature_a --enable feature_b`를 사용하세요.
+> 기능을 비활성화하려면 `config.toml`에서 해당 키를 `false`로 설정하세요.
 
 ### tools - 도구 설정
 
@@ -411,37 +439,11 @@ enabled = true
 
 ## 세분화된 승인 정책 (GranularApprovalConfig)
 
-`approval_policy`를 객체 형태로 설정하면 세분화된 제어가 가능합니다.
+`approval_policy`를 `reject` 객체 형태로 설정하면 특정 프롬프트 카테고리를 자동 거부하면서 나머지는 대화형으로 유지할 수 있습니다.
 
 ```toml
-[approval_policy]
-type = "granular"
-
-# MCP 도구 호출 승인
-[approval_policy.mcp_elicitations]
-# 특정 MCP 서버의 도구에 대한 승인 규칙
-
-# 규칙 기반 승인
-[[approval_policy.rules]]
-# 패턴 매칭 규칙
-pattern = "npm test"
-allowed = true
-
-[[approval_policy.rules]]
-pattern = "rm -rf"
-allowed = false
-
-# 샌드박스 승인
-[approval_policy.sandbox_approval]
-# 샌드박스 내 작업에 대한 승인 정책
-
-# 스킬 승인
-[approval_policy.skill_approval]
-# 스킬 사용에 대한 승인 정책
-
-# 권한 요청
-[approval_policy.request_permissions]
-# 특정 권한 요청에 대한 승인 정책
+# 샌드박스 승격 및 규칙 기반 승인은 자동 거부, MCP elicitation은 사용자에게 표시
+approval_policy = { reject = { sandbox_approval = true, rules = true } }
 ```
 
 ---
@@ -729,32 +731,63 @@ codex --profile safe "리팩토링해줘"
 
 ## 환경 변수 목록
 
-| 환경 변수 | 설명 | 기본값 |
+Codex는 지속 설정에 `config.toml`을 사용합니다. 환경 변수는 셸 범위 오버라이드, 자동화 시크릿, 설치 프로그램 동작, 진단에 사용합니다.
+
+> 이 표는 Codex가 직접 읽는 **안정적 공개 환경 변수**만 나열합니다. 내부 개발 변수, 테스트 변수, 또는 `env_key`로 직접 선택하는 제공자별 시크릿 이름은 포함하지 않습니다.
+
+### Core locations
+
+| 환경 변수 | 사용 주체 | 기본값 | 설명 |
+| --- | --- | --- | --- |
+| `CODEX_HOME` | CLI, IDE 확장, app-server, 설치 프로그램 | `~/.codex` | 구성, 인증, 로그, 세션, 스킬, 독립 패키지 메타데이터를 포함한 Codex 상태의 루트. 설정 시 디렉토리가 이미 존재해야 함 |
+| `CODEX_SQLITE_HOME` | CLI 및 app-server 상태 | `CODEX_HOME` | SQLite 기반 상태가 저장되는 위치. `sqlite_home` config 옵션이 우선. 상대 경로는 현재 작업 디렉토리에서 해석 |
+
+### Installer variables
+
+| 환경 변수 | 기본값 | 설명 |
 | --- | --- | --- |
-| `OPENAI_API_KEY` | OpenAI API 키 | - |
-| `CODEX_API_KEY` | Codex 전용 API 키 | - |
-| `CODEX_ACCESS_TOKEN` | Codex 액세스 토큰 | - |
-| `CODEX_HOME` | Codex 홈 디렉토리 | `~/.codex` |
-| `CODEX_SQLITE_HOME` | Codex SQLite 데이터베이스 경로 | - |
-| `CODEX_CA_CERTIFICATE` | 커스텀 CA 인증서 경로 | - |
-| `CODEX_NON_INTERACTIVE` | 무인 설치 모드 | `0` |
-| `CODEX_REMOTE_TOKEN` | 원격 연결 인증 토큰 | - |
-| `RUST_LOG` | Rust 로깅 수준 | `codex_core=info,codex_tui=info,codex_rmcp_client=info` |
-| `VISUAL` | 외부 에디터 경로 (`Ctrl+G`에서 사용) | - |
-| `EDITOR` | 외부 에디터 경로 (`VISUAL` 미설정 시 사용) | - |
-| `PATH` | 시스템 PATH (Codex가 명령어 탐색에 사용) | - |
+| `CODEX_NON_INTERACTIVE` | `false` | `1`, `true`, `yes`로 설정 시 설치 프로그램 프롬프트를 건너뜀. 프롬프트는 기본 응답을 사용하므로 스크립트 설치 및 업데이트에 사용. 최초 설정에는 부적합 |
+| `CODEX_INSTALL_DIR` | macOS/Linux: `~/.local/bin`, Windows: `%LOCALAPPDATA%\Programs\OpenAI\Codex\bin` | `codex` 명령이 설치되는 위치 변경. 독립 패키지 캐시는 `CODEX_HOME/packages/standalone`에 유지 |
+
+```shell
+# 무인 설치 예시 (macOS/Linux)
+curl -fsSL https://chatgpt.com/codex/install.sh | CODEX_NON_INTERACTIVE=1 sh
+
+# 무인 설치 예시 (Windows PowerShell)
+$env:CODEX_NON_INTERACTIVE=1; irm https://chatgpt.com/codex/install.ps1 | iex
+```
+
+### Authentication and network
+
+| 환경 변수 | 사용 주체 | 설명 |
+| --- | --- | --- |
+| `CODEX_API_KEY` | `codex exec` | 단일 비대화형 실행을 위한 API 키. **`codex exec`에서만 지원**. 저장소 제어 코드를 실행할 때 작업 전체가 아닌 인라인으로 설정 |
+| `CODEX_ACCESS_TOKEN` | CLI, app-server, 신뢰된 자동화 | ChatGPT 또는 Codex 액세스 토큰 제공. 지속 로그인을 위해 `codex login --with-access-token`으로 파이프 |
+| `CODEX_CA_CERTIFICATE` | HTTPS, 로그인, WebSocket 클라이언트 | 기업 TLS 가로채기 또는 사설 루트 CA 환경에서 PEM CA 번들 경로. `SSL_CERT_FILE`보다 우선 |
+| `SSL_CERT_FILE` | HTTPS, 로그인, WebSocket 클라이언트 | `CODEX_CA_CERTIFICATE`가 설정되지 않은 경우 대체 PEM CA 번들 경로 |
+
+> 제공자 API 키의 경우 모델 제공자 구성에서 `env_key`를 설정하세요. Codex는 해당 구성으로 명명된 변수를 읽으므로, 변수 이름 자체는 고정된 Codex 환경 변수가 아닙니다.
+
+### Diagnostics
+
+| 환경 변수 | 사용 주체 | 설명 |
+| --- | --- | --- |
+| `RUST_LOG` | CLI 및 app-server | Rust 로그 필터링 및 상세도 제어. `codex exec`는 더 상세한 값을 설정하지 않는 한 `error` 출력이 기본 |
+
+```shell
+# 디버그 로깅 예시
+RUST_LOG=debug codex -c log_dir=./.codex-log
+tail -F ./.codex-log/codex-tui.log
+```
 
 ### 환경 변수 사용 예시
 
 ```shell
-# API 키 설정
-export OPENAI_API_KEY="<YOUR_API_KEY>"
+# Codex exec 전용 API 키 (인라인으로 설정, 작업 전체에 설정하지 말 것)
+CODEX_API_KEY="<YOUR_API_KEY>" codex exec "작업 설명"
 
-# Codex 전용 API 키
-export CODEX_API_KEY="<YOUR_CODEX_API_KEY>"
-
-# Codex 액세스 토큰
-export CODEX_ACCESS_TOKEN="<YOUR_ACCESS_TOKEN>"
+# 액세스 토큰으로 로그인
+echo "<YOUR_ACCESS_TOKEN>" | codex login --with-access-token
 
 # SQLite 데이터베이스 경로
 export CODEX_SQLITE_HOME="/data/codex/db"
@@ -767,10 +800,6 @@ export CODEX_HOME="/data/codex"
 
 # 디버그 로깅 활성화
 export RUST_LOG=codex_core=debug,codex_tui=debug
-
-# 원격 연결
-export CODEX_REMOTE_TOKEN="$(cat ~/.codex/app-server-token)"
-codex --remote wss://remote-host:4500 --remote-auth-token-env CODEX_REMOTE_TOKEN
 ```
 
 ---
@@ -819,7 +848,7 @@ codex -c model=gpt-4.1-mini
 
 # 모델 설정
 model = "gpt-5.5"
-reasoning_effort = "medium"
+model_reasoning_effort = "medium"
 model_reasoning_summary = "auto"
 model_verbosity = "medium"
 service_tier = "default"
@@ -860,8 +889,8 @@ timeout = 30
 [features]
 unified_exec = true
 shell_snapshot = true
-hooks = true
-fast_mode = false
+shell_tool = true
+undo = true
 
 # 프로필
 [profiles.fast]
@@ -870,7 +899,7 @@ approval_policy = "never"
 service_tier = "fast"
 
 [profiles.fast.features]
-fast_mode = true
+unified_exec = true
 
 [profiles.safe]
 approval_policy = "untrusted"
@@ -924,4 +953,4 @@ experimental_network = false
 ---
 
 > **최종 업데이트**: 2026-06-06
-> **출처**: [developers.openai.com/codex/config/config-basics](https://developers.openai.com/codex/config/config-basics), [developers.openai.com/codex/config/advanced-config](https://developers.openai.com/codex/config/advanced-config), [developers.openai.com/codex/config/config-reference](https://developers.openai.com/codex/config/config-reference), [developers.openai.com/codex/config/environment-variables](https://developers.openai.com/codex/config/environment-variables), [developers.openai.com/codex/permissions](https://developers.openai.com/codex/permissions), [developers.openai.com/codex/rules](https://developers.openai.com/codex/rules), [developers.openai.com/codex/speed](https://developers.openai.com/codex/speed), [developers.openai.com/codex/hooks](https://developers.openai.com/codex/hooks)
+> **출처**: [developers.openai.com/codex/config-basic/](https://developers.openai.com/codex/config-basic/), [developers.openai.com/codex/config-advanced/](https://developers.openai.com/codex/config-advanced/), [developers.openai.com/codex/config-reference/](https://developers.openai.com/codex/config-reference/), [developers.openai.com/codex/environment-variables/](https://developers.openai.com/codex/environment-variables/), [developers.openai.com/codex/permissions](https://developers.openai.com/codex/permissions), [developers.openai.com/codex/rules](https://developers.openai.com/codex/rules), [developers.openai.com/codex/speed](https://developers.openai.com/codex/speed), [developers.openai.com/codex/hooks](https://developers.openai.com/codex/hooks)
