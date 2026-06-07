@@ -2,7 +2,37 @@
 
 > 원문: https://docs.pencil.dev/core-concepts/components, https://docs.pencil.dev/core-concepts/slots, Pencil MCP 서버 Design System 가이드 (get_guidelines로 조회)
 
-Pencil의 Design System 가이드는 사이드바, 카드, 테이블, 탭, 드롭다운, 페이지네이션 등 일반적인 UI 패턴의 구성 방법과 아이콘, 슬롯, 화면 레이아웃 패턴, 디자인 토큰을 제공합니다.
+Pencil의 Design System 가이드는 컴포넌트 기본 개념, 슬롯, 사이드바, 카드, 테이블, 탭, 드롭다운, 페이지네이션 등 일반적인 UI 패턴의 구성 방법과 아이콘, 화면 레이아웃 패턴, 디자인 토큰을 제공합니다.
+
+---
+
+## 컴포넌트 기본
+
+> 출처: https://docs.pencil.dev/core-concepts/components
+
+### 컴포넌트를 사용하는 이유
+
+컴포넌트를 사용하면 디자인 전반에 일관성을 유지할 수 있습니다. 메인 컴포넌트를 한 번 수정하면 모든 인스턴스가 자동으로 업데이트됩니다. 컴포넌트는 디자인 시스템 구축의 기반이 됩니다.
+
+### 컴포넌트 생성
+
+프레임, 도형, 텍스트 등 모든 표준 디자인 요소를 재사용 가능한 컴포넌트로 변환할 수 있습니다.
+
+| 단계 | 설명 |
+| --- | --- |
+| 1 | 요소를 선택 |
+| 2 | **Cmd/Ctrl + Option/Alt + K** 단축키를 누르거나, 속성 패널 상단의 "Create component" 버튼 클릭 |
+| 3 | 요소가 컴포넌트 오리진이 되며, 선택 시 **magenta** 색상의 bounding box로 표시됨 |
+
+> 복잡한 구조의 경우 중첩 컴포넌트(nested components)를 생성할 수 있습니다.
+
+### 컴포넌트 사용
+
+| 항목 | 설명 |
+| --- | --- |
+| 인스턴스 생성 | 캔버스에서 컴포넌트 오리진을 복사 |
+| 인스턴스 식별 | 선택 시 **violet** 색상의 bounding box로 표시 |
+| 오리진으로 이동 | 속성 패널의 "Go to component" 버튼 클릭 |
 
 ---
 
@@ -22,11 +52,41 @@ Pencil의 Design System 가이드는 사이드바, 카드, 테이블, 탭, 드�
 
 ---
 
-## Understanding Slots
+## Slots 기본
 
-슬롯(Slot)은 컴포넌트 내부에서 자식 컴포넌트를 삽입할 수 있는 placeholder 프레임입니다. `slot` 속성에 추천 컴포넌트 ID 배열이 포함되어 있습니다.
+> 출처: https://docs.pencil.dev/core-concepts/slots
 
-### 슬롯 식별
+슬롯(Slot)은 컴포넌트 내부에서 요소를 드롭할 수 있는 지정된 영역입니다. 컴포넌트에 유연하고 커스터마이징 가능한 영역을 정의할 수 있습니다.
+
+### UI에서 슬롯 생성
+
+| 단계 | 설명 |
+| --- | --- |
+| 1 | 프레임을 만들고 컴포넌트로 변환 — **Cmd/Ctrl + Option/Alt + K** 또는 속성 패널 상단의 "Create component" 버튼 클릭 |
+| 2 | 원하는 대로 스타일 지정 |
+| 3 | 속성 패널 상단의 **"Make a slot"** 버튼 클릭 |
+
+- **빈 프레임만 변환 가능**: 컴포넌트 오리진 내의 빈 프레임(empty frame)만 슬롯으로 변환할 수 있습니다.
+- **대각선 표시**: 슬롯은 캔버스에 대각선(diagonal lines)으로 표시되어 요소를 드롭할 수 있는 영역을 나타냅니다.
+
+### Suggested Slot Components
+
+같은 .pen 파일 내의 다른 컴포넌트를 "suggested slot components"로 지정할 수 있습니다. 예를 들어 `table` 컴포넌트의 슬롯은 `table-row`를 추천 콘텐츠로 제안할 수 있습니다. 이 기능은 사람과 AI 디자이너 모두에게 해당 슬롯에 어떤 요소가 들어가야 하는지 안내합니다.
+
+| 단계 | 설명 |
+| --- | --- |
+| 1 | 컴포넌트 오리진에서 슬롯이 있는 레이어 선택 |
+| 2 | 속성 패널 상단의 "Slots" 행에서 **`+` 버튼** 클릭 |
+| 3 | 추천으로 지정할 컴포넌트 선택 |
+
+### 슬롯에 요소 삽입
+
+| 단계 | 설명 |
+| --- | --- |
+| 1 | 컴포넌트 인스턴스 생성 |
+| 2 | **드래그 앤 드롭** 또는 **복사-붙여넣기**로 요소를 슬롯에 삽입 |
+
+### 슬롯 프로그래밍 방식 사용
 
 컴포넌트를 읽을 때 `slot` 속성이 있는 프레임을 찾습니다:
 
@@ -43,7 +103,7 @@ Pencil의 Design System 가이드는 사이드바, 카드, 테이블, 탭, 드�
 | `slot` | 추천 자식 컴포넌트 ID 배열 |
 | `name` | 슬롯의 용도를 나타내는 이름 (예: "Content Slot", "Header Slot") |
 
-### 슬롯 사용법
+#### Insert로 슬롯 활용
 
 1. **부모 컴포넌트를 Insert** 하고 바인딩을 캡처
 2. **슬롯에 자식을 Insert** — 경로: `parentBinding/slotId`
@@ -55,9 +115,9 @@ item1 = Insert(sidebar + "/contentSlotId", { type: "ref", ref: "sidebarItemId", 
 item2 = Insert(sidebar + "/contentSlotId", { type: "ref", ref: "sidebarItemId", descendants: { ... } })
 ```
 
-### 불필요한 슬롯 숨김
+#### 불필요한 슬롯 숨김
 
-인스턴스에서 특정 슬롯이 필요 없으면 `enabled: false`로 숨깁니다:
+인스턴스에서 특정 슬롯이 필요 없으면 `enabled: false`로 숨김합니다:
 
 ```javascript
 Update(card + "/contentSlotId", { enabled: false })
