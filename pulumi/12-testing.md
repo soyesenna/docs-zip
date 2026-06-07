@@ -24,7 +24,7 @@ Pulumi는 범용 프로그래밍 언어로 클라우드 리소스를 프로비�
 
 ### 속성 테스트와 Policy as Code
 
-속성 테스트(Property Tests)는 **Policy as Code** 기반으로 동작한다. Pulumi의 정책 팩(Policy Pack)은 TypeScript/JavaScript(Node.js)와 Python으로만 작성할 수 있으며, 각 정책은 테스트가 평가하고 단언하는 **속성(property), 즉 불변식(invariant)**이 된다. 예를 들어 "모든 S3 버킷은 암호화되어야 한다", "보안 그룹은 22번 포트를 인터넷에 공개해서는 안 된다" 등의 규칙을 정책으로 정의하고, `pulumi up` 실행 시 자동으로 검사한다. 자세한 내용은 [Policy as Code 가이드](https://www.pulumi.com/docs/iac/using-pulumi/continuous-delivery/policy-as-code/)를 참조하라.
+속성 테스트(Property Tests)는 **Policy as Code** 기반으로 동작한다. Pulumi의 정책 팩(Policy Pack)은 TypeScript/JavaScript(Node.js)와 Python으로 작성할 수 있으며, 각 정책은 테스트가 평가하고 단언하는 **속성(property), 즉 불변식(invariant)**이 된다. 예를 들어 "모든 S3 버킷은 암호화되어야 한다", "보안 그룹은 22번 포트를 인터넷에 공개해서는 안 된다" 등의 규칙을 정책으로 정의하고, `pulumi up` 실행 시 자동으로 검사한다. 속성 테스트는 Pulumi CLI 내부에서 인프라 프로비저닝 전후에 실행되며, 단위 테스트와 달리 클라우드 제공자가 반환하는 실제 값을 평가할 수 있다. 모의(mock) 값이 아닌 실제 값을 검증할 수 있으므로 단위 테스트보다 높은 신뢰도를 제공한다. 속성 테스트는 모든 클라우드 환경에서 실행할 수 있다: 지속적인 "수용(acceptance)" 스택, 각 pull request마다 생성되는 임시 클라우드 환경, 또는 이들의 조합 등. 자세한 내용은 [Property Testing 가이드](https://www.pulumi.com/docs/iac/guides/testing/property-testing/) 및 [Policy as Code 가이드](https://www.pulumi.com/docs/insights/policy/policy-packs/authoring/)를 참조하라.
 
 ---
 
@@ -77,8 +77,12 @@ pulumi.runtime.setMocks({
                     id: "i-1234567890abcdef0",
                     state: {
                         ...args.inputs,
-                        publicIp: "203.0.113.12",
+                        arn: "arn:aws:ec2:us-west-2:123456789012:instance/i-1234567890abcdef0",
                         instanceState: "running",
+                        primaryNetworkInterfaceId: "eni-12345678",
+                        privateDns: "ip-10-0-1-17.ec2.internal",
+                        publicDns: "ec2-203-0-113-12.compute-1.amazonaws.com",
+                        publicIp: "203.0.113.12",
                     },
                 };
             default:
@@ -100,6 +104,8 @@ pulumi.runtime.setMocks({
 // 인수 설명: "project" → 프로젝트 이름, "stack" → 스택 이름,
 // false → dryRun 플래그 (pulumi가 preview 모드로 실행 중인지 여부)
 ```
+
+모킹 인터페이스의 정의는 [runtime API 참조 페이지](https://www.pulumi.com/docs/reference/pkg/nodejs/pulumi/pulumi/runtime/#Mocks)에서 확인할 수 있다.
 
 ### 모킹의 제한 사항 (Limitations)
 
@@ -134,6 +140,117 @@ pulumi.runtime.set_mocks(
 ```
 
 > **주의:** Python에서 `new_resource`에서 명시적 출력 속성을 반환할 때, 속성 이름은 camelCase(예: `"publicIp"`)를 사용해야 한다. Pulumi는 프로그래밍 언어와 관계없이 내부 속성 직렬화에 camelCase를 사용하기 때문이다. `"public_ip"`가 아닌 `"publicIp"`를 사용해야 한다.
+
+**Go 모킹 예제:**
+
+```go
+import (
+    "github.com/pulumi/pulumi/sdk/v3/go/common/resource"
+    "github.com/pulumi/pulumi/sdk/v3/go/pulumi"
+)
+
+type mocks int
+
+func (mocks) NewResource(args pulumi.MockResourceArgs) (string, resource.PropertyMap, error) {
+    return args.Name + "_id", args.Inputs, nil
+}
+
+func (mocks) Call(args pulumi.MockCallArgs) (resource.PropertyMap, error) {
+    return args.Args, nil
+}
+```
+
+**C# 모킹 예제:**
+
+```csharp
+using System.Collections.Immutable;
+using System.Threading.Tasks;
+using Pulumi;
+using Pulumi.Testing;
+
+namespace UnitTesting
+{
+    class Mocks : IMocks
+    {
+        public Task<(string? id, object state)> NewResourceAsync(MockResourceArgs args)
+        {
+            var outputs = ImmutableDictionary.CreateBuilder<string, object>();
+            outputs.AddRange(args.Inputs);
+
+            if (args.Type == "aws:ec2/instance:Instance")
+            {
+                outputs.Add("publicIp", "203.0.113.12");
+                outputs.Add("publicDns", "ec2-203-0-113-12.compute-1.amazonaws.com");
+            }
+
+            args.Id ??= $"{args.Name}_id";
+            return Task.FromResult<(string? id, object state)>((args.Id, (object)outputs));
+        }
+
+        public Task<object> CallAsync(MockCallArgs args)
+        {
+            var outputs = ImmutableDictionary.CreateBuilder<string, object>();
+
+            if (args.Token == "aws:index/getAmi:getAmi")
+            {
+                outputs.Add("architecture", "x86_64");
+                outputs.Add("id", "ami-0eb1f3cdeeb8eed2a");
+            }
+
+            return Task.FromResult((object)outputs);
+        }
+    }
+
+    public static class Testing
+    {
+        public static Task<ImmutableArray<Resource>> RunAsync<T>() where T : Stack, new()
+        {
+            return Deployment.TestAsync<T>(new Mocks(), new TestOptions { IsPreview = false });
+        }
+
+        public static Task<T> GetValueAsync<T>(this Output<T> output)
+        {
+            var tcs = new TaskCompletionSource<T>();
+            output.Apply(v =>
+            {
+                tcs.SetResult(v);
+                return v;
+            });
+            return tcs.Task;
+        }
+    }
+}
+```
+
+**Java 모킹 예제:**
+
+```java
+package myproject;
+
+import com.pulumi.test.Mocks;
+import com.pulumi.test.Mocks.CallArgs;
+import com.pulumi.test.Mocks.ResourceArgs;
+import com.pulumi.test.Mocks.ResourceResult;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+
+class MyMocks implements Mocks {
+    @Override
+    public CompletableFuture<ResourceResult> newResourceAsync(ResourceArgs args) {
+        var state = new HashMap<>(args.inputs);
+        return CompletableFuture.completedFuture(
+            ResourceResult.of(Optional.of(args.name + "_id"), state)
+        );
+    }
+
+    @Override
+    public CompletableFuture<Map<String, Object>> callAsync(CallArgs args) {
+        return CompletableFuture.completedFuture(Map.of());
+    }
+}
+```
 
 ### 입력 속성 vs 출력 속성
 
@@ -190,6 +307,120 @@ class MyMocks(pulumi.runtime.Mocks):
     def call(self, args: pulumi.runtime.MockCallArgs):
         return {}
 ```
+
+**Go 예제:**
+
+```go
+type mocks int
+
+func (mocks) NewResource(args pulumi.MockResourceArgs) (string, resource.PropertyMap, error) {
+    // Handle StackReference resources
+    if args.TypeToken == "pulumi:pulumi:StackReference" {
+        outputs := resource.NewPropertyMapFromMap(map[string]interface{}{
+            "vpcId":       "vpc-12345678",
+            "subnetIds":   []interface{}{"subnet-11111111", "subnet-22222222"},
+            "clusterName": "my-cluster",
+        })
+        state := args.Inputs.Copy()
+        state["outputs"] = resource.NewObjectProperty(outputs)
+        return args.Name + "_id", state, nil
+    }
+    return args.Name + "_id", args.Inputs, nil
+}
+
+func (mocks) Call(args pulumi.MockCallArgs) (resource.PropertyMap, error) {
+    return args.Args, nil
+}
+```
+
+프로그램에서는 다음과 같이 `StackReference`를 사용할 수 있다:
+
+```go
+networkStack, err := pulumi.NewStackReference(ctx, "organization/network/prod", nil)
+if err != nil {
+    return err
+}
+vpcId := networkStack.GetStringOutput(pulumi.String("vpcId"))
+// 테스트에서 vpcId는 "vpc-12345678"로 해결된다
+```
+
+**C# 예제:**
+
+```csharp
+class Mocks : IMocks
+{
+    public Task<(string? id, object state)> NewResourceAsync(MockResourceArgs args)
+    {
+        var outputs = ImmutableDictionary.CreateBuilder<string, object>();
+        outputs.AddRange(args.Inputs);
+
+        if (args.Type == "pulumi:pulumi:StackReference")
+        {
+            outputs.Add("outputs", new Dictionary<string, object>
+            {
+                { "vpcId", "vpc-12345678" },
+                { "subnetIds", new[] { "subnet-11111111", "subnet-22222222" } },
+                { "clusterName", "my-cluster" },
+            });
+        }
+
+        args.Id ??= $"{args.Name}_id";
+        return Task.FromResult<(string? id, object state)>((args.Id, (object)outputs));
+    }
+
+    public Task<object> CallAsync(MockCallArgs args)
+    {
+        return Task.FromResult((object)ImmutableDictionary<string, object>.Empty);
+    }
+}
+```
+
+프로그램에서는 다음과 같이 `StackReference`를 사용할 수 있다:
+
+```csharp
+var networkStack = new StackReference("organization/network/prod");
+var vpcId = networkStack.GetOutput("vpcId");
+// 테스트에서 vpcId는 "vpc-12345678"로 해결된다
+```
+
+**Java 예제:**
+
+```java
+import java.util.List;
+
+class MyMocks implements Mocks {
+    @Override
+    public CompletableFuture<ResourceResult> newResourceAsync(ResourceArgs args) {
+        var state = new HashMap<>(args.inputs);
+        if ("pulumi:pulumi:StackReference".equals(args.type)) {
+            state.put("outputs", Map.of(
+                "vpcId", "vpc-12345678",
+                "subnetIds", List.of("subnet-11111111", "subnet-22222222"),
+                "clusterName", "my-cluster"
+            ));
+        }
+        return CompletableFuture.completedFuture(
+            ResourceResult.of(Optional.of(args.name + "_id"), state)
+        );
+    }
+
+    @Override
+    public CompletableFuture<Map<String, Object>> callAsync(CallArgs args) {
+        return CompletableFuture.completedFuture(Map.of());
+    }
+}
+```
+
+프로그램에서는 다음과 같이 `StackReference`를 사용할 수 있다:
+
+```java
+var networkStack = new StackReference("organization/network/prod",
+    StackReferenceArgs.builder().build());
+var vpcId = networkStack.getOutput(Output.of("vpcId"));
+// 테스트에서 vpcId는 "vpc-12345678"로 해결된다
+```
+
+> **참고:** YAML 프로그램은 선언형이므로 단위 테스트 모킹에서 StackReference를 지원하지 않는다. StackReference를 사용하는 프로그램의 테스트는 [통합 테스트](https://www.pulumi.com/docs/iac/guides/testing/integration/)를 참조하라.
 
 ### 테스트 작성
 
@@ -286,6 +517,230 @@ class TestingWithMocks(unittest.TestCase):
         return pulumi.Output.all(infra.group.urn, infra.group.ingress).apply(check_security_group_rules)
 ```
 
+**Go 테스트 예제:**
+
+```go
+package main
+
+import (
+    "sync"
+    "testing"
+
+    "github.com/pulumi/pulumi-aws/sdk/v4/go/aws/ec2"
+    "github.com/pulumi/pulumi/sdk/v3/go/common/resource"
+    "github.com/pulumi/pulumi/sdk/v3/go/pulumi"
+    "github.com/stretchr/testify/assert"
+)
+
+// ... mocks as shown above
+
+func TestInfrastructure(t *testing.T) {
+    err := pulumi.RunErr(func(ctx *pulumi.Context) error {
+        infra, err := createInfrastructure(ctx)
+        assert.NoError(t, err)
+
+        var wg sync.WaitGroup
+        wg.Add(3)
+
+        // 검사 1: 인스턴스에 Name 태그가 있어야 함
+        pulumi.All(infra.server.URN(), infra.server.Tags).ApplyT(func(all []interface{}) error {
+            urn := all[0].(pulumi.URN)
+            tags := all[1].(map[string]string)
+            assert.Containsf(t, tags, "Name", "missing a Name tag on server %v", urn)
+            wg.Done()
+            return nil
+        })
+
+        // 검사 2: userData 스크립트를 사용하지 않아야 함
+        pulumi.All(infra.server.URN(), infra.server.UserData).ApplyT(func(all []interface{}) error {
+            urn := all[0].(pulumi.URN)
+            userData := all[1].(string)
+            assert.Emptyf(t, userData, "illegal use of userData on server %v", urn)
+            wg.Done()
+            return nil
+        })
+
+        // 검사 3: SSH가 인터넷에 열려 있지 않아야 함
+        pulumi.All(infra.group.URN(), infra.group.Ingress).ApplyT(func(all []interface{}) error {
+            urn := all[0].(pulumi.URN)
+            ingress := all[1].([]ec2.SecurityGroupIngress)
+            for _, i := range ingress {
+                openToInternet := false
+                for _, b := range i.CidrBlocks {
+                    if b == "0.0.0.0/0" {
+                        openToInternet = true
+                        break
+                    }
+                }
+                assert.Falsef(t, i.FromPort == 22 && openToInternet,
+                    "illegal SSH port 22 open to the Internet (CIDR 0.0.0.0/0) on group %v", urn)
+            }
+            wg.Done()
+            return nil
+        })
+
+        wg.Wait()
+        return nil
+    }, pulumi.WithMocks("project", "stack", mocks(0)))
+    assert.NoError(t, err)
+}
+```
+
+**C# 테스트 예제:**
+
+```csharp
+using System.Linq;
+using System.Threading.Tasks;
+using FluentAssertions;
+using NUnit.Framework;
+using Pulumi.Aws.Ec2;
+
+namespace UnitTesting
+{
+    [TestFixture]
+    public class WebserverStackTests
+    {
+        // 검사 1: 인스턴스에 Name 태그가 있어야 함
+        [Test]
+        public async Task InstanceHasNameTag()
+        {
+            var resources = await Testing.RunAsync<WebserverStack>();
+
+            var instance = resources.OfType<Instance>().FirstOrDefault();
+            instance.Should().NotBeNull("EC2 Instance not found");
+
+            var tags = await instance.Tags.GetValueAsync();
+            tags.Should().NotBeNull("Tags are not defined");
+            tags.Should().ContainKey("Name");
+        }
+
+        // 검사 2: userData 스크립트를 사용하지 않아야 함
+        [Test]
+        public async Task InstanceMustNotUseInlineUserData()
+        {
+            var resources = await Testing.RunAsync<WebserverStack>();
+
+            var instance = resources.OfType<Instance>().FirstOrDefault();
+            instance.Should().NotBeNull("EC2 Instance not found");
+
+            var userData = await instance.UserData.GetValueAsync();
+            userData.Should().BeNull();
+        }
+
+        // 검사 3: SSH가 인터넷에 열려 있지 않아야 함
+        [Test]
+        public async Task SecurityGroupMustNotHaveSshPortsOpenToInternet()
+        {
+            var resources = await Testing.RunAsync<WebserverStack>();
+
+            foreach (var securityGroup in resources.OfType<SecurityGroup>())
+            {
+                var urn = await securityGroup.Urn.GetValueAsync();
+                var ingress = await securityGroup.Ingress.GetValueAsync();
+                foreach (var rule in ingress)
+                {
+                    (rule.FromPort == 22 && rule.CidrBlocks.Any(b => b == "0.0.0.0/0"))
+                        .Should().BeFalse($"Illegal SSH port 22 open to the Internet (CIDR 0.0.0.0/0) on group {urn}");
+                }
+            }
+        }
+    }
+}
+```
+
+**Java 테스트 예제:**
+
+```java
+package myproject;
+
+import com.pulumi.test.PulumiTest;
+import com.pulumi.test.TestOptions;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.*;
+
+class Ec2Tests {
+    @AfterEach
+    void cleanup() {
+        PulumiTest.cleanup();
+    }
+
+    // 검사 1: 인스턴스에 Name 태그가 있어야 함
+    @Test
+    void instanceMustHaveNameTag() {
+        var result = PulumiTest
+            .withMocks(new MyMocks())
+            .withOptions(TestOptions.builder()
+                .projectName("project").stackName("stack").preview(false)
+                .build())
+            .runTest(App::stack);
+
+        var instances = result.resources().stream()
+            .filter(r -> r instanceof Instance)
+            .map(r -> (Instance) r)
+            .toList();
+
+        assertFalse(instances.isEmpty(), "EC2 Instance not found");
+        for (var instance : instances) {
+            var urn = PulumiTest.extractValue(instance.urn());
+            var tags = PulumiTest.extractValue(instance.tags());
+            assertNotNull(tags, "Server " + urn + " must have tags");
+            assertTrue(tags.containsKey("Name"), "Server " + urn + " must have a Name tag");
+        }
+    }
+
+    // 검사 2: userData 스크립트를 사용하지 않아야 함
+    @Test
+    void instanceMustNotUseInlineUserData() {
+        var result = PulumiTest
+            .withMocks(new MyMocks())
+            .withOptions(TestOptions.builder()
+                .projectName("project").stackName("stack").preview(false)
+                .build())
+            .runTest(App::stack);
+
+        var instance = result.resources().stream()
+            .filter(r -> r instanceof Instance)
+            .map(r -> (Instance) r)
+            .findFirst().orElse(null);
+
+        assertNotNull(instance, "EC2 Instance not found");
+        var urn = PulumiTest.extractValue(instance.urn());
+        var userData = PulumiTest.extractValue(instance.userData());
+        assertNull(userData, "Illegal use of userData on server " + urn);
+    }
+
+    // 검사 3: SSH가 인터넷에 열려 있지 않아야 함
+    @Test
+    void securityGroupMustNotHaveSshOpenToInternet() {
+        var result = PulumiTest
+            .withMocks(new MyMocks())
+            .withOptions(TestOptions.builder()
+                .projectName("project").stackName("stack").preview(false)
+                .build())
+            .runTest(App::stack);
+
+        for (var resource : result.resources()) {
+            if (resource instanceof SecurityGroup group) {
+                var urn = PulumiTest.extractValue(group.urn());
+                var ingress = PulumiTest.extractValue(group.ingress());
+                if (ingress != null) {
+                    for (var rule : ingress) {
+                        var fromPort = PulumiTest.extractValue(rule.fromPort());
+                        var cidrBlocks = PulumiTest.extractValue(rule.cidrBlocks());
+                        boolean sshOpen = fromPort != null && fromPort == 22
+                            && cidrBlocks != null && cidrBlocks.contains("0.0.0.0/0");
+                        assertFalse(sshOpen, "Illegal SSH port 22 open to the Internet "
+                            + "(CIDR 0.0.0.0/0) on group " + urn);
+                    }
+                }
+            }
+        }
+    }
+}
+```
+
 ### 테스트 실행 명령어
 
 | 언어 | 명령어 |
@@ -311,6 +766,8 @@ class TestingWithMocks(unittest.TestCase):
 
 통합 테스트는 Pulumi 프로그램을 실행하고 내부 구현 세부 사항을 검사하지 않고 결과를 테스트하는 방식이다. 예를 들어, HTTP 엔드포인트가 사용 가능하고 들어오는 요청에 예상된 응답을 주는지 테스트할 수 있다. 이 접근 방식은 "블랙박스 테스트"로도 알려져 있다.
 
+통합 테스트는 클라우드 리소스를 모킹하는 단위 테스트나 특정 리소스의 기대값을 검증하는 Policy as Code와 달리, 실제 인프라를 배포하여 코드의 동작을 종단 간으로 검증할 수 있게 한다.
+
 ### 통합 테스트가 보장하는 사항
 
 | 검증 항목 | 설명 |
@@ -334,6 +791,16 @@ class TestingWithMocks(unittest.TestCase):
 | 타입 안전성 | 높음 | 높음 | 낮음 |
 | 추가 의존성 | Go 패키지 | Pulumi SDK | Pulumi CLI만 |
 | 업데이트 경로 테스트 | `EditDirs`로 시퀀스 테스트 | 직접 구현 필요 | 직접 구현 필요 |
+
+### DIY 옵션
+
+Automation API 외에도 Pulumi CLI 명령을 셸에서 직접 실행하여 통합 테스트를 작성할 수 있다. 셸 스크립트나 선호하는 언어에서 셸 명령을 실행하는 방식이다. Automation API가 언어 네이티브 API를 제공하여 이 과정을 더 쉽게 만들어주지만, 필요하다면 셸 스크립트로도 유사한 결과를 얻을 수 있다.
+
+| 장점 | 단점 |
+|------|------|
+| 모든 프로그래밍 언어에서 사용 가능 | 수동 오류 처리 필요 |
+| 이해와 구현이 간단 | Automation API보다 타입 안전성이 낮음 |
+| Pulumi CLI 외에 추가 의존성 없음 | 리소스 속성 추출 및 검증이 어려움 |
 
 ---
 
@@ -439,6 +906,12 @@ integration.ProgramTest(t, &integration.ProgramTestOptions{
 })
 ```
 
+### 추가 리소스
+
+- [Integration Testing in Go 예제](https://github.com/pulumi/examples/tree/master/testing-integration) - Pulumi Go 통합 테스트 프레임워크를 사용한 최소 예제
+- [Pulumi AWS 프로바이더 테스트](https://github.com/pulumi/pulumi-aws/tree/master/examples) - AWS 프로바이더의 포괄적인 통합 테스트 예제
+- [Pulumi 예제 테스트 스위트](https://github.com/pulumi/examples/blob/master/misc/test/examples_test.go) - 추가 예제 및 패턴
+
 ---
 
 ## Automation API를 활용한 통합 테스트
@@ -492,6 +965,8 @@ Automation API로 작성된 통합 테스트 예제:
 | C# | [pulumi-dotnet/sdk/Pulumi.Automation.Tests/LocalWorkspaceTests.cs](https://github.com/pulumi/pulumi-dotnet/blob/main/sdk/Pulumi.Automation.Tests/LocalWorkspaceTests.cs) |
 | Java | [automation-api-examples/java/localProgram/](https://github.com/pulumi/automation-api-examples/blob/main/java/localProgram/) |
 
+`localProgram-tsnode-mochatests` 예제는 Automation API로 스택을 설정하고 런타임 검증을 수행한 후 테스트의 일환으로 스택을 정리하는 방법을 보여준다. [localProgram-tsnode-mochatests 예제](https://github.com/pulumi/automation-api-examples/tree/main/nodejs/localProgram-tsnode-mochatests)에서 확인할 수 있다.
+
 ---
 
 ## 테스트 전략과 모범 사례
@@ -519,6 +994,9 @@ Pulumi는 세 가지 테스트 스타일을 모두 시도해 보고, 품질 목�
 - 리소스 유형과 테스트 빈도에 따라 단기 임시 환경도 클라우드 제공자로부터 상당한 비용이 발생할 수 있으므로 적절히 계획해야 한다.
 - `ExtraRuntimeValidation`을 사용하여 배포된 리소스의 실제 동작을 검증한다.
 - `EditDirs`를 사용하면 업데이트/업그레이드 경로를 테스트할 수 있다.
+- Automation API를 사용하면 선호하는 언어와 테스트 프레임워크로 통합 테스트를 작성할 수 있다.
+- 셸 스크립트 기반 DIY 접근 방식도 가능하지만, Automation API가 더 나은 타입 안전성과 오류 처리를 제공한다.
+- 통합 테스트에서 Pulumi 서비스(Pulumi Cloud)와의 상호작용을 테스트하려면 Automation API로 스택 생성 시 `projectName`과 `stackName`을 지정하여 격리된 테스트 스택을 사용하라.
 
 ### 언어별 테스트 지원 요약
 
