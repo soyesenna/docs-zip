@@ -4,6 +4,8 @@
 >
 > https://www.pulumi.com/docs/deployments/deployments/
 >
+> https://www.pulumi.com/docs/deployments/deployments/get-started/
+>
 > https://www.pulumi.com/docs/deployments/deployments/using/
 >
 > https://www.pulumi.com/docs/deployments/deployments/using/settings/
@@ -32,9 +34,15 @@
 >
 > https://www.pulumi.com/docs/deployments/deployments/review-stacks/
 >
+> https://www.pulumi.com/docs/deployments/deployments/runs/
+>
 > https://www.pulumi.com/docs/deployments/deployments/runs/images/
 >
 > https://www.pulumi.com/docs/deployments/deployments/runs/customer-managed-agents/
+>
+> https://www.pulumi.com/docs/deployments/webhooks/
+>
+> https://www.pulumi.com/docs/deployments/pulumi-button/
 
 Pulumi Deployments & Workflows는 인프라스트럭처 프로젝트 관리, 배포 자동화, 워크플로 통합을 위한 운영 도구 모음이다. **Deployments**는 IaC를 위해 목적에 맞게 구축된 관리형 CI/CD 플랫폼으로, 관리형 컴퓨트, 안전한 시크릿 처리, 버전 관리 시스템과의 깊은 통합을 제공한다. **Webhooks**는 스택 업데이트, 배포, Drift Detection, 정책 위반 등에 대응하여 외부 시스템과 워크플로를 트리거한다. **Deploy with Pulumi Button**은 GitHub 리포지토리, Gist 또는 웹 페이지에서 원클릭 인프라 배포를 가능하게 하는 임베디드 배포 버튼이다.
 
@@ -307,7 +315,7 @@ Pulumi Deployments는 OpenID Connect(OIDC)를 통해 클라우드 제공자와�
 |---|---|
 | **Issuer** | 토큰이 올바르게 서명되었는지 검증. 발급자의 공개 서명 키를 가져와 토큰 서명 확인 |
 | **Audience** | 배포와 연결된 조직 이름. 특정 조직으로 자격 증명 제한에 사용 |
-| **Subject** | 배포에 대한 다양한 정보 포함. 특정 조직, 프로젝트, 스택 등으로 자격 증명 제한에 사용 |
+| **Subject** | 배포에 대한 다양한 정보 포함. 특정 조직, 프로젝트, 스택 등으로 자격 증명 제한에 사용. Subject와 커스텀 클레임은 세밀한 조건 설정에 특히 유용 |
 | **Custom Claims** | Subject와 동일한 정보를 개별 필드로 제공. 클라우드 제공자가 커스텀 클레임 기반 신뢰 관계를 지원하는 경우 사용 |
 
 ### OIDC 토큰 구조
@@ -348,7 +356,7 @@ AWS에서는 Web Identity Provider를 생성하여 IAM Role을 수임(Assume)하
 
 1. IAM 콘솔에서 Identity Provider 생성 (Provider URL: `https://api.pulumi.com/oidc`, Audience: Pulumi 조직 이름)
 2. IAM Role 및 Trust Policy 구성
-3. Pulumi 콘솔에서 OIDC 활성화 (Role ARN, Session Name, 선택적으로 Session Duration 입력)
+3. Pulumi 콘솔에서 OIDC 활성화 (Role ARN, Session Name, 선택적으로 Session Duration 및 Policy ARNs 입력)
 
 **IAM 권한 권장 사항:**
 
@@ -413,6 +421,8 @@ pulumi-loca-test-nocode-dev-806bf21f-444f-4825-a80c-afd12cd2526a
 
 **설정 후 환경 변수:** `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_SESSION_TOKEN`. 원본 OIDC 토큰은 `PULUMI_OIDC_TOKEN` 환경 변수와 `/mnt/pulumi/pulumi.oidc` 파일에서도 사용 가능.
 
+> AWS OIDC 구성 시 **Session Duration** 필드에 `"XhYmZs"` 형식으로 수임(Role Session) 기간을 제한할 수 있다. 예: `1h30m`. 또한 **Policy ARNs** 필드를 통해 세션 권한을 추가로 제한할 수도 있다.
+
 ### Azure OIDC 설정
 
 Azure에서는 Microsoft Entra App Registration과 Workload Identity Federation을 사용하여 OIDC를 구성한다.
@@ -458,7 +468,7 @@ Google Cloud에서는 Workload Identity Federation을 사용하여 OIDC를 구�
 3. Pool에 Service Account 액세스 권한 부여 (Subject 조건 필터 사용)
 4. Pulumi 콘솔에서 OIDC 활성화 (Project Number, Workload Pool ID, Identity Provider ID, Service Account Email 입력)
 5. (선택) 스택의 Google Cloud Region 입력 (보통 불필요)
-6. (선택) Session Duration 필드에 "XhYmZs" 형식으로 임시 Google Cloud 자격 증명 기간 제한
+6. (선택) Session Duration 필드에 `"XhYmZs"` 형식으로 임시 Google Cloud 자격 증명 기간 제한. 예: `1h30m`
 
 > GCP 역시 Azure와 마찬가지로 Subject Claim에 와일드카드를 허용하지 않으므로, 각 작업 유형별로 별도의 Credential을 생성해야 한다.
 
@@ -559,11 +569,13 @@ Slack, MS Teams 등에 Drift 알림을 통합할 수 있다. Pulumi Webhooks 통
 
 Drift Detection과 Remediation은 REST API를 통해 프로그래밍 방식으로 구성할 수 있다. 사용 가능한 엔드포인트는 다음과 같다.
 
-- Drift 스케줄 생성
-- Drift 스케줄 조회
-- Drift 스케줄 수정 또는 삭제
-- Drift 스케줄 일시 중지 또는 재개
-- 모든 스케줄 나열 (Raw Pulumi 작업 및 TTL 스케줄 포함)
+| 작업 | 엔드포인트 | 메서드 |
+|---|---|---|
+| Drift 스케줄 생성 | `/api/stacks/{org}/{project}/{stack}/deployments/drift/schedules` | POST |
+| Drift 스케줄 조회 | `/api/stacks/{org}/{project}/{stack}/deployments/drift/schedules` | GET |
+| Drift 스케줄 수정 또는 삭제 | `/api/stacks/{org}/{project}/{stack}/deployments/drift/schedules/{scheduleId}` | PATCH / DELETE |
+| Drift 스케줄 일시 중지 또는 재개 | `/api/stacks/{org}/{project}/{stack}/deployments/drift/schedules/{scheduleId}` | PATCH |
+| 조직의 모든 스케줄 나열 | `/api/orgs/{org}/schedules` | GET |
 
 **Drift Detection 및 Remediation 스케줄 생성 예시:**
 
@@ -666,11 +678,13 @@ Scheduled Deployments는 Cron 표현식을 사용하여 정기적으로 클라�
 
 ### REST API로 스케줄 설정
 
-- 스케줄 생성
-- 스택의 스케줄 조회
-- 스케줄 수정 또는 삭제
-- 스케줄 일시 중지 또는 재개
-- 조직의 모든 스케줄 나열 (Drift 및 TTL 스케줄 포함)
+| 작업 | 엔드포인트 | 메서드 |
+|---|---|---|
+| 스케줄 생성 | `/api/stacks/{org}/{project}/{stack}/deployments/schedules` | POST |
+| 스택의 스케줄 조회 | `/api/stacks/{org}/{project}/{stack}/deployments/schedules` | GET |
+| 스케줄 수정 또는 삭제 | `/api/stacks/{org}/{project}/{stack}/deployments/schedules/{scheduleId}` | PATCH / DELETE |
+| 스케줄 일시 중지 또는 재개 | `/api/stacks/{org}/{project}/{stack}/deployments/schedules/{scheduleId}` | PATCH |
+| 조직의 모든 스케줄 나열 | `/api/orgs/{org}/schedules` | GET |
 
 **스케줄 생성 예시:**
 
@@ -778,11 +792,13 @@ TTL 스케줄 구성 시 "Delete After Destroy" 옵션을 활성화하면 `pulum
 
 ### REST API로 TTL 설정
 
-- TTL 스케줄 생성
-- 스택의 TTL 스케줄 조회
-- TTL 스케줄 수정 또는 삭제
-- TTL 스케줄 일시 중지 또는 재개
-- 조직의 모든 스케줄 나열 (Raw Pulumi 작업 및 Drift 스케줄 포함)
+| 작업 | 엔드포인트 | 메서드 |
+|---|---|---|
+| TTL 스케줄 생성 | `/api/stacks/{org}/{project}/{stack}/deployments/ttl/schedules` | POST |
+| 스택의 TTL 스케줄 조회 | `/api/stacks/{org}/{project}/{stack}/deployments/ttl/schedules` | GET |
+| TTL 스케줄 수정 또는 삭제 | `/api/stacks/{org}/{project}/{stack}/deployments/ttl/schedules/{scheduleId}` | PATCH / DELETE |
+| TTL 스케줄 일시 중지 또는 재개 | `/api/stacks/{org}/{project}/{stack}/deployments/ttl/schedules/{scheduleId}` | PATCH |
+| 조직의 모든 스케줄 나열 | `/api/orgs/{org}/schedules` | GET |
 
 **TTL 스케줄 생성 예시:**
 
@@ -1049,7 +1065,7 @@ Deployment Permissions는 Pulumi Cloud 내에서 Deployment가 수행할 수 있
 
 **Role Assignment (권장):**
 
-스택의 Deployment Settings에서 **Settings > Deploy** 의 Role assignment 섹션에서 조직 역할을 선택할 수 있다. 역할이 할당되면 Deployment의 스택 토큰이 해당 역할의 권한을 상속하여 Stack References, ESC Environments, 조직 리소스에 접근할 수 있다. 세분화된 접근 제어를 위해 배포가 수행해야 하는 작업에 맞춰 특정 권한을 가진 커스텀 역할을 생성할 수도 있다. 조직 역할은 Roles 섹션에서 관리한다.
+스택의 Deployment Settings에서 **Settings > Deploy** 의 Role assignment 섹션에서 조직 역할을 선택할 수 있다. 역할이 할당되면 Deployment의 스택 토큰이 해당 역할의 권한을 상속하여 Stack References, ESC Environments, 조직 리소스에 접근할 수 있다. 세분화된 접근 제어를 위해 배포가 수행해야 하는 작업에 맞춰 특정 권한을 가진 **커스텀 역할(custom roles)**을 생성할 수도 있다. 조직 역할은 Roles 섹션에서 관리한다.
 
 **PULUMI_ACCESS_TOKEN 환경 변수:**
 
@@ -1206,25 +1222,57 @@ Pulumi Cloud는 각 대기 중인 작업을 정확히 하나의 러너에 할당
 
 ### 구성 파일 참조 (`pulumi-workflow-agent.yaml`)
 
+모든 설정은 `PULUMI_AGENT_` 접두사와 대문자 키 이름으로 환경 변수로도 제공할 수 있다. (예: `token` -> `PULUMI_AGENT_TOKEN`). 환경 변수가 구성 파일 값보다 우선한다. Duration 값은 Go Duration 문법을 사용한다 (`300ms`, `30s`, `1m`, `1h30m` 등).
+
+**필수 설정:**
+
 | 설정 | 기본값 | 설명 |
 |---|---|---|
 | `token` | (필수) | 워크플로 러너 풀 생성 시 제공되는 Pulumi 토큰. OIDC 사용 시 불필요 |
+
+**선택 설정:**
+
+| 설정 | 기본값 | 설명 |
+|---|---|---|
 | `service_url` | `https://api.pulumi.com` | Self-Hosted Pulumi 사용 시 API 도메인 |
 | `working_directory` | 바이너리 위치 | Runner 바이너리를 로드할 기본 경로 |
 | `shared_volume_directory` | `""` | 러너 컨테이너에 마운트할 임시 디렉토리를 생성하는 호스트 디렉토리. 비워두면 OS 기본 임시 위치 사용 |
 | `deploy_target` | `docker` | 실행 환경 (`docker` 또는 `kubernetes`) |
-| `single_run` | `false` | `true` 시 단일 작업 완료 후 종료 |
+| `single_run` | `false` | `true` 시 단일 작업 완료 후 종료. Kubernetes Job 등 일회성 러너에 유용 |
 | `pull_image` | `true` | 매 작업마다 이미지를 레지스트리에서 Pull (Docker 전용) |
-| `enabled_workflow_types` | 모든 유형 | 처리할 워크플로 유형 제한 (`deployment`, `insights_scan`, `policy_evaluation`) |
-| `env_forward_allowlist` | `[]` | 호스트에서 러너 컨테이너로 전달할 환경 변수 목록 |
-| `polling_interval` | `1m` | 새 작업 확인 폴링 간격 (Go Duration 문법) |
-| `request_timeout` | `30s` | Pulumi Cloud API 요청 타임아웃 |
-| `request_retry_count` | `2` | Rate Limit 또는 일시적 실패 시 최대 재시도 횟수 |
-| `http_server_port` | `8080` | Health Check 엔드포인트 포트 |
-| `oidc_token_file` | `""` | OIDC 토큰이 포함된 파일 경로. Pulumi 토큰 만료 시마다 다시 읽음 |
+| `enabled_workflow_types` | 모든 유형 | 처리할 워크플로 유형 제한 (`deployment`, `insights_scan`, `policy_evaluation`). 환경 변수는 쉼표 구분 |
+| `env_forward_allowlist` | `[]` | 호스트에서 러너 컨테이너로 전달할 환경 변수 목록. `DOCKER_HOST`는 항상 전달됨. 환경 변수는 공백 구분 |
+
+**OIDC 설정:**
+
+| 설정 | 기본값 | 설명 |
+|---|---|---|
+| `oidc_token_file` | `""` | OIDC 토큰이 포함된 파일 경로. Pulumi 토큰 만료 시마다 다시 읽음. OIDC 사용 시 `organization_name`, `runner_pool_id` 필수이며 `token` 불필요 |
 | `organization_name` | `""` | Pulumi 조직 이름. OIDC 사용 시 필수 |
 | `runner_pool_id` | `""` | 러너가 연결할 풀 ID. OIDC 사용 시 필수 |
 | `token_expiration` | `""` | OIDC 교환을 통해 발급되는 토큰 수명 (Go Duration 문법, 예: `1h`) |
+
+**폴링 및 재시도 설정:**
+
+| 설정 | 기본값 | 설명 |
+|---|---|---|
+| `polling_interval` | `1m` | 새 작업 확인 폴링 간격. 서버가 Retry-After 힌트를 반환하면 해당 값이 우선 |
+| `polling_interval_override` | `false` | `true` 시 서버의 Retry-After 헤더를 무시하고 항상 `polling_interval` 사용 |
+| `job_status_loop_interval` | `30s` | 진행 중인 작업 상태 확인 간격 (취소 감지용) |
+| `request_timeout` | `30s` | Pulumi Cloud API 요청 타임아웃 |
+| `request_retry_count` | `2` | Rate Limit 또는 일시적 실패 시 최대 재시도 횟수 |
+| `request_retry_wait` | `20s` | 재시도 간 초기 대기 시간 |
+| `request_retry_max_wait` | `2m` | 재시도 간 대기 시간 상한 |
+| `circuit_breaker_failures` | `2` | 연속 API 실패 횟수가 이 값에 도달하면 서킷 브레이커가 동작하여 폴링 일시 중지 |
+| `circuit_breaker_timeout` | `10m` | 서킷 브레이커 동작 후 대기 시간 |
+
+**Health 및 관측 설정:**
+
+| 설정 | 기본값 | 설명 |
+|---|---|---|
+| `http_server_port` | `8080` | Health Check 엔드포인트 포트 |
+| `health_threshold` | 자동 | 러너가 진행 없이 지날 수 있는 최대 시간. 이 시간 초과 시 health 엔드포인트가 unhealthy 보고. 기본값은 `polling_interval`과 `job_status_loop_interval` 중 긴 값의 2배 |
+| `syslog` | `false` | `true` 시 stderr 대신 syslog에 로그 출력 |
 
 ### OIDC 인증 활용
 
@@ -1260,6 +1308,17 @@ env_forward_allowlist:
     - key_two
     - key_three
 ```
+
+### Kubernetes-managed Workflow Runners
+
+Kubernetes 환경에서는 구성 값을 환경 변수로 설정하거나 구성 파일을 Pod에 마운트하여 워크플로 러너를 실행할 수 있다. Kubernetes 전용 설정 옵션:
+
+```yaml
+# Kubernetes 이미지 Pull 정책
+PULUMI_AGENT_IMAGE_PULL_POLICY: IfNotPresent
+```
+
+> Kubernetes 네이티브 설치 시 워크플로 러너 구성은 러너를 실행하는 Kubernetes Deployment에 설정된다。
 
 > 모든 설정은 `PULUMI_AGENT_` 접두사와 대문자 키 이름으로 환경 변수로도 제공할 수 있다. (예: `token` -> `PULUMI_AGENT_TOKEN`). 환경 변수가 구성 파일 값보다 우선한다.
 
