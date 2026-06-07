@@ -1,7 +1,7 @@
 # Pencil Dev 개발자 문서
 
 > https://pencil.dev, https://docs.pencil.dev를 기반으로 정리한 한국어 개발자 가이드입니다.
-> 최종 업데이트: 2026-06-07
+> 최종 업데이트: 2026-06-07 (공식 문서 동기화 완료)
 
 Pencil은 IDE 내부에서 동작하는 벡터 디자인 도구입니다. "Design on canvas. Land in code." — 디자인과 코드를 같은 환경에서 작업하며, MCP를 통해 AI 어시스턴트가 디자인을 직접 조작할 수 있습니다.
 
@@ -38,7 +38,8 @@ Pencil은 IDE 내부에서 동작하는 벡터 디자인 도구입니다. "Desig
 | 12 | [디자인 시스템 구성](./12-design-system.md) | Sidebar, Card, Table, Tabs, Dropdown, Pagination 조합 패턴 |
 | 13 | [스크립팅과 셰이더](./13-scripting-shaders.md) | Script 노드, @input, WebGL 셰이더, 유니폼 어노테이션 |
 | 14 | [가져오기/내보내기/CLI](./14-import-export.md) | Import/Export, 디자인 라이브러리, Pencil CLI, 키보드 단축키 |
-| 15 | [디자인 가이드와 스타일](./15-design-guides.md) | Web App 16원칙, Mobile, Landing Page, Slides 가이드, 27 스타일 프리셋 |
+| 15 | [디자인 가이드와 스타일](./15-design-guides.md) | Web App 16원칙, Mobile, Landing Page, Slides 가이드, 27 스타일 프리셋, 문제 해결 가이드 |
+| 16 | [인터페이스와 단축키](./16-pencil-interface.md) | 무한 캔버스, 프레임, 레이어/속성/AI 패널, 도구 모음, 전체 키보드 단축키 |
 
 ---
 
