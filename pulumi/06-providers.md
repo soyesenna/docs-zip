@@ -382,18 +382,51 @@ Pulumi는 Terraform 또는 OpenTofu 레지스트리의 모든 프로바이더를
 - Registry에 게시된 것과 다른 버전의 프로바이더 사용
 - 프로바이더 도입 전 평가
 
-### 워크플로우
+### Walkthrough
+
+Honeycomb Terraform 프로바이더를 Pulumi에서 사용하는 전체 과정을 단계별로 살펴본다. Honeycomb은 Pulumi Registry에 등록되어 있으면서도 Any Terraform Provider 기능을 사용하는 옵저버빌리티 플랫폼이다.
+
+**Step 1: 새 Pulumi 프로젝트 생성**
 
 ```bash
-# 1. 프로바이더 추가 (로컬 SDK 생성)
-pulumi package add terraform-provider honeycombio/honeycombio
+# TypeScript
+pulumi new typescript
 
-# 2. SDK 설치
-pulumi install
+# Python
+pulumi new python
 
-# 3. 코드에서 사용 후 배포
-pulumi up
+# Go
+pulumi new go
+
+# C#
+pulumi new csharp
+
+# Java
+pulumi new java
+
+# YAML
+pulumi new yaml
 ```
+
+**Step 2: Terraform 프로바이더 추가**
+
+```bash
+pulumi package add terraform-provider honeycombio/honeycombio
+```
+
+이 명령은 프로젝트의 `sdks/` 디렉토리에 로컬 SDK를 생성한다 (YAML 프로젝트는 제외 — YAML에서는 프로바이더가 `Pulumi.yaml` 구성을 통해 자동으로 사용 가능하다). 설치를 완료하려면 `pulumi install`을 실행하라.
+
+**Step 3: SDK 설치**
+
+```bash
+pulumi install
+```
+
+생성된 SDK와 그 의존성을 설치한다. YAML 프로젝트에서는 `Pulumi.yaml` 구성을 통해 프로바이더가 자동으로 사용 가능하므로 이 단계를 건너뛴다.
+
+**Step 4: 코드에서 프로바이더 사용**
+
+IDE에서 Honeycomb 프로바이더에 대한 자동완성, 타입 검사, 인라인 문서가 다른 Pulumi 프로바이더와 동일하게 제공된다.
 
 **TypeScript 사용 예시:**
 
@@ -507,6 +540,44 @@ packages:
     parameters:
       - honeycombio/honeycombio
 ```
+
+**Step 5: 인프라 배포**
+
+```bash
+pulumi up
+```
+
+이 명령은 `Pulumi.yaml` 파일의 `packages` 구성을 읽고 프로바이더 바이너리가 머신에 있는지 확인한다. SDK 디렉토리가 버전 관리에 커밋되지 않았다면 로컬 SDK도 생성한다.
+
+### How local packages work
+
+로컬 패키지는 npm이나 PyPI 같은 패키지 레지스트리에서 가져오는 것이 아니라 프로젝트 디렉토리에 저장된 생성된 SDK다. SDK 파일은 언어별 하위 디렉토리(일반적으로 `./sdks/<provider-name>`)에 생성된다.
+
+생성된 SDK에 포함되는 항목:
+
+- 강력한 타입의 리소스 및 함수 정의
+- 프로바이더 스키마에서 추출한 인라인 문서
+- 언어별 관행(예: TypeScript의 camelCase, Python의 snake_case)
+- 생성된 의존성을 제외하는 `.gitignore` 파일
+
+이렇게 생성된 SDK는 Pulumi가 게시한 패키지와 거의 동일하며, Pulumi Registry의 프로바이더와 동일한 IDE 통합, 타입 안전성, 개발자 경험을 제공한다.
+
+로컬 패키지는 `pulumi package add` 명령에 버전을 포함하면 버전 관리되며 (YAML 프로젝트는 제외 — YAML에서는 프로바이더가 `Pulumi.yaml` 구성을 통해 자동으로 사용 가능), 버전 정보는 `Pulumi.yaml` 파일에 저장된다. 이를 통해 서로 다른 환경과 팀원 간에 일관된 빌드를 보장한다.
+
+### Relationship to the Pulumi Registry
+
+[Pulumi Registry](https://www.pulumi.com/registry/)는 가장 인기 있는 클라우드 및 SaaS 플랫폼에 대해 사전 빌드된 SDK를 패키지 매니저에 게시하는 프로바이더를 포함한다. Registry에는 Any Terraform Provider 기능을 사용해 로컬 SDK를 생성하는 프로바이더도 많이 포함되어 있다. 이러한 Registry 항목은 문서와 설치 지침을 제공하지만, SDK는 로컬에서 생성한다. 예를 들어 [Honeycomb 프로바이더](https://www.pulumi.com/registry/packages/honeycombio/)가 이 방식을 사용한다.
+
+Pulumi Registry에 없는 프로바이더나 커스텀 내부 프로바이더의 경우, Any Terraform Provider 기능을 사용해 직접 로컬 SDK를 생성할 수 있다.
+
+### Limitations
+
+Any Terraform Provider 기능은 강력하지만 몇 가지 고려 사항이 있다.
+
+| 항목 | 내용 |
+| - | - |
+| **문서화** | 로컬 패키지의 생성된 SDK에는 인라인 문서가 포함되지만, 프로바이더가 Pulumi Registry에 추가되지 않은 한 전용 웹 문서는 제공되지 않는다 |
+| **지원** | 프로바이더 기능에 대한 이슈(브릿지 자체가 아닌)는 Terraform 프로바이더 유지관리자와 협력해야 한다 |
 
 ### 버전 관리 권장 사항
 
@@ -627,7 +698,7 @@ Pulumi는 세 가지 함수 유형을 제공한다.
 
 | 유형 | 설명 | 사용 사례 |
 | - | - | - |
-| **프로바이더 함수** | 클라우드 프로바이더 API를 쿼리하여 리소스가 아닌 데이터를 조회 | 최신 AMI ID 조회,可用 가용 영역 목록 확인 |
+| **프로바이더 함수** | 클라우드 프로바이더 API를 쿼리하여 리소스가 아닌 데이터를 조회 | 최신 AMI ID 조회, 가용 영역 목록 확인 |
 | **Get 함수** | Pulumi로 관리되지 않는 기존 리소스의 속성을 참조 | 기존 VNet ID로 CIDR 블록 조회 |
 | **리소스 메서드** | Pulumi로 관리 중인 리소스 인스턴스에서 파생된 값 반환 | 관리형 Kubernetes 클러스터의 kubeconfig 생성 |
 
@@ -653,6 +724,30 @@ Pulumi는 세 가지 함수 유형을 제공한다.
 | `dependsOn` | 이 함수가 의존하는 리소스 배열. 선행 리소스가 준비된 후에 실행 보장 | 출력 형식만 |
 | `parent` | 함수 호출의 부모 리소스. provider 결정 시 참조 | 두 형식 모두 |
 | `provider` | 기본 프로바이더 대신 사용할 명시적으로 구성된 프로바이더. 예: 여러 AWS 리전에서 함수를 호출할 때 | 두 형식 모두 |
+
+> **deprecated 옵션:** 다음 옵션도 사용 가능하지만, 최신 Pulumi 프로그램에서는 사용하지 않아야 한다. 해당 기능은 프로바이더 패키지 설치 시 처리되기 때문이다.
+
+| 옵션 | 설명 |
+| - | - |
+| `pluginDownloadURL` | 프로바이더 플러그인을 가져올 URL. `https://get.pulumi.com`에 호스팅되지 않은 서드파티 패키지에 필요할 수 있음. **deprecated** |
+| `version` | 함수 호출 시 사용할 프로바이더 플러그인 버전. **deprecated** |
+| `async` | *이 옵션은 deprecated이며 향후 릴리스에서 제거될 예정.* **deprecated** |
+
+### When your function will execute
+
+직접 형식과 출력 형식은 호출 시 동일한 데이터를 반환하지만, Pulumi 프로그램 실행 시 **언제 실행되는지**가 다르다.
+
+- **직접 형식 함수**는 Pulumi 프로그램 언어의 다른 함수 호출과 동일하게 실행된다. 직접 형식 함수는 Pulumi Input과 Output을 받지 않으므로 Pulumi 엔진이 리소스처럼 추적하지 않으며, 의존성 그래프에 참여하지 않는다.
+- **출력 형식 함수**는 Input을 인수로 받고 Output을 반환 값으로 반환하므로 Pulumi 엔진이 추적하며 의존성 그래프에 참여한다. 즉, Pulumi는 함수의 모든 입력값이 resolve된 후에 함수가 호출되도록 보장한다. (이것이 `dependsOn`이 출력 형식에서만 사용 가능한 옵션인 이유다.)
+
+### Choosing between direct form and output form
+
+직접 형식 또는 출력 형식을 반드시 사용해야 하거나 사용해야 하는 몇 가지 일반적인 시나리오가 있다.
+
+| 시나리오 | 권장 형식 | 이유 |
+| - | - | - |
+| 함수 결과로 리소스 생성 여부를 결정해야 할 때 | **직접 형식 (필수)** | 직접 형식은 Pulumi 엔진이 의존성 그래프를 구성하는 동안(즉, 생성/업데이트/삭제할 리소스를 결정하는 동안) 실행된다. 리소스가 그래프에 포함되어야 하는지 여부를 결정하려면 항상 사전에 계산되어야 한다. |
+| 함수 호출 전에 리소스가 생성/업데이트되어야 할 때 | **출력 형식 (권장)** | 출력 형식의 의존성은 리소스와 동일하게 추적된다. 함수의 모든 입력이 resolve된 후 함수가 실행된다. 명시적 추가 의존성이 필요하면 `dependsOn` 옵션을 사용한다. 직접 형식도 사용할 수 있지만 `apply`로 래핑해야 하어 가독성이 떨어진다. |
 
 ### 사용 예시
 
