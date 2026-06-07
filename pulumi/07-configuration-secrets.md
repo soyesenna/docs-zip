@@ -2,6 +2,7 @@
 
 > https://www.pulumi.com/docs/iac/concepts/config/
 > https://www.pulumi.com/docs/iac/concepts/secrets/
+> https://www.pulumi.com/docs/iac/concepts/secrets/write-only-fields/
 
 Pulumi는 스택별로 다른 설정값을 관리하기 위한 **Configuration** 시스템과, 민감한 데이터를 암호화하여 보호하는 **Secrets** 관리 기능을 제공한다. 설정값은 CLI 명령어(`pulumi config set/get`)와 프로그래밍 모델(`pulumi.Config`) 모두에서 접근할 수 있으며, 시크릿은 `--secret` 플래그 또는 코드 내 `requireSecret` 계열 API로 암호화된다. 모든 설정은 `Pulumi.<stack-name>.yaml` 스택 설정 파일에 저장되며 버전 관리에 커밋하는 것이 권장된다.
 
@@ -381,6 +382,45 @@ Output이 시크릿으로 마킹되는 경우:
 
 > **주의:** `apply` 콜백 내에서 평문 시크릿 값이 전달된다. Pulumi는 반환 값을 시크릿으로 마킹하지만, 콜백 자체가 값을 노출하지 않도록 프로그램이 보장해야 한다.
 
+### 리소스 출력을 시크릿으로 명시적 마킹 (additionalSecretOutputs)
+
+리소스의 출력 속성을 시크릿으로 명시적으로 마킹할 수 있다. 이 경우 Pulumi는 해당 출력을 자동으로 시크릿으로 취급하여 상태 파일과 전파되는 모든 곳에서 암호화한다. `additionalSecretOutputs` 리소스 옵션을 사용하면 된다.
+
+이 옵션은 Pulumi가 시크릿 입력을 기반으로 자동 감지하는 속성 목록에 추가로, 사용자가 지정한 출력 속성도 시크릿으로 처리하도록 한다.
+
+| 언어 | 사용법 |
+|---|---|
+| TypeScript | `{ additionalSecretOutputs: ["password"] }` |
+| Python | `opts=ResourceOptions(additional_secret_outputs=['password'])` |
+| Go | `pulumi.AdditionalSecretOutputs([]string{"password"})` |
+| C# | `new CustomResourceOptions { AdditionalSecretOutputs = { "password" } }` |
+| Java | `CustomResourceOptions.builder().additionalSecretOutputs("password").build()` |
+| YAML | `options: additionalSecretOutputs: [password]` |
+
+```typescript
+// TypeScript - 데이터베이스 리소스의 password 출력을 시크릿으로 마킹
+let db = new Database("new-name-for-db", { /*...*/ },
+    { additionalSecretOutputs: ["password"] });
+```
+
+```python
+# Python
+db = Database('db',
+    opts=ResourceOptions(additional_secret_outputs=['password']))
+```
+
+```yaml
+# YAML
+resources:
+  db:
+    type: Database
+    options:
+      additionalSecretOutputs:
+        - password
+```
+
+> **참고:** 최상위 리소스 속성만 시크릿으로 지정할 수 있다. 중첩된 속성 내에 민감한 데이터가 있는 경우, 해당 중첩 속성을 포함하는 전체 최상위 출력 속성을 시크릿으로 마킹해야 한다.
+
 ---
 
 ## 시크릿 암호화 프로바이더
@@ -526,14 +566,183 @@ config:
 
 ## Pulumi ESC를 통한 설정/시크릿 관리
 
-Pulumi ESC(Environments, Secrets, and Configuration)를 사용하면 여러 스택 설정 파일에서 중복되는 공통 설정과 시크릿을 중앙에서 관리할 수 있다.
+> https://www.pulumi.com/docs/iac/concepts/config/ (Using Pulumi ESC from Pulumi Stack Config)
+> https://www.pulumi.com/docs/iac/concepts/secrets/ (Managing secrets with Pulumi ESC environments)
+
+Pulumi ESC(Environments, Secrets, and Configuration)를 사용하면 여러 스택 설정 파일에서 중복되는 공통 설정과 시크릿을 중앙에서 관리할 수 있다. ESC 환경은 AWS Secrets Manager, Azure Key Vault, GCP Secret Manager, HashiCorp Vault 등 다양한 시크릿 매니저를 단일 진입점으로 통합할 수 있으며, RBAC 및 감사 제어를 통한 보안을 제공한다.
+
+### 스택 설정에서 ESC 환경 가져오기
+
+Pulumi ESC 환경을 설정하고 `pulumiConfig`로 Pulumi 설정을 투영한 후, 해당 환경을 Pulumi 스택 설정 파일에서 가져올 수 있다. 여러 환경도 가져올 수 있다.
 
 ```yaml
 # Pulumi.<stack>.yaml
+# test ESC 환경과 모든 설정을 가져옴
 environment:
-  - test        # ESC 환경 가져오기
+  - test
 config:
     # 일반 Pulumi 설정
 ```
 
-ESC 환경은 AWS Secrets Manager, Azure Key Vault, GCP Secret Manager 등 다양한 시크릿 매니저를 단일 진입점으로 통합할 수 있으며, RBAC 및 감사 제어를 통한 보안을 제공한다.
+### 다중 팀 시크릿 공유
+
+Pulumi ESC를 사용하면 여러 팀이 각각 다른 시크릿을 소유하고 수명 주기를 관리하면서, 다양한 AWS Secrets Manager 시크릿에 저장할 수 있다.
+
+예를 들어, 결제 서비스 팀이 결제 처리 API 키를 관리하는 `Billing` 환경을 정의할 수 있다.
+
+```yaml
+# Billing 환경 정의
+values:
+    aws:
+        creds:
+            fn::open::aws-login:
+            oidc:
+                duration: 1h
+                roleArn: arn:aws:iam::************:role/billing-oidc
+                sessionName: pulumi-environments-session
+    team:
+        secrets:
+        fn::open::aws-secrets:
+            region: us-west-2
+            login: ${aws.creds}
+            get:
+                paymentApiKey:
+                    secretId: production/paymentAPIKey
+                backupPaymentAPIKey:
+                    secretId: production/backupPaymentAPIKey
+```
+
+다른 팀의 환경(예: `Subscription_Management_Prod`)이 `Billing` 환경을 가져와 사용할 수 있다.
+
+```yaml
+# Subscription_Management_Prod 환경
+imports:
+- Prod
+- Billing
+values:
+    serviceName: Subscription Management
+    numInstances: 3
+    secrets:
+        fn::open::aws-secrets:
+            region: us-west-2
+            login: ${aws.creds}
+            get:
+                dbPassword:
+                    secretId: production/rdsPassword
+```
+
+명령줄에서 환경을 열어 시크릿에 접근할 수 있다.
+
+```bash
+$ pulumi env open myorg/subscription_management_prod
+```
+
+### 크로스 클라우드 시크릿 통합
+
+GCP와 Azure 등 여러 클라우드에 걸친 제품을 운영하는 경우, Pulumi ESC를 사용하여 GCP Secrets Manager와 Azure KeyVault의 시크릿 접근을 단일 진입점으로 통합할 수 있다.
+
+```yaml
+# Cross_Cloud 환경 정의
+values:
+    azure:
+        login:
+            fn::open::azure-login:
+                clientId: aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee
+                tenantId: aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee
+                subscriptionId: /subscriptions/00000000-0000-0000-0000-000000000000
+                oidc: true
+    secrets:
+        fn::open::azure-secrets:
+            login: ${azure.login}
+            vault: https://vault-name.vault.azure.net/type/name/version
+            get:
+                api-key:
+                    name: api-key
+                app-secret:
+                    name: app-secret
+    gcp:
+        login:
+            fn::open::gcp-login:
+                project: 123456789
+                oidc:
+                    workloadPoolId: pulumi-esc
+                    providerId: pulumi-esc
+                    serviceAccount: pulumi-esc@foo-bar-123456.iam.gserviceaccount.com
+    secrets:
+        fn::open::gcp-secrets:
+            login: ${gcp.login}
+            access:
+                dbPassword:
+                    name: db-key
+```
+
+이 환경을 가져오는 스택이나 다른 환경은 Azure와 GCP 시크릿에 하나의 접근점으로 접근할 수 있다.
+
+```bash
+$ pulumi env open myorg/cross_cloud
+```
+
+---
+
+## Write-Only Fields
+
+> https://www.pulumi.com/docs/iac/concepts/secrets/write-only-fields/
+
+Write-only 필드는 리소스 생성 시 설정할 수 있지만, 클라우드 프로바이더의 API가 절대 반환하지 않는 리소스 속성이다. 즉, Pulumi는 이러한 값을 클라우드 프로바이더로부터 다시 읽을 수 없다.
+
+### Terraform 기반 프로바이더와의 관계
+
+Write-only 필드는 일부 프로바이더가 기반이 되는 Terraform 프로바이더에서 상속하는 개념이다. 이러한 프로바이더에는 보안상의 이유로 의도적으로 write-only인 필드가 있다. 예를 들어, 데이터베이스 비밀번호는 생성 시 설정되지만, 프로바이더는 후속 API 호출에서 실제 비밀번호 값을 반환하지 않는다.
+
+> **참고:** Pulumi는 주로 기반이 되는 Terraform 프로바이더와의 스키마 패리티를 위해 이러한 속성을 지원한다. Pulumi에서는 민감한 데이터를 항상 Secret으로 상태에 저장할 수 있으며, 이것이 가능할 때 권장되는 접근 방식이다.
+
+### Pulumi의 Write-Only 필드 처리 방식
+
+Pulumi가 write-only 필드를 만나면 다음과 같이 동작한다.
+
+| 단계 | 동작 |
+|---|---|
+| 1. 생성/업데이트 | 값이 리소스 생성 또는 업데이트에 사용되어 클라우드 API로 전송됨 |
+| 2. 상태 기록 | 초기 값이 Pulumi 상태 입력(Inputs)에 Secret으로 기록됨. 상태 출력(Outputs)에는 절대 나타나지 않음 |
+| 3. 후속 읽기 | 후속 Read 작업에서 값이 `null`로 설정됨 |
+| 4. Diff 감지 | 후속 preview나 업데이트에서 Pulumi는 이 필드의 diff를 감지하거나 표시하지 않음. 상태에서 추적되지 않기 때문 |
+
+### 버전 제어 필드
+
+일부 프로바이더는 write-only 필드의 업데이트를 write-only **버전** 필드로 제어한다. 이 버전 필드는 전체 Pulumi 라이프사이클 관리 대상이며, write-only 필드와 연결되어 있다. 버전 필드가 변경되면 Pulumi는 write-only 필드의 값을 클라우드 인프라에 다시 적용한다.
+
+예를 들어, AWS SSM Parameter 리소스는 Secure String 값에 대해 write-only 필드를 지원한다.
+
+```typescript
+import * as pulumi from "@pulumi/pulumi";
+import * as aws from "@pulumi/aws";
+
+// Write-only 필드를 사용한 SSM Parameter 생성
+const testParameter = new aws.ssm.Parameter("test-param", {
+    name: "/test/writeonly-parameter",
+    type: aws.ssm.ParameterType.SecureString,
+    description: "Test parameter with write-only fields",
+    // Write-only 필드
+    valueWo: "write-only-secret-value",
+    valueWoVersion: 1,
+});
+```
+
+#### 동작 흐름
+
+| 단계 | 동작 |
+|---|---|
+| **초기 생성** | `valueWo` 필드가 클라우드 프로바이더 API로 전송되고, Pulumi 상태 Inputs에 Secret으로 저장됨. `valueWoVersion`도 상태에 추적되어 저장됨 |
+| **후속 읽기** | 생성 후 Pulumi가 클라우드 프로바이더에서 리소스를 읽을 때, `valueWo` 필드는 상태 출력에서 `null`이 됨 (프로바이더가 write-only 값을 반환하지 않음). `valueWoVersion`은 상태에서 계속 추적되며 읽기 가능 |
+| **값 업데이트** | `valueWo` 필드를 업데이트하려면 `valueWoVersion`을 증가시켜야 함 |
+
+```typescript
+// Write-only 값 업데이트 - 버전 증가로 트리거
+const updatedParameter = new aws.ssm.Parameter("test-param", {
+    name: "/test/writeonly-parameter",
+    type: aws.ssm.ParameterType.SecureString,
+    description: "Test parameter with write-only fields",
+    valueWo: "new-write-only-secret-value",
+    valueWoVersion: 2, // 증가시켜 업데이트 트리거
+});
+```
