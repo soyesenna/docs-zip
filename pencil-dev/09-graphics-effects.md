@@ -1,6 +1,6 @@
 # Pencil Dev 그래픽과 효과
 
-> 원문: Pencil MCP 서버 .pen 파일 스키마 fill/effect 섹션 (get_editor_state로 조회)
+> 원문: [The Pen Format — Pencil 공식 문서](https://docs.pencil.dev/for-developers/the-pen-format) / Pencil MCP 서버 .pen 파일 스키마 fill/effect 섹션 (get_editor_state로 조회)
 
 .pen 파일은 색상, 그래디언트, 이미지, 셰이더, 메시 그래디언트 등 다양한 Fill 타입과 효과를 지원합니다.
 
@@ -307,17 +307,19 @@ Path 노드로 임의의 SVG 형상을 그립니다:
   type: "path",
   geometry: "M10 10 L90 10 L90 90 L10 90 Z",
   viewBox: [0, 0, 100, 100],
+  fillRule: "nonzero",
   fill: "#3B82F6",
   width: 100,
   height: 100
 }
 ```
 
-| 규칙 | 설명 |
-| --- | --- |
-| `viewBox` | 항상 명시적으로 설정. `[x, y, width, height]` |
-| `geometry` | SVG path 명령어 |
-| 매핑 | viewBox 영역이 노드의 width/height에 스트레치됨 |
+| 속성 | 타입 | 설명 |
+| --- | --- | --- |
+| `geometry` | `string` | SVG path 명령어 |
+| `viewBox` | `[number, number, number, number]` | 항상 명시적으로 설정. `[x, y, width, height]` |
+| `fillRule` | `"nonzero"` \| `"evenodd"` | SVG path 채우기 규칙. 기본값 `"nonzero"`. 겹치는 경로가 있는 복잡한 형상에서 렌더링 결과에 영향 |
+| 매핑 | — | viewBox 영역이 노드의 width/height에 스트레치됨 |
 
 ---
 
