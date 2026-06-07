@@ -12,8 +12,12 @@
 > - https://www.pulumi.com/docs/iac/comparisons/serverless/
 > - https://www.pulumi.com/docs/iac/comparisons/opentofu/
 > - https://www.pulumi.com/docs/iac/comparisons/arm-templates/
+> - https://www.pulumi.com/docs/iac/comparisons/cloud-sdks/
+> - https://www.pulumi.com/docs/iac/comparisons/chef-puppet-etc/
+> - https://www.pulumi.com/docs/iac/comparisons/custom/
+> - https://www.pulumi.com/docs/iac/comparisons/terraform/opentofu/
 
-Pulumi는 범용 프로그래밍 언어(Python, TypeScript, JavaScript, Go, .NET, Java)와 YAML로 클라우드 인프라를 정의하는 Infrastructure as Code(IaC) 플랫폼이다. 다양한 IaC 도구와 기능이 겹치지만, 언어 지원·실행 모델·클라우드 범위·상태 관리·비밀 처리 방식에서 유의미한 차이가 있다. 이 문서는 Pulumi와 주요 IaC 도구 10종을 공식 비교 문서에 근거하여 정리한다.
+Pulumi는 범용 프로그래밍 언어(Python, TypeScript, JavaScript, Go, .NET, Java)와 YAML로 클라우드 인프라를 정의하는 Infrastructure as Code(IaC) 플랫폼이다. 다양한 IaC 도구와 기능이 겹치지만, 언어 지원·실행 모델·클라우드 범위·상태 관리·비밀 처리 방식에서 유의미한 차이가 있다. 이 문서는 Pulumi와 주요 IaC 도구 13종을 공식 비교 문서에 근거하여 정리한다.
 
 ---
 
@@ -21,23 +25,23 @@ Pulumi는 범용 프로그래밍 언어(Python, TypeScript, JavaScript, Go, .NET
 
 ### 언어·클라우드 범위·실행 모델
 
-| 구분 | Pulumi | Terraform | CloudFormation | AWS CDK | CDKTF | Crossplane | Helm | K8s YAML Manifests | Serverless Framework | OpenTofu | ARM Templates/Bicep |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| **언어** | Python, TypeScript, JavaScript, Go, C#, Java, YAML | HCL(HashiCorp Configuration Language) | JSON, YAML 템플릿 + 고유 함수(`Fn::Join`, `Fn::If` 등) | TypeScript, JavaScript, Python, Go, C#, Java | TypeScript, Python, Go, C#, Java | Kubernetes YAML 매니페스트; Go(프로바이더·컴포지션 함수 작성용) | YAML + Go 템플릿 문법 | YAML 또는 JSON(Kustomize로 베이스·오버레이 레이어링 가능, 루프·조건문·변수 없음) | `serverless.yml`(YAML) + 변수 시스템 | HCL | JSON 또는 Bicep(DSL → JSON 컴파일) |
-| **클라우드 범위** | 모든 클라우드 및 SaaS(Pulumi Registry) | 모든 클라우드 및 SaaS(Terraform Registry) | AWS 전용 | AWS 전용 | Terraform 프로바이더 전용 | 모든 클라우드(Crossplane 프로바이더) | Kubernetes 전용 | Kubernetes API 객체 전용(비-K8s 클라우드 리소스는 별도 도구 필요) | AWS 전용(V4 기준) | 모든 클라우드(OpenTofu Registry) | Azure 전용 |
-| **트랜스파일** | 없음 — 호스트 언어에서 직접 실행 | 없음 — HCL을 Terraform CLI가 직접 해석 | 없음 — CloudFormation 서비스가 직접 해석 | 있음 — CloudFormation JSON/YAML으로 합성(synth) 후 CloudFormation이 배포 | 있음 — Terraform JSON으로 합성 후 Terraform CLI가 배포 | 없음 — YAML 매니페스트를 Crossplane 컨트롤러가 직접 조정(reconcile) | 없음 — Go 템플릿으로 렌더 후 `helm` CLI가 적용 | 없음 — 매니페스트를 Kubernetes API 서버에 직접 전송 | 있음 — `serverless.yml`을 CloudFormation 템플릿으로 컴파일 후 CloudFormation 배포 | 없음 — HCL을 OpenTofu CLI가 직접 해석 | Bicep → ARM JSON 컴파일 후 ARM 서비스가 배포; JSON은 직접 해석 |
-| **실행 모델** | 로컬 CLI, Automation API(프로그래밍), Pulumi Deployments(원격) | 로컬 CLI, HCP Terraform(원격) | AWS 관리 서비스(Console, CLI, SDK, Change Sets) | `cdk deploy` → CloudFormation 서비스 | `cdktf deploy` → Terraform CLI | Kubernetes 클러스터 내 컨트롤러가 지속 조정(GitOps) | 로컬 `helm` CLI | 로컬 `kubectl` CLI 또는 GitOps 컨트롤러(Argo CD, Flux); K8s 자체는 중앙 오케스트레이션 서비스 없음 | 로컬 `serverless` CLI, Dashboard | 로컬 `tofu` CLI; 원격 실행은 서드파티 필요 | Azure 관리 서비스(Portal, CLI, PowerShell, Bicep CLI, REST API) |
+| 구분 | Pulumi | Terraform | CloudFormation | AWS CDK | CDKTF | Crossplane | Helm | K8s YAML Manifests | Serverless Framework | OpenTofu | ARM Templates/Bicep | Cloud SDKs |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| **언어** | Python, TypeScript, JavaScript, Go, C#, Java, YAML | HCL(HashiCorp Configuration Language) | JSON, YAML 템플릿 + 고유 함수(`Fn::Join`, `Fn::If` 등) | TypeScript, JavaScript, Python, Go, C#, Java | TypeScript, Python, Go, C#, Java | Kubernetes YAML 매니페스트; Go(프로바이더·컴포지션 함수 작성용) | YAML + Go 템플릿 문법 | YAML 또는 JSON(Kustomize로 베이스·오버레이 레이어링 가능, 루프·조건문·변수 없음) | `serverless.yml`(YAML) + 변수 시스템 | HCL | JSON 또는 Bicep(DSL → JSON 컴파일) | 클라우드 SDK가 지원하는 언어 전체(AWS Boto/Python, AWS SDK for JS/Go/Java/C# 등) |
+| **클라우드 범위** | 모든 클라우드 및 SaaS(Pulumi Registry) | 모든 클라우드 및 SaaS(Terraform Registry) | AWS 전용 | AWS 전용 | Terraform 프로바이더 전용 | 모든 클라우드(Crossplane 프로바이더) | Kubernetes 전용 | Kubernetes API 객체 전용(비-K8s 클라우드 리소스는 별도 도구 필요) | AWS 전용(V4 기준) | 모든 클라우드(OpenTofu Registry) | Azure 전용 | SDK가 지원하는 클라우드 범위에 한정(멀티클라우드 시 각 SDK 개별 사용) |
+| **트랜스파일** | 없음 — 호스트 언어에서 직접 실행 | 없음 — HCL을 Terraform CLI가 직접 해석 | 없음 — CloudFormation 서비스가 직접 해석 | 있음 — CloudFormation JSON/YAML으로 합성(synth) 후 CloudFormation이 배포 | 있음 — Terraform JSON으로 합성 후 Terraform CLI가 배포 | 없음 — YAML 매니페스트를 Crossplane 컨트롤러가 직접 조정(reconcile) | 없음 — Go 템플릿으로 렌더 후 `helm` CLI가 적용 | 없음 — 매니페스트를 Kubernetes API 서버에 직접 전송 | 있음 — `serverless.yml`을 CloudFormation 템플릿으로 컴파일 후 CloudFormation 배포 | 없음 — HCL을 OpenTofu CLI가 직접 해석 | Bicep → ARM JSON 컴파일 후 ARM 서비스가 배포; JSON은 직접 해석 | 해당 없음 — 클라우드 API를 직접 호출하는 명령형(imperative) 라이브러리 |
+| **실행 모델** | 로컬 CLI, Automation API(프로그래밍), Pulumi Deployments(원격) | 로컬 CLI, HCP Terraform(원격) | AWS 관리 서비스(Console, CLI, SDK, Change Sets) | `cdk deploy` → CloudFormation 서비스 | `cdktf deploy` → Terraform CLI | Kubernetes 클러스터 내 컨트롤러가 지속 조정(GitOps) | 로컬 `helm` CLI | 로컬 `kubectl` CLI 또는 GitOps 컨트롤러(Argo CD, Flux); K8s 자체는 중앙 오케스트레이션 서비스 없음 | 로컬 `serverless` CLI, Dashboard | 로컬 `tofu` CLI; 원격 실행은 서드파티 필요 | Azure 관리 서비스(Portal, CLI, PowerShell, Bicep CLI, REST API) | 애플리케이션 코드에 직접 삽입(명령형 호출) |
 
 ### 상태 관리·비밀·롤백·정책
 
-| 구분 | Pulumi | Terraform | CloudFormation | AWS CDK | CDKTF | Crossplane | Helm | K8s YAML Manifests | Serverless Framework | OpenTofu | ARM Templates/Bicep |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| **상태 관리** | Pulumi Cloud(기본) 또는 자체 관리(S3, Azure Blob, GCS, 로컬 등) | 로컬 파일(기본); 원격 백엔드(S3, GCS, Consul, HCP Terraform) | CloudFormation 서비스 내부 관리; 사용자 접근 불가 | CloudFormation 서비스 내부(상태 파일 없음) | Terraform 상태 모델(로컬/원격/클라우드) | Kubernetes etcd(리소스 객체의 status로 저장) | 클러스터 내 Secret 또는 ConfigMap으로 release 메타데이터 저장 | 별도 상태 파일 없음; 라이브 클러스터(etcd)가 진실의 원천, `kubectl apply`가 server-side apply로 관리 필드 추적 | CloudFormation 스택(독립 상태 저장소 없음) | 로컬 파일(기본); 원격 백엔드(S3, GCS, Azure Blob, HTTP) | ARM 서비스 내부(Azure 구독 내 배포 이력으로 관리); 사용자 접근 불가 |
-| **비밀 관리** | 전송 중·저장 시 암호화(기본), 스택별 암호화 키, 플러그형 KMS(AWS KMS, Azure Key Vault, GCP KMS, Vault) | 상태 파일 내 미암호화; HCP Terraform은 저장 시 암호화; Vault는 별도 제품 | 기본 없음; `NoEcho` 파라미터 또는 Secrets Manager/SSM 동적 참조 | 기본 없음; CloudFormation의 `NoEcho`/동적 참조 상속 | 기본 없음 | Kubernetes Secrets(클러스터 설정에 의존) | 기본 없음; `helm-secrets` 등 커뮤니티 플러그인 또는 외부 스토어 | Kubernetes Secret 객체는 base64 인코딩만(미암호화); etcd 암호화는 클러스터 수준에서 별도 구성 필요 | 기본 없음; SSM Parameter Store/Secrets Manager 변수 참조 | 상태·플랜 파일 암호화(1.7+); 개별 변수는 일급 비밀 프리미티브 아님 | 기본 없음; `secureString`/`secureObject` 파라미터 또는 Key Vault 참조 |
-| **실패 시 롤백** | 부분 업데이트 상태 유지; 이후 `pulumi up`으로 수렴 | 부분 적용 상태 유지; 이후 `terraform apply`로 수렴 | 자동 스택 롤백(기본); 롤백 트리거·`DisableRollback` 설정 가능 | CloudFormation 자동 롤백 상속 | 자동 롤백 없음; 코드 수정 후 재실행 필요 | 트랜잭션 롤백 없음; 컨트롤러가 지속 재시도 | `helm rollback`으로 이전 리비전 복원 | `kubectl apply`는 트랜잭션 롤백 없음; 워크로드 컨트롤러는 `kubectl rollout undo`로 리비전 롤백 지원 | `serverless rollback` + CloudFormation 자동 롤백 | 자동 롤백 없음; `tofu apply` 재실행으로 수렴 | 오류 시 롤백 옵션(배포 시 활성화 가능, 마지막 성공 배포로 복원) |
-| **Policy as Code** | Pulumi Policies(오픈 소스, Python/TypeScript/Rego); 상용 플랜에 중앙 관리 + 준법 팩(CIS, HITRUST, NIST, PCI DSS) | Sentinel(상용, HCP Terraform/Enterprise 전용), OPA | CloudFormation Hooks, CloudFormation Guard | CloudFormation Hooks, CloudFormation Guard(상속) | 일급 없음; OPA 또는 Sentinel(상용) | 기본 없음; OPA Gatekeeper, Kyverno 등 Kubernetes 어드미션 컨트롤러 | 기본 없음; Kyverno, OPA Gatekeeper 등 | 기본 없음; OPA Gatekeeper, Kyverno 등 어드미션 컨트롤러로 클러스터 내 시행 | 기본 없음; CloudFormation Guard, OPA 등 외부 도구 | 기본 없음; OPA, Checkov 등 외부 도구 | Azure Policy(별도 Azure 서비스, 템플릿 저작 루프와 분리) |
-| **프로그래밍 API** | Automation API — CLI 호출 없이 `up`, `preview`, `destroy`를 호스트 애플리케이션에 내장 가능 | 해당 없음 | 해당 없음(ARM REST API는 있지만 임베딩 SDK는 아님) | 해당 없음 | 해당 없음 | Kubernetes API 자체가 프로그래밍 인터페이스 | Go 전용 Helm SDK; 다른 언어는 CLI 셸아웃 | Kubernetes API·클라이언트 라이브러리로 개별 객체 조작 가능하나 apply/preview/destroy 수명주기 오케스트레이션 SDK는 없음 | 해당 없음 | 해당 없음 | 해당 없음 |
-| **오픈 소스 라이선스** | Apache 2.0 | Business Source License 1.1 | 폐쇄 소스(AWS 서비스) | CDK 프레임워크: Apache 2.0; 배포 엔진(CloudFormation): 폐쇄 소스 | MPL 2.0(보관됨); 배포용 Terraform CLI: BSL 1.1 | Apache 2.0 | Apache 2.0 | Apache 2.0(Kubernetes, kubectl) | V3까지 MIT; V4는 독점 라이선스 | MPL 2.0 | Bicep: MIT; ARM 배포 서비스: 폐쇄 소스 |
+| 구분 | Pulumi | Terraform | CloudFormation | AWS CDK | CDKTF | Crossplane | Helm | K8s YAML Manifests | Serverless Framework | OpenTofu | ARM Templates/Bicep | Cloud SDKs |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| **상태 관리** | Pulumi Cloud(기본) 또는 자체 관리(S3, Azure Blob, GCS, 로컬 등) | 로컬 파일(기본); 원격 백엔드(S3, GCS, Consul, HCP Terraform) | CloudFormation 서비스 내부 관리; 사용자 접근 불가 | CloudFormation 서비스 내부(상태 파일 없음) | Terraform 상태 모델(로컬/원격/클라우드) | Kubernetes etcd(리소스 객체의 status로 저장) | 클러스터 내 Secret 또는 ConfigMap으로 release 메타데이터 저장 | 별도 상태 파일 없음; 라이브 클러스터(etcd)가 진실의 원천, `kubectl apply`가 server-side apply로 관리 필드 추적 | CloudFormation 스택(독립 상태 저장소 없음) | 로컬 파일(기본); 원격 백엔드(S3, GCS, Azure Blob, HTTP) | ARM 서비스 내부(Azure 구독 내 배포 이력으로 관리); 사용자 접근 불가 | 없음 — 프로비저닝 상태 추적·체크포인트 기능 없음(직접 구현 필요) |
+| **비밀 관리** | 전송 중·저장 시 암호화(기본), 스택별 암호화 키, 플러그형 KMS(AWS KMS, Azure Key Vault, GCP KMS, Vault) | 상태 파일 내 미암호화; HCP Terraform은 저장 시 암호화; Vault는 별도 제품 | 기본 없음; `NoEcho` 파라미터 또는 Secrets Manager/SSM 동적 참조 | 기본 없음; CloudFormation의 `NoEcho`/동적 참조 상속 | 기본 없음 | Kubernetes Secrets(클러스터 설정에 의존) | 기본 없음; `helm-secrets` 등 커뮤니티 플러그인 또는 외부 스토어 | Kubernetes Secret 객체는 base64 인코딩만(미암호화); etcd 암호화는 클러스터 수준에서 별도 구성 필요 | 기본 없음; SSM Parameter Store/Secrets Manager 변수 참조 | 상태·플랜 파일 암호화(1.7+); 개별 변수는 일급 비밀 프리미티브 아님 | 기본 없음; `secureString`/`secureObject` 파라미터 또는 Key Vault 참조 | 없음 — 비밀 처리를 직접 구현해야 함(클라우드 비밀 관리 서비스 별도 호출 가능) |
+| **실패 시 롤백** | 부분 업데이트 상태 유지; 이후 `pulumi up`으로 수렴 | 부분 적용 상태 유지; 이후 `terraform apply`로 수렴 | 자동 스택 롤백(기본); 롤백 트리거·`DisableRollback` 설정 가능 | CloudFormation 자동 롤백 상속 | 자동 롤백 없음; 코드 수정 후 재실행 필요 | 트랜잭션 롤백 없음; 컨트롤러가 지속 재시도 | `helm rollback`으로 이전 리비전 복원 | `kubectl apply`는 트랜잭션 롤백 없음; 워크로드 컨트롤러는 `kubectl rollout undo`로 리비전 롤백 지원 | `serverless rollback` + CloudFormation 자동 롤백 | 자동 롤백 없음; `tofu apply` 재실행으로 수렴 | 오류 시 롤백 옵션(배포 시 활성화 가능, 마지막 성공 배포로 복원) | 없음 — 실패 시 복구 로직을 직접 작성해야 함(부분 생성 리소스 수동 정리 필요) |
+| **Policy as Code** | Pulumi Policies(오픈 소스, Python/TypeScript/Rego); 상용 플랜에 중앙 관리 + 준법 팩(CIS, HITRUST, NIST, PCI DSS) | Sentinel(상용, HCP Terraform/Enterprise 전용), OPA | CloudFormation Hooks, CloudFormation Guard | CloudFormation Hooks, CloudFormation Guard(상속) | 일급 없음; OPA 또는 Sentinel(상용) | 기본 없음; OPA Gatekeeper, Kyverno 등 Kubernetes 어드미션 컨트롤러 | 기본 없음; Kyverno, OPA Gatekeeper 등 | 기본 없음; OPA Gatekeeper, Kyverno 등 어드미션 컨트롤러로 클러스터 내 시행 | 기본 없음; CloudFormation Guard, OPA 등 외부 도구 | 기본 없음; OPA, Checkov 등 외부 도구 | Azure Policy(별도 Azure 서비스, 템플릿 저작 루프와 분리) | 없음 — 정책 시행·컴플라이언스 검사 불가 |
+| **프로그래밍 API** | Automation API — CLI 호출 없이 `up`, `preview`, `destroy`를 호스트 애플리케이션에 내장 가능 | 해당 없음 | 해당 없음(ARM REST API는 있지만 임베딩 SDK는 아님) | 해당 없음 | 해당 없음 | Kubernetes API 자체가 프로그래밍 인터페이스 | Go 전용 Helm SDK; 다른 언어는 CLI 셸아웃 | Kubernetes API·클라이언트 라이브러리로 개별 객체 조작 가능하나 apply/preview/destroy 수명주기 오케스트레이션 SDK는 없음 | 해당 없음 | 해당 없음 | 해당 없음 | SDK 자체가 API — 클라우드 API를 직접 호출하지만 IaC 수명주기(프리뷰·diff·상태 체크포인트)는 없음 |
+| **오픈 소스 라이선스** | Apache 2.0 | Business Source License 1.1 | 폐쇄 소스(AWS 서비스) | CDK 프레임워크: Apache 2.0; 배포 엔진(CloudFormation): 폐쇄 소스 | MPL 2.0(보관됨); 배포용 Terraform CLI: BSL 1.1 | Apache 2.0 | Apache 2.0 | Apache 2.0(Kubernetes, kubectl) | V3까지 MIT; V4는 독점 라이선스 | MPL 2.0 | Bicep: MIT; ARM 배포 서비스: 폐쇄 소스 | 클라우드 SDK별 상이(AWS SDK: Apache 2.0, Azure SDK: MIT, GCP SDK: Apache 2.0 등) |
 | **상용 옵션** | Pulumi Cloud | HCP Terraform / Terraform Enterprise | 없음(AWS의 일부) | 없음(AWS의 일부) | HCP Terraform | 없음(Upbound에서 관리형 컨트롤 플레인 제공) | 없음 | 없음(매니페스트는 K8s API 입력 형식; 관리형 K8s는 클라우드 프로바이더가 판매) | Serverless Subscription(V4, 수입 임계값 초과 조직 필수) | 없음(서드파티: Spacelift, env0, Scalr) | 없음(Azure의 일부) |
 
 ---
@@ -159,8 +163,55 @@ Pulumi와 Crossplane은 모든 클라우드/SaaS에 리소스를 프로비저닝
 | **비밀** | 일급 암호화 프리미티브 | Kubernetes Secrets(클러스터 설정에 의존) |
 | **모듈성** | Component Resources + Pulumi Packages | Composite Resource Definitions(XRD) + Compositions + Composition Functions(v2에서 patch-and-transform 대신 composition functions가 기본) |
 | **정책** | Pulumi Policies(오픈 소스) | 기본 없음; OPA Gatekeeper, Kyverno 등 Kubernetes 어드미션 컨트롤러 사용 |
-| **프로바이더** | Pulumi Registry + 모든 Terraform 프로바이더 | Crossplane 프로바이더(많은 것이 Upjet으로 Terraform 프로바이더에서 생성) |
+| **프로바이더** | Pulumi Registry + 모든 Terraform 프로바이더 | Crossplane 프로바이더 — 클러스터 내에 패키지로 설치(installed into cluster); 공식 AWS, Azure, Google Cloud 프로바이더 제공; 다수의 커뮤니티 프로바이더는 Upjet 프레임워크로 Terraform 프로바이더에서 생성 |
 | **공존 패턴** | Pulumi Kubernetes 프로바이더로 Crossplane 설치·관리 가능 | — |
+
+### Pulumi vs Crossplane 선택 기준
+
+**Pulumi를 선택해야 하는 경우:**
+
+1. 범용 언어의 테스트 프레임워크, 패키지 매니저, IDE 도구를 활용해 인프라를 작성하고 싶을 때
+2. 인프라 관리를 위해 Kubernetes 클러스터를 선행 요구사항으로 운영하고 싶지 않을 때
+3. 호스트 애플리케이션에서 배포를 구동하는 임베딩 SDK(Automation API)가 필요할 때 — 내부 개발자 플랫폼, SaaS 제품, PR별 임시 환경 등
+4. 플러그형 KMS 제공자와 스택별 암호화 키를 갖춘 일급 암호화 비밀이 필요할 때
+
+**Crossplane을 선택해야 하는 경우:**
+
+1. Kubernetes를 컨트롤 플레인으로 표준화하고 애플리케이션과 동일한 API, RBAC, GitOps 워크플로로 인프라를 관리하고 싶을 때
+2. 누군가 명령을 실행하지 않아도 컨트롤러가 지속적으로 조정하고 드리프트를 자동 수정하기를 원할 때
+3. YAML로 인프라를 선언적으로 정의하고 재사용 가능한 플랫폼 API를 Kubernetes 리소스로 소비하는 것을 선호할 때
+
+두 도구는 공존할 수도 있다. 자세한 내용은 아래 채택 섹션을 참조하라.
+
+### 채택: 공존, 변환, Import
+
+Pulumi를 Crossplane과 함께 또는 그 대신 도입하는 일반적인 경로는 다음과 같으며, 조합하여 사용할 수 있다:
+
+1. **Crossplane과 Pulumi 병행 사용** — Crossplane과 그 리소스는 모두 Kubernetes 객체이므로, Pulumi의 Kubernetes 프로바이더로 Crossplane을 설치하고 프로바이더를 설치하며 Crossplane 매니페스트를 적용할 수 있다. 예를 들어 `ConfigGroup`이나 `ConfigFile`로 기존 YAML을 적용하거나, `crd2pulumi`로 Crossplane CRD에서 타입 안전 SDK를 생성할 수 있다. 팀은 Pulumi로 클러스터를 관리하고 Crossplane을 부트스트랩하면서 Crossplane 관리 리소스는 그대로 유지할 수 있다.
+2. **`pulumi convert`로 YAML 변환** — `pulumi convert --from kubernetes`는 Crossplane 리소스를 포함한 Kubernetes YAML 매니페스트를 원하는 언어의 Pulumi 프로그램으로 번역한다.
+3. **기존 리소스 Import** — `pulumi import`와 `import` 리소스 옵션으로 이미 프로비저닝된 클라우드 리소스를 Pulumi 관리로 편입하고 선택한 언어로 코드를 생성할 수 있다.
+
+### 자주 묻는 질문
+
+**Crossplane은 Terraform과 같은가?**
+
+다르다. 관련은 있지만 별개의 도구이다. 많은 Crossplane 프로바이더가 Upjet 프레임워크로 Terraform 프로바이더에서 생성되므로 유사한 클라우드 API를 커버하지만, 실행 모델이 다르다 — Terraform은 CLI를 통해 온디맨드로 실행되고, Crossplane은 Kubernetes 클러스터 내에서 컨트롤러가 지속 조정한다. Crossplane은 HCL과 Terraform CLI 대신 Kubernetes YAML과 Kubernetes API를 사용한다.
+
+**Pulumi는 Kubernetes가 필요한가?**
+
+필요하지 않다. Pulumi는 CLI나 Automation API를 통해 실행되며 인프라 관리를 위해 Kubernetes 클러스터가 필요하지 않다. 반면 Crossplane은 Kubernetes 클러스터 내에서 컨트롤러를 실행하므로 클러스터가 운영 공간의 일부이다. Pulumi는 Kubernetes 리소스를 관리하기 위한 일급 Kubernetes 프로바이더를 제공하지만 — Crossplane 자체 포함 — 선택 사항이다.
+
+**Pulumi에서 Crossplane 리소스를 배포하고 관리할 수 있는가?**
+
+가능하다. Crossplane, 프로바이더, 그리고 Crossplane이 정의하는 커스텀 리소스는 모두 Kubernetes 객체이므로 Pulumi의 Kubernetes 프로바이더로 Crossplane을 설치하고 Crossplane 매니페스트를 적용할 수 있다. `ConfigGroup`이나 `ConfigFile`로 기존 YAML을 적용하거나, `crd2pulumi`로 Crossplane CRD에서 타입 안전 SDK를 생성할 수 있다.
+
+**Crossplane에서 Pulumi로 마이그레이션하려면?**
+
+조합할 수 있는 옵션이 있다: `pulumi convert --from kubernetes`로 Crossplane YAML 매니페스트 변환, `pulumi import`로 이미 프로비저닝된 클라우드 리소스를 Pulumi 관리로 편입, 또는 두 도구를 병행 운영하며 점진적으로 마이그레이션. 자세한 안내는 Kubernetes에서 Pulumi로 마이그레이션 가이드를 참조하라.
+
+**Pulumi는 Crossplane처럼 무료인가?**
+
+Pulumi CLI와 SDK는 Apache 2.0 라이선스의 오픈 소스로 무료다. Pulumi Cloud는 무료 Individual 티어와 조직 규모 실행을 위한 유료 플랜(관리형 상태, RBAC, 감사 로그, 정책 관리 등)을 제공한다. Crossplane 자체는 Apache 2.0으로 무료이며, 관리형 컨트롤 플레인과 엔터프라이즈 배포판은 Upbound에서 별도 판매한다.
 
 ---
 
@@ -228,13 +279,64 @@ OpenTofu는 Terraform 1.6에서 포크된 Linux Foundation 관리의 오픈 소�
 | 차이점 | Pulumi | OpenTofu |
 | --- | --- | --- |
 | **언어** | 범용 언어 6종 + YAML | HCL(고정 함수 집합, `for_each`, `count`, `dynamic` 메타 인수) |
-| **프로바이더** | Pulumi Registry + Any Terraform Provider 기능으로 OpenTofu/Terraform 레지스트리의 모든 프로바이더에서 타입 안전 SDK 생성 | OpenTofu Registry + Terraform Registry; `required_providers` 블록으로 설치·고정 |
+| **프로바이더** | Pulumi Registry + Any Terraform Provider 기능으로 OpenTofu/Terraform 레지스트리의 모든 프로바이더에서 타입 안전 SDK 생성(`pulumi package add terraform-provider <name>` 실행으로 로컬 SDK 생성) | OpenTofu Registry + Terraform Registry; `required_providers` 블록으로 설치·고정 |
 | **비밀** | 일급 프리미티브(전송 중·저장 시 암호화, 스택별 키) | 상태·플랜 파일 암호화(1.7+, 전체 파일 단위); 개별 민감 변수는 일급 프리미티브 아님 |
 | **Automation API** | 있음 | 없음(`tofu` CLI 호출로만 오케스트레이션) |
 | **상용** | Pulumi Cloud(단일 벤더) | 프로젝트 자체는 상용 없음; 서드파티(Spacelift, env0, Scalr)에서 관리형 서비스 제공 |
 | **라이선스** | Apache 2.0 | MPL 2.0 |
 | **모듈 소비** | OpenTofu 모듈을 Pulumi에서 직접 실행(OpenTofu 자동 설치·호출) | — |
 | **마이그레이션** | `pulumi convert --from terraform`(OpenTofu HCL 동일하게 처리, 별도 `--from opentofu` 불필요); Pulumi에서 OpenTofu 상태 참조 가능 | — |
+
+### Pulumi vs OpenTofu 선택 기준
+
+**Pulumi를 선택해야 하는 경우:**
+
+1. 범용 언어의 테스트 프레임워크, 패키지 매니저, IDE 도구를 활용해 인프라를 작성하고 싶을 때
+2. 호스트 애플리케이션에서 배포를 구동하는 임베딩 SDK(Automation API)가 필요할 때 — 내부 개발자 플랫폼, SaaS 제품, PR별 임시 환경 등
+3. 플러그형 KMS 제공자와 스택별 암호화 키를 갖춘 일급 암호화 비밀이 필요할 때
+4. 상태, RBAC, 감사 로그, 정책 관리, 원격 실행을 모두 포함하는 단일 관리 제품(Pulumi Cloud)을 원할 때
+
+**OpenTofu를 선택해야 하는 경우:**
+
+1. 프로젝트 자체의 상용 제품이 없는, 완전한 오픈 소스·벤더 중립 IaC 도구를 원할 때
+2. HCL 구성, Terraform/OpenTofu 모듈, 팀 전문 지식에 대한 대규모 기존 투자를 마이그레이션하고 싶지 않을 때
+3. 단일 벤더에서 구매하는 대신 서드파티 서비스(Spacelift, env0, Scalr)에서 관리형 상태·협업 기능을 조립하는 것을 선호할 때
+
+두 도구는 공존할 수도 있다. 자세한 내용은 아래 채택 섹션을 참조하라.
+
+### 채택: 공존, 변환, Import
+
+Pulumi를 OpenTofu와 함께 또는 그 대신 도입하는 일반적인 경로는 다음과 같으며, 조합하여 사용할 수 있다:
+
+1. **OpenTofu와 Pulumi 병행 사용** — Pulumi 프로그램에서 기존 OpenTofu 상태 파일을 참조하여 출력값을 읽을 수 있다(`terraform.state.getLocalReference`, `terraform.state.getRemoteReference`). Pulumi는 기존 OpenTofu 모듈도 직접 실행할 수 있으며, 모듈을 실행하기 위해 OpenTofu를 자동 설치·호출한다.
+2. **`pulumi convert`로 HCL 변환** — `pulumi convert --from terraform`은 HCL을 원하는 언어의 Pulumi 프로그램으로 번역한다. 동일한 플래그가 Terraform과 OpenTofu HCL 모두를 처리하며, 구성 언어가 동일하므로 별도의 `--from opentofu` 플래그는 없다.
+3. **기존 리소스 Import** — `pulumi import`와 `import` 리소스 옵션으로 이미 프로비저닝된 클라우드 리소스를 Pulumi 관리로 편입하고 선택한 언어로 코드를 생성할 수 있다.
+
+### 자주 묻는 질문
+
+**OpenTofu는 Terraform과 같은가?**
+
+OpenTofu는 HashiCorp가 Terraform의 라이선스를 MPL 2.0에서 Business Source License로 변경한 후 2023년에 Terraform 1.6에서 포크되었다. 두 프로젝트는 HCL 구성 언어와 대부분 겹치는 프로바이더 생태계를 공유하지만, 이후 분기되었다. OpenTofu는 Linux Foundation이 관리하며 Terraform에는 없는 상태 암호화 등의 기능을 추가했고, Terraform도 자체적인 새 기능을 계속 출시하고 있다. 대부분의 기존 구성에서 OpenTofu는 즉시 사용 가능한 대체제이지만, 두 프로젝트는 동일하지 않다.
+
+**Pulumi에서 기존 OpenTofu 프로바이더와 모듈을 사용할 수 있는가?**
+
+가능하다. Any Terraform Provider 기능으로 OpenTofu 또는 Terraform 레지스트리의 모든 프로바이더에서 `pulumi package add terraform-provider <name>` 실행만으로 타입 안전 Pulumi SDK를 생성할 수 있다. Pulumi는 기존 OpenTofu 모듈도 Pulumi 프로그램 내 컴포넌트로 직접 실행할 수 있다 — Pulumi가 OpenTofu를 자동 설치하고 모듈 실행을 위해 호출한다.
+
+**OpenTofu에서 Pulumi로 마이그레이션하려면?**
+
+세 가지 옵션을 조합할 수 있다: `pulumi convert --from terraform`로 HCL 변환(OpenTofu HCL도 처리하며 별도 `--from opentofu` 플래그 불필요), `pulumi import`로 이미 프로비저닝된 리소스를 Pulumi 관리로 편입, 또는 전환할 준비가 될 때까지 두 도구를 병행 운영. 전체 안내는 마이그레이션 가이드를 참조하라.
+
+**Pulumi는 OpenTofu 상태 파일을 지원하는가?**
+
+지원한다. Pulumi 프로그램은 `terraform.state.getLocalReference`(로컬 상태) 및 `terraform.state.getRemoteReference`(원격 백엔드)를 통해 OpenTofu 상태 파일의 출력값을 읽을 수 있다. 두 함수 모두 `terraform` 패키지에 있으며, 두 도구가 상태 파일 형식을 공유하므로 OpenTofu 상태에서도 작동한다.
+
+**Pulumi는 OpenTofu처럼 무료인가?**
+
+Pulumi CLI와 SDK는 Apache 2.0 라이선스의 오픈 소스로 무료다. Pulumi Cloud는 무료 Individual 티어와 조직 규모 실행을 위한 유료 플랜(관리형 상태, RBAC, 감사 로그, 정책 관리 등)을 제공한다. OpenTofu 자체는 MPL 2.0으로 무료이며, 상용 관리형 상태·협업 도구는 Spacelift, env0, Scalr 등 서드파티에서 별도 판매한다.
+
+**마이그레이션 중 Pulumi와 OpenTofu를 병행 실행할 수 있는가?**
+
+가능하며, 가장 일반적인 도입 패턴 중 하나이다. Pulumi는 OpenTofu 상태 파일에서 출력값을 읽고 OpenTofu 모듈을 직접 실행할 수 있으므로, 팀은 일반적으로 기존 인프라를 OpenTofu로 유지하면서 새 작업에 Pulumi를 사용한 후 프로젝트 상황에 맞게 점진적으로 변환하거나 Import한다.
 
 ---
 
@@ -260,6 +362,31 @@ Pulumi와 ARM Templates(Azure Resource Manager)은 모두 Azure 인프라를 위
 | **Import** | `pulumi import` + `import` 리소스 옵션(코드 자동 생성) | 일급 Import 없음; Bicep `existing` 키워드로 읽기 전용 참조만 |
 | **정책** | Pulumi Policies(오픈 소스, Python/TypeScript/Rego) | Azure Policy(별도 Azure 서비스, 템플릿 저작 루프와 분리) |
 | **마이그레이션** | `pulumi convert --from arm` / `--from bicep`; Pulumi Neo(AI 보조); `pulumi import` | — |
+
+---
+
+## Pulumi vs Cloud SDKs (AWS Boto 등)
+
+> https://www.pulumi.com/docs/iac/comparisons/cloud-sdks/
+
+### 개요
+
+클라우드 프로바이더는 다양한 언어로 SDK를 제공한다. 대표적으로 AWS Boto(Python)가 있으며, JavaScript, C#, Java, Go 등을 위한 수많은 라이브러리도 존재한다. 이 밖에도 클라우드별 또는 멀티클라우드 시나리오를 추상화하는 커뮤니티 주도 라이브러리도 많다. 이러한 SDK는 클라우드 API에 대한 직접 접근을 제공하며 리소스 프로비저닝에도 사용할 수 있지만, **안정적인 관리를 프로그래머에게 전적으로 맡긴다**. 이들은 명령형(imperative) 라이브러리이므로, 이를 사용해 프로비저닝과 업데이트를 직접 코드로 작성하는 것은 오류가 발생하기 쉬우며, 결국 [자체 제작 프로비저닝 시스템](https://www.pulumi.com/docs/concepts/vs/custom/)을 구축하는 결과로 이어지는 경우가 많다.
+
+Pulumi는 진정한 Infrastructure as Code 엔진으로 리소스의 견고한 관리를 보장한다. 특히 업데이트가 실패하더라도 시스템은 항상 명확하게 정의된 복구 가능한 상태를 유지한다. 사실 Pulumi는 내부적으로 이러한 클라우드 SDK를 사용하여 각 클라우드 프로바이더와 통신한다. Pulumi를 다른 것은 언어 런타임, 업데이트 diff 기능, 동시성 관리, 상태의 견고한 체크포인트 등 IaC 엔진으로서의 기능이다. 반복 가능하고 견고한 배포를 팀 환경에서 구현하려면 이러한 기능을 직접 구축해야 한다. 멀티클라우드 지원은 상당한 노력이 필요하며, 결국 Pulumi를 수동으로 다시 만드는 것과 같다.
+
+### 주요 차이점
+
+| 차이점 | Pulumi | Cloud SDKs |
+| --- | --- | --- |
+| **패러다임** | 선언적 IaC — 원하는 상태를 정의하면 엔진이 diff·생성·업데이트·삭제를 처리 | 명령형(imperative) — API 호출을 직접 코드로 작성, 프로비저닝 로직 전부 수동 관리 |
+| **상태 관리** | Pulumi Cloud(기본) 또는 자체 관리 백엔드. 체크포인트 기반 상태 추적 | 없음. 프로비저닝 상태 추적·체크포인트 기능 없음(직접 구현 필요) |
+| **diff·플랜** | `pulumi preview`로 변경 사항을 실행 전에 미리 확인 | 없음. 어떤 변경이 발생할지 직접 추적해야 함 |
+| **실패 복구** | 실패 후에도 명확한 상태 유지; 이후 `pulumi up`으로 수렴 | 실패 시 복구 로직을 직접 작성해야 함(부분 생성 리소스 수동 정리 필요) |
+| **멀티클라우드** | 단일 프로그램에서 AWS, Azure, GCP, Kubernetes, SaaS 모두 관리 | 각 클라우드 SDK를 개별적으로 사용; 멀티클라우드 조율은 전적으로 수동 |
+| **비밀 처리** | 일급 암호화 프리미티브 | 없음. 비밀 처리를 직접 구현(클라우드 비밀 관리 서비스 별도 호출 가능) |
+| **동시성 관리** | Pulumi 엔진이 종속성 그래프 기반으로 자동 처리 | 직접 구현(API 호출 순서·의존성·재시도 로직) |
+| **재사용·공유** | Component Resources + Pulumi Packages로 언어 간 공유 | 범용 언어의 패키지 매니저로 코드 공유는 가능하나 IaC 추상화는 직접 설계 |
 
 ---
 
@@ -290,6 +417,59 @@ Pulumi와 Kubernetes YAML 매니페스트는 모두 인프라의 원하는 상�
 2. **렌더링으로 공존** — Pulumi 프로그램을 Kubernetes YAML로 렌더링하여 기존 `kubectl` 또는 GitOps 파이프라인으로 배포
 3. **매니페스트 변환** — `pulumi convert --from kubernetes`로 기존 매니페스트를 원하는 언어의 Pulumi 코드로 변환
 4. **기존 리소스 Import** — `pulumi import`로 클러스터 내 이미 실행 중인 리소스를 Pulumi 관리로 편입
+
+---
+
+## Pulumi vs Chef & Puppet
+
+> https://www.pulumi.com/docs/iac/comparisons/chef-puppet-etc/
+
+### 개요
+
+Chef, Puppet, Ansible, Salt는 모두 인기 있는 *구성 관리 도구(configuration management tools)*이다. 이 도구들은 기존 클라우드 인프라에 소프트웨어를 설치하고 관리하는 데 도움을 주며, 가상 머신 부트스트래핑이나 패치에 사용된다. 하지만 인프라, 컨테이너, 서버리스 리소스의 프로비저닝이나 업데이트 문제는 해결하지 않는다.
+
+Pulumi는 이 도구들과 근본적으로 다르며, 함께 사용하면 훌륭하게 작동한다. Pulumi는 가상 머신, 컨테이너, 데이터베이스, 호스팅된 클라우드 서비스, 서버리스 함수를 포함하여 클라우드 인프라와 애플리케이션의 프로비저닝과 업데이트를 관리한다.
+
+Pulumi는 일부 구성 관리 도구와 마찬가지로 표현력 있는 범용 언어를 사용하여 클라우드 요구 사항과 원하는 인프라 상태를 정의한다. 그런 다음 Pulumi 도구가 이러한 설명을 받아 여러 환경을 관리하여 CLI나 호스팅된 CI/CD 시나리오를 통해 인프라가 항상 최신 상태로 유지되도록 한다.
+
+Pulumi는 부트스트래핑과 패치가 불필요한 최신 "불변 인프라(immutable infrastructure)" 아키텍처에서 잘 작동한다. 이러한 경우 구성 관리는 일반적인 의미로 필요하지 않다. 그러나 Pulumi는 종종 가상 머신을 수반하는 클래식 인프라 접근 방식에서도 잘 작동하며, 구성 도구를 계속 함께 사용하는 것이 쉽다. 어느 경우든 Pulumi는 클라우드 네이티브 아키텍처로의 전환을 지원한다.
+
+### 핵심 차이
+
+구성 관리 도구(Chef, Puppet, Ansible, Salt)와 Pulumi는 서로 다른 문제를 해결한다:
+
+| 구분 | Pulumi | 구성 관리 도구 |
+| --- | --- | --- |
+| **목적** | 클라우드 인프라 프로비저닝 및 관리 | 기존 서버의 소프트웨어 설치 및 구성 관리 |
+| **접근 방식** | 선언적 IaC — 원하는 상태를 정의하면 엔진이 처리 | 명령형/선언형 혼합 — 주로 구성 관리에 초점 |
+| **리소스 유형** | 가상 머신, 컨테이너, 데이터베이스, 서버리스, 클라우드 서비스 등 모든 클라우드 리소스 | 기존 인프라 위의 소프트웨어 패키지, 파일, 서비스 |
+| **클라우드 범위** | 모든 클라우드/SaaS | 클라우드에 구애받지 않으나 프로비저닝이 아닌 구성에 초점 |
+| **관계** | 보완재 — Pulumi가 인프라를 프로비저닝하고 구성 관리 도구가 소프트웨어를 구성 | 보완재 — 구성 관리 도구로 소프트웨어를 구성하고 Pulumi로 인프라를 프로비저닝 |
+
+---
+
+## Pulumi vs Custom Solutions
+
+> https://www.pulumi.com/docs/iac/comparisons/custom/
+
+### 개요
+
+많은 조직이 수동으로 인프라를 관리하는 것으로 시작한다. 일반적으로 클라우드 웹 콘솔에서 포인트앤드클릭으로 시작하여, 점차 프로비저닝과 로직을 간단한 스크립트(Bash, Python 등)로 인코딩하는 방식으로 발전한다.
+
+이 접근 방식은 초기에는 작동하지만, 시간이 지남에 따라 자체 구축한 솔루션은 다음과 같은 문제로 점점 무너진다:
+
+- 애플리케이션의 여러 복사본을 프로비저닝하는 것이 어렵거나 불가능해진다
+- 스크립트의 로직이 인프라 복잡성에 비례하여 비선형적으로 증가한다
+- 장애 모드에서 환경 복구를 위해 수동 개입이 필요하며, 종종 다운타임으로 이어진다
+- 클라우드 프로바이더가 진화함에 따라 최신 혁신을 따라잡고 채택하기가 어려워진다
+
+이러한 솔루션의 유지 보수 비용은 종종 여러 팀 구성원을 소모하며, 실제로 최고의 엔지니어들이 묶이게 된다. 많은 팀이 자체 구축한 인프라 스크립트를 관리하는 데 비즈니스 로직을 작성하는 것보다 더 많은 시간을 소비하면서도 원하는 속도로 움직이지 못한다는 것을 발견한다.
+
+### Pulumi가 해결하는 문제
+
+Pulumi는 이러한 문제를 즉시 해결하도록 설계되었다. 친숙한 언어로 클라우드 프로그래밍 모델을 제공하여 클라우드 인프라와 애플리케이션 요구 사항을 표현할 수 있다. Pulumi로 표현하면 팀 환경에서 작동하는 견고하고 반복 가능한 배포 모델을 얻을 수 있다. Pulumi는 기존 시스템의 새 리전, 새 환경(스테이징, 프로덕션, 테스트), 테스트 용이성 등 인프라 또는 애플리케이션의 여러 복사본 프로비저닝을 간단하게 만든다.
+
+또한 Pulumi는 [오픈 소스](https://github.com/pulumi/pulumi)이며 커뮤니티 주도이다. 따라서 맞춤 요구 사항이 있는 경우 자체 구축 솔루션과 마찬가지로 필요한 맞춤 설정을 할 수 있다. 대부분의 고객에게 Pulumi는 맞춤 설정 없이 기존 맞춤 솔루션을 대체하지만, 이것이 옵션이라는 점을 알면 Pulumi가 장기적으로 사용 가능하고 성장하는 요구를 충족하기 위해 진화할 수 있다는 것을 알 수 있다.
 
 ---
 
