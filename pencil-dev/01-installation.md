@@ -67,11 +67,11 @@ VS Code와 동일: `.pen` 파일 생성 후 Pencil 아이콘 확인
 
 ### macOS
 
-```bash
-# 1. Pencil 웹사이트에서 최신 .dmg 다운로드
-# 2. Pencil을 Applications 폴더로 드래그
-# 3. Pencil 실행
-```
+**다운로드:**
+
+- Pencil 웹사이트 또는 releases 페이지에서 최신 `.dmg` 다운로드
+- Pencil을 Applications 폴더로 드래그
+- Pencil 실행
 
 **첫 실행 시:** macOS 보안 경고가 뜨면 우클릭 → 열기로 실행. 활성화 과정 완료 후 AI 기능 사용을 위해 Claude Code 로그인.
 
@@ -107,10 +107,10 @@ Pencil의 AI 기능을 사용하려면 Claude Code CLI 설치와 인증이 필�
 
 ```bash
 # npm으로 설치
-npm install -g @anthropic-ai/claude-code
+npm install -g @anthropic-ai/claude-code-cli
 
 # 또는 공식 설치 스크립트
-curl https://claude.ai/install.sh | sh
+curl https://claude.ai/cli/install.sh | sh
 ```
 
 ### 인증
@@ -120,11 +120,25 @@ curl https://claude.ai/install.sh | sh
 claude
 ```
 
+인증 과정에서 다음 단계가 자동으로 진행됩니다:
+
+1. 브라우저 열기
+2. Anthropic 계정으로 로그인
+3. 인증 정보를 로컬에 저장
+
 ### 확인
 
 ```bash
+# CLI 버전 확인
 claude --version
 ```
+
+**Pencil 내에서도 확인 가능:**
+
+| 확인 사항 | 방법 |
+| --- | --- |
+| 연결 경고 | Pencil 실행 후 "Claude Code not connected" 경고가 없는지 확인 |
+| AI 프롬프트 패널 | `Cmd/Ctrl + K`로 AI 프롬프트 패널이 정상 작동하는지 확인 |
 
 ---
 
@@ -151,9 +165,12 @@ Pencil MCP 서버는 Pencil 사용 시 자동으로 실행됩니다. AI 어시�
 
 Pencil 설치 완료 후 다음 단계를 진행하세요:
 
-1. `.pen` 파일을 프로젝트에 생성
-2. AI 프롬프트 패널 열기 (`Cmd/Ctrl + K`)
-3. 디자인 요청 (예: "Create a login form with email and password")
+1. **활성화 완료** — 이메일로 Pencil 활성화
+2. **Claude Code 로그인** — AI 기능 사용을 위해 필요
+3. **웰컴 파일 열기** — 캔버스 우클릭 → Open Welcome File
+4. **첫 디자인 생성** — `.pen` 파일 생성 방법 참고
+5. **AI 프롬프트 패널 열기** — `Cmd/Ctrl + K`
+6. **디자인 요청** — 예: "Create a login form with email and password"
 
 ---
 
@@ -174,6 +191,7 @@ Pencil은 Pencil 자체 활성화와 Claude Code 인증 두 가지가 필요합�
 | 활성화 이메일 미수신 | 스팸 필터, 지연 | 스팸함 확인, 다른 이메일 시도, 몇 분 대기 |
 | "Invite not found" | 대기자 명단 | 확장 재설치, 지원팀 문의 |
 | 반복 활성화 프롬프트 | 알려진 이슈 | IDE 재시작, 확장 재설치 |
+| 마이그레이션 중 활성화 멈춤 | 확장 데이터 이관 문제 | 확장 재설치, 확장 데이터 삭제 후 재시도 |
 | "Claude Code isn't connected" | CLI 인증 누락 | 터미널에서 `claude` 실행 후 인증 |
 | "Invalid API key" | 인증 충돌 | `ANTHROPIC_API_KEY` 환경변수 제거, CLI 인증 사용 |
 | CLI는 작동하지만 Pencil에서 미연결 | 서드파티 프로바이더 충돌 | 클린 Claude Code 세션 사용, IDE 재시작, 충돌 환경변수 확인 |
@@ -211,7 +229,27 @@ Pencil 설치 → Pencil 활성화(이메일) → Claude Code CLI 설치 → Cla
 
 ## 업데이트
 
-| 항목 | 방법 |
+확장 프로그램은 기본적으로 자동으로 업데이트됩니다. 수동으로 업데이트하려면:
+
+### VS Code/Cursor 확장
+
+1. 확장 패널 열기
+2. Pencil 찾기
+3. 업데이트가 있으면 Update 클릭
+
+### 데스크톱 앱
+
+- 업데이트가 있으면 앱 내에서 알림 표시
+- 웹사이트에서 최신 버전 다운로드 후 설치
+
+---
+
+## 설치 트러블슈팅
+
+| 문제 | 해결 방법 |
 | --- | --- |
-| VS Code/Cursor 확장 | 확장 패널에서 업데이트 확인 |
-| 데스크톱 앱 | 앱 내 업데이트 또는 웹사이트에서 다운로드 |
+| 확장 설치 후 연결 안 됨 | Claude Code 로그인 확인 → 활성화 과정 완료 → IDE 재시작 |
+| 활성화 이메일 미수신 | 스팸함 확인 → 다른 이메일 주소 시도 → 확장 재설치 |
+| "Invalid API key" 또는 "Please run /login" | `claude` CLI 실행 후 인증 완료 → 충돌하는 인증 설정 제거 (환경변수 키, 커스텀 프로바이더) |
+
+> 더 많은 문제와 해결 방법은 [Troubleshooting 가이드](https://docs.pencil.dev/troubleshooting)를 참고하세요.
