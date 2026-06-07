@@ -108,7 +108,7 @@ res = Resource(name, args, options)
 
 ## 리소스 이름과 식별
 
-각 리소스는 서로 다른 목적을 가진 **네 가지 식별 형태** 를 갖는다.
+각 리소스는 서로 다른 목적을 가진 **다섯 가지 식별 형태** 를 갖는다.
 
 | 식별 형태 | 출처 | 예시 값 | 사용 시기 |
 |---|---|---|---|
@@ -116,6 +116,7 @@ res = Resource(name, args, options)
 | **물리적 이름** | 프로바이더 (논리적 이름과 자동 명명에 영향을 받음) | `"my-bucket-d7c3a1f"` | 프로바이더 API 호출에 사용. 프로바이더별 출력 속성으로 읽기 |
 | **물리적 ID** | 프로바이더 — 리소스 생성 후 반환 | `"my-bucket-d7c3a1f"` (S3), `"vpc-0abc1234"` (VPC) | `import`, `get`, 프로바이더 API에 전달. `resource.id`로 접근 |
 | **URN** | Pulumi — 프로젝트, 스택, 타입, 논리적 이름에서 파생 | `"urn:pulumi:dev::app::aws:s3/bucket:Bucket::my-bucket"` | Pulumi CLI 명령(`pulumi state`). 프로그램 코드에서는 거의 사용하지 않음. `resource.urn`으로 접근 |
+| **리소스 참조(Resource Reference)** | 프로그램 — 리소스 객체를 담은 변수 | `bucket` (Python/TS/Go 변수) | `ResourceOptions` 필드(`parent`, `depends_on`, `provider`, `deleted_with`)에 전달. URN이나 ID가 아닌 **변수 자체**를 전달해야 함 |
 
 > **주의:** `dependsOn` 옵션은 **리소스 참조**(변수 자체) 목록을 받으며, URN이나 ID가 아니다.
 
@@ -142,13 +143,70 @@ role = iam.Role('my-role', name='my-role-001')
 
 ### 자동 명명 설정
 
-`pulumi:autonaming` 구성 설정으로 자동 명명 동작을 커스터마이즈할 수 있다.
+`pulumi:autonaming` 구성 설정으로 자동 명명 동작을 커스터마이즈할 수 있다. 스택 또는 프로젝트 수준에서 설정할 수 있으며, [Pulumi ESC](https://www.pulumi.com/docs/esc/)를 활용하면 조직 수준에서도 관리할 수 있다.
 
-| 모드 | 설명 |
-|---|---|
-| `default` | 기본 동작. 임의 접미사 추가 |
-| `verbatim` | 논리적 이름을 그대로 사용. 접미사 없음 |
-| `disabled` | 모든 리소스에 명시적 이름 필수 |
+> **참고:** 프로젝트 구성 파일(`Pulumi.yaml`)에서 설정할 때는 `value` 키로 감싸야 한다:
+>
+> ```yaml
+> config:
+>   pulumi:autonaming:
+>     value:
+>       pattern: ${name}-${project}-${stack}
+> ```
+>
+> 스택 구성 파일(`Pulumi.<stack-name>.yaml`)에서는 직접 지정할 수 있다:
+>
+> ```yaml
+> config:
+>   pulumi:autonaming:
+>     pattern: ${name}-${project}-${stack}
+> ```
+>
+> [ESC 환경](https://www.pulumi.com/docs/esc/guides/integrate-with-pulumi-iac/)에서는 `$$` 이스케이프를 사용한다:
+>
+> ```yaml
+> pulumiConfig:
+>   pulumi:autonaming:
+>     pattern: $${name}-$${project}-$${stack}
+> ```
+
+#### 기본 자동 명명 (Default)
+
+```yaml
+config:
+  pulumi:autonaming:
+    mode: default
+```
+
+기본 동작과 동일하며, 리소스 이름에 임의 접미사가 추가된다.
+
+#### Verbatim 이름
+
+```yaml
+config:
+  pulumi:autonaming:
+    mode: verbatim
+```
+
+논리적 이름을 수정 없이 그대로 사용하며, 임의 접미사가 추가되지 않는다.
+
+#### 자동 명명 비활성화
+
+```yaml
+config:
+  pulumi:autonaming:
+    mode: disabled
+```
+
+모든 리소스에 명시적 이름이 필수가 된다.
+
+#### 커스텀 명명 패턴
+
+```yaml
+config:
+  pulumi:autonaming:
+    pattern: ${name}-${hex(8)}
+```
 
 **패턴 표현식:**
 
@@ -165,14 +223,40 @@ role = iam.Role('my-role', name='my-role-001')
 | `${stack}` | 스택 이름 | `${stack}_${name}` |
 | `${config.key}` | 키의 구성 값 | `${config.region}_${name}` |
 
+> **주의:** `verbatim` 모드나 임의 구성 요소가 없는 패턴을 사용하면, 교체가 필요한 리소스가 먼저 삭제된 후 새로 생성되므로 가동 중단이 발생할 수 있다.
+
+#### 프로바이더별 구성 (Provider-Specific Configuration)
+
+특정 프로바이더나 리소스 타입에 대해 자동 명명을 다르게 구성할 수 있다:
+
 ```yaml
-# Pulumi.<stack-name>.yaml
 config:
   pulumi:autonaming:
-    pattern: ${name}-${project}-${stack}
+    mode: default
+    providers:
+      aws:
+        pattern: ${name}_${hex(4)}  # AWS 리소스는 밑줄과 짧은 접미사 사용
+      azure-native:
+        mode: verbatim  # Azure 리소스는 이름 그대로 사용
+        resources:
+          azure-native:storage:Account:
+            pattern: ${name}${string(6)}  # Storage Account는 고유 이름 필요
 ```
 
-> **주의:** `verbatim` 모드나 임의 구성 요소가 없는 패턴을 사용하면, 교체가 필요한 리소스가 먼저 삭제된 후 새로 생성되므로 가동 중단이 발생할 수 있다.
+#### 엄격한 이름 패턴 적용 (Strict Name Pattern Enforcement)
+
+기본적으로 프로바이더는 리소스별 요구 사항에 맞게 생성된 이름을 수정할 수 있다. 이를 방지하고 패턴을 정확히 적용하려면 `enforce: true`를 사용한다:
+
+```yaml
+config:
+  pulumi:autonaming:
+    pattern: ${name}-${hex(8)}
+    enforce: true
+```
+
+#### 마이그레이션 (Migration)
+
+기존 스택에서 자동 명명 설정을 변경해도 즉각적인 변경은 발생하지 않는다. 새로 생성되는 리소스나 관련 없는 이유로 교체되는 리소스에만 새 이름이 적용된다. 리소스를 새 이름으로 재생성하려면(예: 개발 스택) 스택을 파기(destroy)하고 다시 업데이트해야 한다.
 
 ### 리소스 타입 토큰
 
@@ -198,6 +282,52 @@ urn:pulumi:production::acmecorp-website::custom:resources:Resource$aws:s3/bucket
 URN은 전역적으로 고유해야 한다. 동일한 이름, 타입, 부모 경로를 가진 두 리소스를 생성하면 오류가 발생한다.
 
 > **주의:** 리소스 이름을 변경하면 새 URN이 생성되어 이전 리소스는 삭제, 새 리소스는 생성된다. 이름 변경 없이 리소스를 유지하려면 `aliases` 옵션을 사용하라.
+
+### Physical IDs (물리적 ID)
+
+논리적 이름, 물리적 이름, URN 외에도 Pulumi가 클라우드 프로바이더에 생성하는 모든 리소스는 생성 완료 후 프로바이더로부터 **물리적 ID(Physical ID)** 를 할당받는다. 이 ID는 모든 리소스의 `id` 출력 속성으로 노출된다.
+
+논리적 이름(사용자가 선택)이나 URN(Pulumi가 파생)과 달리, 물리적 ID는 프로바이더가 할당하며 해당 프로바이더의 규칙에 따른다:
+
+| 프로바이더 | 물리적 ID 형식 | 예시 |
+|---|---|---|
+| **AWS** | 짧은 식별자 (버킷 이름, 리소스별 ID) | `my-bucket-d7c3a1f`, `vpc-0abc1234def5678`, `i-0abc1234def5678` |
+| **Azure** | 긴 ARM ID | `/subscriptions/<sub>/resourceGroups/<rg>/providers/...` |
+| **GCP** | self-link URL | `https://www.googleapis.com/compute/v1/projects/...` |
+| **일반** | 단순 문자열 또는 숫자 ID | 리소스에 따라 다름 |
+
+> **참고:** AWS의 ARN은 일반적으로 `id`가 아닌 별도의 `arn` 출력 속성으로 제공된다.
+
+`id`는 출력(Output)이므로 Pulumi의 `Output<T>` 타입으로 래핑되며, 리소스가 생성되거나 업데이트될 때까지 알 수 없다. 다른 출력과 마찬가지로 다른 리소스의 입력에 직접 전달하거나, 코드에서 값을 변환해야 할 때 `.apply()`를 사용한다.
+
+```typescript
+const bucket = new aws.s3.Bucket("my-bucket");
+
+// bucket.id는 Output<string> — AWS가 할당한 버킷 이름
+const obj = new aws.s3.BucketObject("hello.txt", {
+    bucket: bucket.id,   // Output<string>을 직접 전달 — .apply() 불필요
+    content: "Hello!",
+    key: "hello.txt",
+});
+```
+
+```python
+bucket = aws.s3.Bucket("my-bucket")
+
+# bucket.id는 Output[str] — AWS가 할당한 버킷 이름
+obj = aws.s3.BucketObject("hello.txt",
+    bucket=bucket.id,   # Output[str]을 직접 전달
+    content="Hello!",
+    key="hello.txt",
+)
+```
+
+물리적 ID는 기존 클라우드 리소스를 Pulumi 스택으로 채택할 때 특히 중요하다. `import` 리소스 옵션과 `get` 정적 메서드 모두 물리적 ID를 받아 프로바이더에서 리소스의 현재 상태를 조회한다.
+
+```python
+# 기존 S3 버킷을 프로바이더가 할당한 ID로 가져오기
+existing = aws.s3.Bucket.get("existing-bucket", id="my-bucket-name-abc123")
+```
 
 ---
 
@@ -450,6 +580,79 @@ Pulumi 리소스는 다음 네 가지 주요 수명주기 작업을 거친다.
 - **`replaceOnChanges`**: 지정된 속성이 변경되면 강제로 교체 수행
 
 > **주의:** 리소스의 논리적 이름을 변경하면 URN이 변경되어 교체가 아닌 **create + delete** 작업이 수행된다. 이름 변경 시 기존 리소스를 유지하려면 `aliases` 옵션을 사용하라.
+
+### 리소스 수명주기 훅 (Resource Lifecycle Hooks)
+
+`hooks` 리소스 옵션을 사용하면 리소스 수명주기의 특정 지점에서 커스텀 로직을 실행할 수 있다. 이를 통해 리소스 생성 전후, 업데이트 전후, 삭제 전후에 사용자 정의 동작을 주입할 수 있다.
+
+`hooks`는 Custom 및 Component 리소스 모두에 적용할 수 있지만, 컴포넌트에서 자식 리소스로는 상속되지 않는다.
+
+---
+
+## 컴포넌트 소비 (Consuming Components)
+
+컴포넌트를 소비하는 방법은 배포 형태에 따라 다르다.
+
+| 배포 형태 | 설치 방법 | 비고 |
+|---|---|---|
+| **로컬 컴포넌트** | 언어의 표준 import 메커니즘으로 직접 참조 | 동일 저장소 내, 추가 설치 불필요 |
+| **네이티브 언어 패키지** | `npm install`, `pip install`, `go get`, `dotnet add package` 등 | 작성된 언어에서만 사용 가능, Pulumi 플러그인 없음 |
+| **Pulumi 패키지 (사전 게시 SDK 없음)** | `pulumi package add <url>` | 모든 언어에서 사용 가능, SDK가 즉석에서 생성됨 |
+| **Pulumi 패키지 (사전 게시 SDK 있음)** | 네이티브 패키지 매니저로 직접 설치 | 추가 런타임 불필요 (예: `@pulumi/awsx`) |
+
+#### 로컬 컴포넌트
+
+Pulumi 프로그램과 동일한 저장소에 있는 컴포넌트는 언어의 표준 import 메커니즘으로 참조한다. 추가 설치 단계가 필요 없다.
+
+#### 네이티브 언어 패키지
+
+일부 컴포넌트는 언어 레지스트리(npm, PyPI, NuGet, Maven 등)에 게시된 네이티브 언어 패키지로 배포된다. Pulumi 플러그인이 없으므로 작성된 언어에서만 소비할 수 있다.
+
+```bash
+# TypeScript
+npm install @my-org/my-component
+
+# Python
+pip install my-org-my-component
+
+# Go
+go get github.com/my-org/my-component
+
+# C#
+dotnet add package MyOrg.MyComponent
+```
+
+#### Pulumi 패키지 (`pulumi package add`)
+
+Pulumi 패키지로 배포된 컴포넌트는 `pulumi package add` 명령으로 모든 언어에서 소비할 수 있다. Pulumi가 해당 언어의 SDK를 즉석에서 생성하여 프로젝트에 연결한다.
+
+```bash
+# Git 저장소에서
+pulumi package add github.com/my-org/my-component@v1.0.0
+
+# 로컬 디렉터리에서
+pulumi package add /path/to/local/secure-s3-component
+```
+
+> **참고:** Pulumi가 라이브 플러그인에서 SDK를 생성하므로, 플러그인이 실행 가능해야 한다. 요구 사항은 해당 언어 SDK 문서를 참조하라.
+
+#### 사전 게시 SDK가 있는 Pulumi 패키지
+
+일부 Pulumi 패키지(예: AWSx)는 각 언어별로 사전 생성된 SDK가 게시되어 있어, `pulumi package add` 없이 네이티브 패키지 매니저로 직접 설치할 수 있다. SDK가 이미 컴파일되어 있으므로 자체 언어 도구 체인 외에 추가 런타임이 필요 없다.
+
+```bash
+# TypeScript
+npm install @pulumi/awsx
+
+# Python
+pip install pulumi-awsx
+
+# Go
+go get github.com/pulumi/pulumi-awsx/sdk/v3/go/awsx
+
+# C#
+dotnet add package Pulumi.Awsx
+```
 
 ---
 
