@@ -10,21 +10,58 @@
 >
 > https://www.pulumi.com/docs/deployments/deployments/using/triggers/
 >
+> https://www.pulumi.com/docs/deployments/deployments/using/post-automation/
+>
 > https://www.pulumi.com/docs/deployments/deployments/permissions/
 >
 > https://www.pulumi.com/docs/deployments/deployments/oidc/
 >
 > https://www.pulumi.com/docs/deployments/deployments/oidc/aws/
 >
-> https://www.pulumi.com/docs/deployments/deployments/runs/
+> https://www.pulumi.com/docs/deployments/deployments/oidc/azure/
+>
+> https://www.pulumi.com/docs/deployments/deployments/oidc/gcp/
+>
+> https://www.pulumi.com/docs/deployments/deployments/cloud-credentials/
 >
 > https://www.pulumi.com/docs/deployments/deployments/drift/
+>
+> https://www.pulumi.com/docs/deployments/deployments/schedules/
+>
+> https://www.pulumi.com/docs/deployments/deployments/ttl/
+>
+> https://www.pulumi.com/docs/deployments/deployments/review-stacks/
+>
+> https://www.pulumi.com/docs/deployments/deployments/runs/images/
+>
+> https://www.pulumi.com/docs/deployments/deployments/runs/customer-managed-agents/
 
-Pulumi Deployments는 인프라스트럭처 코드(IaC)를 위해 목적에 맞게 구축된 관리형 CI/CD 플랫폼이다. 관리형 컴퓨트, 안전한 시크릿 처리, 버전 관리 시스템과의 깊은 통합을 제공하여 조직 전반의 인프라 변경 사항을 안전하게 배포할 수 있다. Git Push 배포, 풀 리퀘스트 자동 프리뷰, 스케줄된 작업, Drift Detection, 임시 환경(Review Stacks, TTL Stacks) 등 다양한 배포 자동화 기능을 제공한다.
+Pulumi Deployments & Workflows는 인프라스트럭처 프로젝트 관리, 배포 자동화, 워크플로 통합을 위한 운영 도구 모음이다. **Deployments**는 IaC를 위해 목적에 맞게 구축된 관리형 CI/CD 플랫폼으로, 관리형 컴퓨트, 안전한 시크릿 처리, 버전 관리 시스템과의 깊은 통합을 제공한다. **Webhooks**는 스택 업데이트, 배포, Drift Detection, 정책 위반 등에 대응하여 외부 시스템과 워크플로를 트리거한다. **Deploy with Pulumi Button**은 GitHub 리포지토리, Gist 또는 웹 페이지에서 원클릭 인프라 배포를 가능하게 하는 임베디드 배포 버튼이다.
 
----
+### 주요 기능
 
-## 핵심 구성 요소
+#### Managed Infrastructure CI/CD
+
+- **Zero Touch CI/CD**: 앱 팀이 Pulumi Cloud의 New Project Wizard에서 템플릿을 선택하여 몇 분 안에 인프라 배포
+- **Git 통합**: PR 생성 시 자동 `pulumi preview`, 병합 시 `pulumi up` 실행
+- **Live Preview Environments**: 각 PR이 실제 인프라가 포함된 Review Stack을 자동 생성하여 병합 전 변경 사항 검증
+- **Secure by Default**: Pulumi ESC 통합으로 시크릿과 클라우드 자격 증명을 안전하게 처리
+
+#### Beyond CI/CD
+
+- **Drift Detection**: 인프라가 원하는 상태에서 벗어났을 때 자동 감지
+- **Scheduled Operations**: Cron 표현식으로 정기적인 Pulumi 작업 실행
+- **Temporary Infrastructure**: TTL Stacks를 통해 개발/테스트 환경 자동 해제
+- **Custom Compute**: Customer-Managed Workflow Runners로 자체 인프라에서 Pulumi 작업, Insights Discovery 스캔, 정책 평가 실행
+
+#### Platform Engineering
+
+- **REST API**: 인프라 작업을 프로그래밍 방식으로 자동화하여 커스텀 워크플로 및 셀프 서비스 플랫폼 구축
+- **Deployment Settings**: 소스 코드, 자격 증명, 환경 변수 등 모든 배포 요구 사항을 단일 구성으로 정의 (UI 또는 Pulumi Cloud Provider로 관리)
+- **Multiple Triggers**: Git Push, REST API, UI 버튼, 스케줄 등 다양한 방식으로 배포 트리거
+- **Best Practices Built-in**: 대규모 인프라 자동화를 위한 Deployment 패턴 제공
+
+### 핵심 구성 요소
 
 Pulumi Deployments는 세 가지 핵심 컴포넌트로 구성된다.
 
@@ -208,6 +245,25 @@ echo GOOGLE_OAUTH_ACCESS_TOKEN=$GOOGLE_OAUTH_ACCESS_TOKEN >> /PULUMI_ENV
 
 ---
 
+## Deployment Runner Pools
+
+Pulumi Deployments를 사용할 때 워크플로가 실행되는 위치를 선택할 수 있다.
+
+| 풀 유형 | 설명 |
+|---|---|
+| **Pulumi Hosted Pool** | Pulumi가 관리하며 모든 Pulumi Cloud 고객이 사용 가능 |
+| **Customer-Managed Workflow Runners** | 자체 호스팅 러너로 프라이빗 네트워크와 리소스에 접근 가능. 배포, Insights Discovery 스캔, 정책 평가 지원 |
+
+스택에 명시적으로 풀이 구성되지 않은 경우 해석 순서는 다음과 같다.
+
+1. 스택, 계정, 또는 정책 그룹에 명시적으로 구성된 풀
+2. 조직 기본 풀 (설정된 경우)
+3. Pulumi Hosted Pool
+
+> 자세한 내용은 [Customer-Managed Workflow Runners](#customer-managed-workflow-runners) 섹션을 참조한다.
+
+---
+
 ## 환경 변수
 
 Pulumi Deployments는 기본적으로 다음 환경 변수를 설정한다.
@@ -240,6 +296,19 @@ Pulumi Deployments는 기본적으로 다음 환경 변수를 설정한다.
 > https://www.pulumi.com/docs/deployments/deployments/oidc/gcp/
 
 Pulumi Deployments는 OpenID Connect(OIDC)를 통해 클라우드 제공자와의 인증을 지원한다. 정적 자격 증명 대신 동적이고 단기 수명의 클라우드 자격 증명을 사용할 수 있어 보안이 강화된다.
+
+> OIDC 외에도 Pulumi ESC를 통한 클라우드 자격 증명 제공 방식이 있다. 자세한 비교는 [Cloud Credentials](#cloud-credentials) 섹션을 참조한다.
+
+### 신뢰 관계 구성
+
+클라우드 제공자는 OIDC 토큰의 클레임을 신뢰 관계 조건과 대조하여 자격 증명 교환을 승인한다. 신뢰 관계 구성은 클라우드 제공자마다 다르지만, 일반적으로 최소한 Audience, Subject, Issuer 클레임을 사용한다.
+
+| 클레임 | 구성 용도 |
+|---|---|
+| **Issuer** | 토큰이 올바르게 서명되었는지 검증. 발급자의 공개 서명 키를 가져와 토큰 서명 확인 |
+| **Audience** | 배포와 연결된 조직 이름. 특정 조직으로 자격 증명 제한에 사용 |
+| **Subject** | 배포에 대한 다양한 정보 포함. 특정 조직, 프로젝트, 스택 등으로 자격 증명 제한에 사용 |
+| **Custom Claims** | Subject와 동일한 정보를 개별 필드로 제공. 클라우드 제공자가 커스텀 클레임 기반 신뢰 관계를 지원하는 경우 사용 |
 
 ### OIDC 토큰 구조
 
@@ -279,7 +348,7 @@ AWS에서는 Web Identity Provider를 생성하여 IAM Role을 수임(Assume)하
 
 1. IAM 콘솔에서 Identity Provider 생성 (Provider URL: `https://api.pulumi.com/oidc`, Audience: Pulumi 조직 이름)
 2. IAM Role 및 Trust Policy 구성
-3. Pulumi 콘솔에서 OIDC 활성화 (Role ARN, Session Name 입력)
+3. Pulumi 콘솔에서 OIDC 활성화 (Role ARN, Session Name, 선택적으로 Session Duration 입력)
 
 **IAM 권한 권장 사항:**
 
@@ -332,11 +401,26 @@ AWS에서는 Web Identity Provider를 생성하여 IAM Role을 수임(Assume)하
 
 > AWS `RoleSessionName`은 최대 64자. 초과 시 `organization.name`, `project.name`, `stack.name`이 끝에서부터 잘린다. `deployment.operation`, `deployment.version`, `deployment.id`는 보호되어 잘리지 않는다.
 
+**Truncate 예시:**
+
+템플릿 `${organization.name}-${project.name}-${stack.name}-${deployment.id}`에서 `organization.name = "pulumi-local"`, `project.name = "test-nocode-rtct-3"`, `stack.name = "dev"`, `deployment.id = "806bf21f-444f-4825-a80c-afd12cd2526a"`인 경우, 전체 길이는 72자가 된다. Pulumi는 세 가지 이름 변수를 잘라 64자에 맞추며, deployment UUID는 완전히 보존한다.
+
+```
+pulumi-loca-test-nocode-dev-806bf21f-444f-4825-a80c-afd12cd2526a
+```
+
+결과는 정확히 64자이다. `${organization.name}`과 `${project.name}`은 각각 11자로 잘리고, `${stack.name}`은 3자로 그대로 유지되며, deployment UUID는 전체가 보존된다.
+
 **설정 후 환경 변수:** `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_SESSION_TOKEN`. 원본 OIDC 토큰은 `PULUMI_OIDC_TOKEN` 환경 변수와 `/mnt/pulumi/pulumi.oidc` 파일에서도 사용 가능.
 
 ### Azure OIDC 설정
 
 Azure에서는 Microsoft Entra App Registration과 Workload Identity Federation을 사용하여 OIDC를 구성한다.
+
+**Prerequisites:**
+
+- Azure Portal에서 Microsoft Entra App Registration을 생성하고 구성할 수 있는 권한이 필요하다.
+- 이 가이드는 공식 제공자 문서를 기반으로 한 단계별 지침을 제공한다. 최신 정확한 정보는 항상 [공식 Azure 문서](https://learn.microsoft.com/en-us/entra/identity-platform/howto-create-service-principal-portal)를 참조한다.
 
 **구성 단계:**
 
@@ -356,11 +440,16 @@ pulumi:deploy:org:contoso:project:core:stack:dev:operation:destroy:scope:write
 
 > Azure의 Federated Credential은 Subject 식별자가 OIDC 토큰의 Subject Claim과 정확히 일치해야 하므로, 각 작업 유형별로 별도의 Credential을 생성해야 한다.
 
-**설정 후 환경 변수:** `ARM_CLIENT_ID`, `ARM_TENANT_ID`, `ARM_SUBSCRIPTION_ID`
+**설정 후 환경 변수:** `ARM_CLIENT_ID`, `ARM_TENANT_ID`, `ARM_SUBSCRIPTION_ID`. 원본 OIDC 토큰은 `PULUMI_OIDC_TOKEN` 환경 변수와 `/mnt/pulumi/pulumi.oidc` 파일에서도 사용 가능.
 
 ### GCP OIDC 설정
 
 Google Cloud에서는 Workload Identity Federation을 사용하여 OIDC를 구성한다.
+
+**Prerequisites:**
+
+- [필요 API가 활성화된 Google Cloud 프로젝트](https://cloud.google.com/iam/docs/workload-identity-federation-with-other-providers#configure)가 필요하다.
+- 이 가이드는 공식 제공자 문서를 기반으로 한 단계별 지침을 제공한다. 최신 정확한 정보는 항상 [공식 Google Cloud 문서](https://cloud.google.com/iam/docs/workload-identity-federation-with-other-providers)를 참조한다.
 
 **구성 단계:**
 
@@ -368,10 +457,12 @@ Google Cloud에서는 Workload Identity Federation을 사용하여 OIDC를 구�
 2. Service Account 생성 및 역할 할당
 3. Pool에 Service Account 액세스 권한 부여 (Subject 조건 필터 사용)
 4. Pulumi 콘솔에서 OIDC 활성화 (Project Number, Workload Pool ID, Identity Provider ID, Service Account Email 입력)
+5. (선택) 스택의 Google Cloud Region 입력 (보통 불필요)
+6. (선택) Session Duration 필드에 "XhYmZs" 형식으로 임시 Google Cloud 자격 증명 기간 제한
 
 > GCP 역시 Azure와 마찬가지로 Subject Claim에 와일드카드를 허용하지 않으므로, 각 작업 유형별로 별도의 Credential을 생성해야 한다.
 
-**설정 후 환경 변수:** `GOOGLE_CREDENTIALS` (Credential Configuration 형식)
+**설정 후 환경 변수:** `GOOGLE_CREDENTIALS` (Credential Configuration 형식). 원본 OIDC 토큰은 `PULUMI_OIDC_TOKEN` 환경 변수와 `/mnt/pulumi/pulumi.oidc` 파일에서도 사용 가능.
 
 ---
 
@@ -396,9 +487,13 @@ Pulumi는 Deployments OIDC보다 ESC Environments 사용을 권장한다.
 | **모듈성** | 스택별 OIDC 구성 반복이 불필요. 중앙에서 정의 후 여러 스택에 Import |
 | **더 많은 네이티브 통합** | OIDC, 관리형 시크릿 서비스, Kubernetes, Docker 등 다양한 통합 |
 | **구성 가능성** | Environment가 다른 Environment를 Import 가능 |
-| **버전 관리** | Environment 변경을 제어된 방식으로 롤아웃 가능 |
+| **버전 관리** | Environment Import를 특정 버전에 고정(pin)하여 변경 사항을 제어된 방식으로 롤아웃 가능 |
 
-> 중요한 차이: Pulumi Deployments OIDC는 Pre-Run 명령을 포함한 전체 배포 프로세스에 적용되지만, Pulumi ESC 환경은 Pulumi IaC 작업(예: `pulumi up`)에만 적용된다. Pre-Run 명령에서 ESC를 사용하려면 `pulumi env run` 명령을 접두사로 사용해야 한다.
+> 중요한 차이: Pulumi Deployments OIDC는 Pre-Run 명령을 포함한 전체 배포 프로세스에 적용되지만, Pulumi ESC 환경은 Pulumi IaC 작업(예: `pulumi up`)에만 적용된다. Pre-Run 명령에서 ESC를 사용하려면 `pulumi env run` 명령을 접두사로 사용해야 한다. 예를 들어 프라이빗 리포지토리에서 패키지를 설치하려면 다음과 같이 실행한다.
+>
+> ```bash
+> pulumi env run my-esc-project/my-esc-environment -- npm install
+> ```
 
 ---
 
@@ -460,6 +555,27 @@ Slack, MS Teams 등에 Drift 알림을 통합할 수 있다. Pulumi Webhooks 통
 
 `pulumi refresh --preview-only` 또는 `pulumi refresh`를 실행하면 Pulumi Cloud에서 Drift 실행으로 간주된다. 실행 완료 후 스택의 Drift 탭에서 결과를 확인할 수 있다.
 
+### REST API로 Drift 설정
+
+Drift Detection과 Remediation은 REST API를 통해 프로그래밍 방식으로 구성할 수 있다. 사용 가능한 엔드포인트는 다음과 같다.
+
+- Drift 스케줄 생성
+- Drift 스케줄 조회
+- Drift 스케줄 수정 또는 삭제
+- Drift 스케줄 일시 중지 또는 재개
+- 모든 스케줄 나열 (Raw Pulumi 작업 및 TTL 스케줄 포함)
+
+**Drift Detection 및 Remediation 스케줄 생성 예시:**
+
+```bash
+curl -H "Accept: application/vnd.pulumi+json" \
+     -H "Content-Type: application/json" \
+     -H "Authorization: token $PULUMI_ACCESS_TOKEN" \
+     --request POST \
+     --data '{"scheduleCron":"0 0 * * *","autoRemediate":true}' \
+     https://api.pulumi.com/api/stacks/{organization}/{project}/{stack}/deployments/drift/schedules
+```
+
 ### Drift 스케줄 설정 코드 예제
 
 **TypeScript:**
@@ -489,6 +605,57 @@ drift_schedule = pulumiservice.DriftSchedule("driftDetectionSchedule",
     auto_remediate=True)
 ```
 
+**Go:**
+
+```go
+driftDetectionSchedule, err := pulumiservice.NewDriftSchedule(ctx, "driftDetectionSchedule", &pulumiservice.DriftScheduleArgs{
+    Organization: pulumi.String("<YOUR_ORG>"),
+    Project:      pulumi.String("<YOUR_PROJECT>"),
+    Stack:        pulumi.String("<YOUR_STACK>"),
+    ScheduleCron: pulumi.String("0 0 * * *"),
+    AutoRemediate: pulumi.Bool(true),
+})
+```
+
+**C#:**
+
+```csharp
+var driftSchedule = new PulumiService.DriftSchedule("driftDetectionSchedule", new PulumiService.DriftScheduleArgs
+{
+    Organization = "<YOUR_ORG>",
+    Project = "<YOUR_PROJECT>",
+    Stack = "<YOUR_STACK>",
+    ScheduleCron = "0 0 * * *",
+    AutoRemediate = true,
+});
+```
+
+**Java:**
+
+```java
+var driftSchedule = new Webhook("driftDetectionSchedule", WebhookArgs.builder()
+    .organization("<YOUR_ORG>")
+    .project("<YOUR_PROJECT>")
+    .stack("<YOUR_STACK>")
+    .scheduleCron("0 0 * * *")
+    .autoRemediate(true)
+    .build());
+```
+
+**YAML:**
+
+```yaml
+resources:
+  driftDetectionSchedule:
+    type: pulumiservice:index:DriftSchedule
+    properties:
+      organization: <YOUR_ORG>
+      project: <YOUR_PROJECT>
+      stack: <YOUR_STACK>
+      scheduleCron: "0 0 * * *"
+      autoRemediate: true
+```
+
 ---
 
 ## Scheduled Deployments
@@ -496,6 +663,26 @@ drift_schedule = pulumiservice.DriftSchedule("driftDetectionSchedule",
 > https://www.pulumi.com/docs/deployments/deployments/schedules/
 
 Scheduled Deployments는 Cron 표현식을 사용하여 정기적으로 클라우드 작업을 자동화하는 기능이다. Pulumi Deployments 동시성 제한이 적용되며, 스택 배포 일시 중지 시 예약된 배포도 대기열에 추가된다.
+
+### REST API로 스케줄 설정
+
+- 스케줄 생성
+- 스택의 스케줄 조회
+- 스케줄 수정 또는 삭제
+- 스케줄 일시 중지 또는 재개
+- 조직의 모든 스케줄 나열 (Drift 및 TTL 스케줄 포함)
+
+**스케줄 생성 예시:**
+
+```bash
+curl \
+  -H "Accept: application/vnd.pulumi+8" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: token $PULUMI_ACCESS_TOKEN" \
+  --request POST \
+  --data '{ "scheduleCron":"0 0 * * *", "request": { "operation": "update" } }' \
+  https://api.pulumi.com/api/stacks/{organization}/{project}/{stack}/deployments/schedules
+```
 
 ### 스케줄 설정 코드 예제
 
@@ -526,6 +713,57 @@ raw_schedule = pulumiservice.DeploymentSchedule("rawSchedule",
     pulumi_operation=pulumiservice.PulumiOperation.update)
 ```
 
+**Go:**
+
+```go
+rawSchedule, err := pulumiservice.NewDeploymentSchedule(ctx, "rawSchedule", &pulumiservice.DeploymentScheduleArgs{
+    Organization:    pulumi.String("<YOUR_ORG>"),
+    Project:         pulumi.String("<YOUR_PROJECT>"),
+    Stack:           pulumi.String("<YOUR_STACK>"),
+    ScheduleCron:    pulumi.String("0 0 * * *"),
+    PulumiOperation: pulumiservice.PulumiOperationUpdate,
+})
+```
+
+**C#:**
+
+```csharp
+var rawSchedule = new PulumiService.DeploymentSchedule("rawSchedule", new PulumiService.DeploymentScheduleArgs
+{
+    Organization = "<YOUR_ORG>",
+    Project = "<YOUR_PROJECT>",
+    Stack = "<YOUR_STACK>",
+    ScheduleCron = "0 0 * * *",
+    PulumiOperation = PulumiService.PulumiOperation.Update,
+});
+```
+
+**Java:**
+
+```java
+var rawSchedule = new DeploymentSchedule("rawSchedule", DeploymentScheduleArgs.builder()
+    .organization("<YOUR_ORG>")
+    .project("<YOUR_PROJECT>")
+    .stack("<YOUR_STACK>")
+    .scheduleCron("0 0 * * *")
+    .pulumiOperation(com.pulumi.pulumiservice.PulumiOperation.update())
+    .build());
+```
+
+**YAML:**
+
+```yaml
+resources:
+  rawSchedule:
+    type: pulumiservice:index:DeploymentSchedule
+    properties:
+      organization: <YOUR_ORG>
+      project: <YOUR_PROJECT>
+      stack: <YOUR_STACK>
+      scheduleCron: "0 0 * * *"
+      pulumiOperation: update
+```
+
 ---
 
 ## TTL Stacks
@@ -533,6 +771,29 @@ raw_schedule = pulumiservice.DeploymentSchedule("rawSchedule",
 > https://www.pulumi.com/docs/deployments/deployments/ttl/
 
 TTL(Time-to-Live) Stacks은 지정된 날짜/시간 이후에 스택을 자동으로 삭제하는 기능이다. 개발 환경 등 임시 클라우드 리소스가 자동으로 해제되어 비용을 절감하고 보안 태세를 개선할 수 있다.
+
+### Delete After Destroy
+
+TTL 스케줄 구성 시 "Delete After Destroy" 옵션을 활성화하면 `pulumi destroy` 실행 후 스택 자체도 완전히 삭제된다. 이 옵션은 임시 환경을 완전히 정리할 때 유용하다.
+
+### REST API로 TTL 설정
+
+- TTL 스케줄 생성
+- 스택의 TTL 스케줄 조회
+- TTL 스케줄 수정 또는 삭제
+- TTL 스케줄 일시 중지 또는 재개
+- 조직의 모든 스케줄 나열 (Raw Pulumi 작업 및 Drift 스케줄 포함)
+
+**TTL 스케줄 생성 예시:**
+
+```bash
+curl -H "Accept: application/vnd.pulumi+json" \
+     -H "Content-Type: application/json" \
+     -H "Authorization: token $PULUMI_ACCESS_TOKEN" \
+     --request POST \
+     --data '{"timestamp":"2024-12-31T23:59:59Z","deleteAfterDestroy":true}' \
+     https://api.pulumi.com/api/stacks/{organization}/{project}/{stack}/deployments/ttl/schedules
+```
 
 ### TTL 설정 코드 예제
 
@@ -561,6 +822,53 @@ ttl_schedule = pulumiservice.TtlSchedule("ttlSchedule",
     timestamp="2024-01-01T00:00:00Z")
 ```
 
+**Go:**
+
+```go
+ttlSchedule, err := pulumiservice.NewTtlSchedule(ctx, "ttlSchedule", &pulumiservice.TtlScheduleArgs{
+    Organization: pulumi.String("<YOUR_ORG>"),
+    Project:      pulumi.String("<YOUR_PROJECT>"),
+    Stack:        pulumi.String("<YOUR_STACK>"),
+    Timestamp:    pulumi.String("2024-01-01T00:00:00Z"),
+})
+```
+
+**C#:**
+
+```csharp
+var ttlSchedule = new PulumiService.TtlSchedule("ttlSchedule", new PulumiService.TtlScheduleArgs
+{
+    Organization = "<YOUR_ORG>",
+    Project = "<YOUR_PROJECT>",
+    Stack = "<YOUR_STACK>",
+    Timestamp = "2024-01-01T00:00:00Z",
+});
+```
+
+**Java:**
+
+```java
+var ttlSchedule = new TtlSchedule("ttlSchedule", TtlScheduleArgs.builder()
+    .organization("<YOUR_ORG>")
+    .project("<YOUR_PROJECT>")
+    .stack("<YOUR_STACK>")
+    .timestamp("2024-01-01T00:00:00Z")
+    .build());
+```
+
+**YAML:**
+
+```yaml
+resources:
+  ttlSchedule:
+    type: pulumiservice:index:TtlSchedule
+    properties:
+      organization: <YOUR_ORG>
+      project: <YOUR_PROJECT>
+      stack: <YOUR_STACK>
+      timestamp: "2024-01-01T00:00:00Z"
+```
+
 ---
 
 ## Review Stacks
@@ -574,6 +882,44 @@ Review Stacks는 풀 리퀘스트가 열릴 때 자동으로 생성되고, 각 �
 1. 관례적으로 `pr`라는 이름의 새 스택을 만들고 `Pulumi.pr.yaml` 설정 파일 생성
 2. 스택에 Deployment Settings 구성
 3. `pullRequestTemplate` Deployment Setting을 `true`로 설정
+
+### REST API로 구성
+
+Deployments REST API를 사용하여 프로그래밍 방식으로 Review Stacks를 구성할 수 있다.
+
+```bash
+curl -i -XPOST -H "Content-Type: application/json" -H "Authorization: token $PULUMI_ACCESS_TOKEN" \
+--location "https://api.pulumi.com/api/stacks/org/project/stack/deployments/settings" \
+-d '{
+  "gitHub":{
+    "pullRequestTemplate": true
+  }
+}'
+```
+
+### Config 활용 패턴
+
+각 PR 템플릿 스택에는 해당하는 Pulumi 설정 파일이 있으며, 소스 제어에 체크인할 수 있다. 관례적으로 `Pulumi.pr.yaml`이라고 한다. PR의 일부로 Review Stack 설정 값을 수정할 수 있으며, 수정된 설정이 Review Stack 배포에 사용된다.
+
+예를 들어 프로덕션 설정(`Pulumi.production.yaml`)을 다음과 같이 구성하고:
+
+```yaml
+config:
+  aws:region: us-west-2
+  webserver:apiServiceDesiredCount: "32"
+  webserver:clusterInstanceType: m6g.xlarge
+  webserver:clusterNumInstances: "16"
+```
+
+Review Stack 설정(`Pulumi.pr.yaml`)에서 클라우드 비용 절감을 위해 축소할 수 있다:
+
+```yaml
+config:
+  aws:region: us-west-2
+  webserver:apiServiceDesiredCount: "2"
+  webserver:clusterInstanceType: t3.large
+  webserver:clusterNumInstances: "1"
+```
 
 ### Review Stacks 패턴
 
@@ -596,6 +942,48 @@ const reviewSettings = new pulumiservice.DeploymentSettings("reviewSettings", {
         pullRequestTemplate: true,
         repository: "<YOUR_ORG>/<YOUR_REPO>",
         reviewStackLabels: ["review-stack", "reviewStack", "rs"],
+    },
+    sourceContext: {
+        git: {
+            branch: "refs/heads/main",
+            repoDir: "<YOUR_REPO_DIR>",
+        },
+    },
+});
+```
+
+### Path Filter 기반 템플릿 선택
+
+변경된 코드의 종류에 따라 Review Stack의 동작을 다르게 하고 싶을 수 있다. 예를 들어 `migrations` 폴더의 변경은 마이그레이션 컨테이너를 빌드하고 실행해야 하지만, 그 외의 경우 이 단계를 건너뛰어 배포 시간을 단축할 수 있다. Path Filter와 여러 Review Stack 템플릿을 조합하여 이를 구현할 수 있다. PR이 열리면 Pulumi Deployments가 코드 변경을 평가하고 Path Filter 일치 여부에 따라 사용할 템플릿을 선택한다.
+
+```typescript
+// 마이그레이션 변경이 없는 경우 사용할 템플릿
+const prSettings = new pulumiservice.DeploymentSettings("prSettings", {
+    organization: pulumi.getOrganization(),
+    project: "<YOUR_PROJECT>",
+    stack: "pr",
+    github: {
+        pullRequestTemplate: true,
+        repository: "<YOUR_ORG>/<YOUR_REPO>",
+        paths: ["!migrations/*"], // 마이그레이션 미변경 시
+    },
+    sourceContext: {
+        git: {
+            branch: "refs/heads/main",
+            repoDir: "<YOUR_REPO_DIR>",
+        },
+    },
+});
+
+// 마이그레이션 변경이 있는 경우 사용할 템플릿
+const prMigrationSettings = new pulumiservice.DeploymentSettings("prMigrationSettings", {
+    organization: pulumi.getOrganization(),
+    project: "<YOUR_PROJECT>",
+    stack: "pr-migrations",
+    github: {
+        pullRequestTemplate: true,
+        repository: "<YOUR_ORG>/<YOUR_REPO>",
+        paths: ["migrations/*"], // 마이그레이션 변경 시
     },
     sourceContext: {
         git: {
@@ -661,7 +1049,7 @@ Deployment Permissions는 Pulumi Cloud 내에서 Deployment가 수행할 수 있
 
 **Role Assignment (권장):**
 
-스택의 Deployment Settings에서 **Settings > Deploy** 의 Role assignment 섹션에서 조직 역할을 선택할 수 있다. 역할이 할당되면 Deployment의 스택 토큰이 해당 역할의 권한을 상속하여 Stack References, ESC Environments, 조직 리소스에 접근할 수 있다.
+스택의 Deployment Settings에서 **Settings > Deploy** 의 Role assignment 섹션에서 조직 역할을 선택할 수 있다. 역할이 할당되면 Deployment의 스택 토큰이 해당 역할의 권한을 상속하여 Stack References, ESC Environments, 조직 리소스에 접근할 수 있다. 세분화된 접근 제어를 위해 배포가 수행해야 하는 작업에 맞춰 특정 권한을 가진 커스텀 역할을 생성할 수도 있다. 조직 역할은 Roles 섹션에서 관리한다.
 
 **PULUMI_ACCESS_TOKEN 환경 변수:**
 
@@ -746,6 +1134,8 @@ Pulumi Cloud는 Pulumi 프로그램을 *Deployment Executor Image*라는 컨테�
 ### 커스텀 이미지 예제
 
 ```dockerfile
+# Pulumi CLI 버전을 명시적으로 고정. :latest와 같은 부동 태그는
+# 이미지와 로컬 CLI가 배포 간에 서로 달라질 수 있음.
 FROM pulumi/pulumi-base:3.236.0
 
 RUN apt-get update \
@@ -753,7 +1143,11 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 ```
 
-> 기본 이미지는 Pulumi 호스트 워크플로 러너에 미리 캐시되어 있지만, 커스텀 이미지는 그렇지 않다. 콜드 스타트 시간을 줄이려면 작은 베이스 이미지를 사용하고, Pulumi 호스트 러너는 AWS `us-west-2`에서 실행되므로 동일 리전의 ECR을 사용하는 것이 좋다.
+> 기본 이미지는 Pulumi 호스트 워크플로 러너에 미리 캐시되어 있지만, 커스텀 이미지는 그렇지 않다. 콜드 스타트 시간을 줄이려면 작은 베이스 이미지를 사용하고, Pulumi 호스트 러너는 AWS `us-west-2`에서 실행되므로 동일 리전의 ECR을 사용하는 것이 좋다. 또한 digest를 고정하면 러너가 태그 대신 레이어 캐시를 활용하여 재 fetch를 방지할 수 있다.
+
+### 정적 자격 증명만 지원 (Static Credentials Only)
+
+커스텀 이미지가 프라이빗 레지스트리에 있는 경우 Deployment Settings에 정적 사용자 이름과 비밀번호 자격 증명을 제공해야 한다. 커스텀 Executor Image에 대해서는 OIDC 및 IAM 역할 기반 Pull이 지원되지 않는다. 보안 모델이 단기 수명 레지스트리 자격 증명을 요구하는 경우, Customer-Managed Workflow Runners를 사용하여 자체 인프라에서 원하는 Pull 메커니즘을 구성할 수 있다.
 
 ---
 
@@ -793,6 +1187,15 @@ Customer-Managed Workflow Runners를 사용하면 워크플로 러너를 자체 
 | **Ephemeral runners** | `single_run: true` 설정 후 Kubernetes Job/CronJob으로 작업별 러너 시작 |
 | **Specialized pools** | `enabled_workflow_types`로 배포 전용, 스캔 전용 등 분리 |
 
+### 복구 동작
+
+Pulumi Cloud는 각 대기 중인 작업을 정확히 하나의 러너에 할당한다. 여러 러너가 동시에 같은 풀을 폴링하면 서비스가 각 대기 작업을 단일 러너에 전달하므로 동일한 작업이 두 러너에서 동시에 처리되지 않는다. 복구 동작은 워크플로 유형에 따라 다르다.
+
+| 워크플로 유형 | 복구 동작 |
+|---|---|
+| **Insights 스캔 및 정책 평가** | 리스(Lease) 기반. 러너가 충돌하거나 연결이 끊어지면 리스가 만료되어 풀의 다른 러너가 작업을 이어받음 |
+| **배포(Deployments)** | 재전달되지 않음. 러너가 배포 중 10분 동안 하트비트를 중지하면 다른 러너에 전달되지 않고 실패로 표시됨 |
+
 ### 조직 기본 풀
 
 풀을 조직 기본값으로 지정할 수 있다. 해상 순서는 다음과 같다.
@@ -808,6 +1211,7 @@ Customer-Managed Workflow Runners를 사용하면 워크플로 러너를 자체 
 | `token` | (필수) | 워크플로 러너 풀 생성 시 제공되는 Pulumi 토큰. OIDC 사용 시 불필요 |
 | `service_url` | `https://api.pulumi.com` | Self-Hosted Pulumi 사용 시 API 도메인 |
 | `working_directory` | 바이너리 위치 | Runner 바이너리를 로드할 기본 경로 |
+| `shared_volume_directory` | `""` | 러너 컨테이너에 마운트할 임시 디렉토리를 생성하는 호스트 디렉토리. 비워두면 OS 기본 임시 위치 사용 |
 | `deploy_target` | `docker` | 실행 환경 (`docker` 또는 `kubernetes`) |
 | `single_run` | `false` | `true` 시 단일 작업 완료 후 종료 |
 | `pull_image` | `true` | 매 작업마다 이미지를 레지스트리에서 Pull (Docker 전용) |
@@ -817,6 +1221,45 @@ Customer-Managed Workflow Runners를 사용하면 워크플로 러너를 자체 
 | `request_timeout` | `30s` | Pulumi Cloud API 요청 타임아웃 |
 | `request_retry_count` | `2` | Rate Limit 또는 일시적 실패 시 최대 재시도 횟수 |
 | `http_server_port` | `8080` | Health Check 엔드포인트 포트 |
+| `oidc_token_file` | `""` | OIDC 토큰이 포함된 파일 경로. Pulumi 토큰 만료 시마다 다시 읽음 |
+| `organization_name` | `""` | Pulumi 조직 이름. OIDC 사용 시 필수 |
+| `runner_pool_id` | `""` | 러너가 연결할 풀 ID. OIDC 사용 시 필수 |
+| `token_expiration` | `""` | OIDC 교환을 통해 발급되는 토큰 수명 (Go Duration 문법, 예: `1h`) |
+
+### OIDC 인증 활용
+
+정적 토큰 대신 OpenID 인증을 사용하여 Pulumi Pool 토큰을 동적으로 가져올 수 있다. 먼저 Pulumi 계정에 OpenID 제공자를 신뢰할 수 있는 OIDC Issuer로 등록해야 한다. Kubernetes 클러스터에서 실행하는 경우 EKS 또는 GKE에 대한 클러스터별 가이드를 참조한다.
+
+등록 후 워크플로 러너에 다음 정보가 필요하다.
+
+- `organization_name`: Pulumi 조직 이름
+- `runner_pool_id`: 러너가 연결할 풀 ID
+- `token_expiration` (선택): 러너가 요청하는 토큰 수명
+- `oidc_token_file`: OIDC 토큰이 기록되는 파일 위치
+
+워크플로 러너는 `oidc_token_file`에서 새 OIDC 토큰을 읽어 Pulumi 토큰이 만료될 때마다 자동으로 교환한다.
+
+### Credentials 제공 방법
+
+워크플로 러너에 클라우드 제공자 자격 증명을 제공하는 두 가지 방법이 있다.
+
+1. **OIDC를 통한 자격 증명 생성**: OpenID Connect를 사용하여 자격 증명을 동적으로 생성
+2. **환경 변수를 통한 직접 제공**: 호스트에서 환경 변수를 구성하거나 바이너리 실행 시 전달
+
+```bash
+VARIABLE=value customer-managed-workflow-agent run
+```
+
+`pulumi-workflow-agent.yaml`의 `env_forward_allowlist` 설정에 전달할 환경 변수를 지정해야 한다.
+
+```yaml
+token: pul-d2d2....
+version: v0.0.5
+env_forward_allowlist:
+    - key_one
+    - key_two
+    - key_three
+```
 
 > 모든 설정은 `PULUMI_AGENT_` 접두사와 대문자 키 이름으로 환경 변수로도 제공할 수 있다. (예: `token` -> `PULUMI_AGENT_TOKEN`). 환경 변수가 구성 파일 값보다 우선한다.
 
@@ -837,6 +1280,29 @@ Pulumi 관리 에이전트를 사용할 때 Dependency Caching으로 배포 속�
 | Node.js (yarn) | `yarn.lock` 필요 |
 
 > 캐시는 프로젝트 수준에서 공유되며, 고객 간에 절대 공유되지 않는다. Customer-Managed Agent Pool에서는 사용할 수 없다.
+
+---
+
+## Private Repositories and Packages
+
+Pulumi Deployments에서 프라이빗 Git 리포지토리에 접근해야 하는 경우가 있다.
+
+### 프라이빗 의존성 패키지
+
+Pulumi Deployment이 프라이빗 GitHub 리포지토리에 접근해야 하는 경우(예: 프라이빗 Go 모듈 사용), 필요한 리포지토리에 접근할 수 있는 SSH 키를 구성해야 한다. 올바른 구성 없이는 Deployment가 프라이빗 아티팩트에 접근할 수 없어 배포가 실패할 수 있다.
+
+**구성 방법:**
+
+1. Pre-run Commands에 다음 코드를 추가하고 Advanced Settings에서 "Skip automatic dependency installation step"을 활성화한다.
+
+```bash
+mkdir /root/.ssh && printf -- "$SSHKEY" > /root/.ssh/id_ed25519
+chmod 600 /root/.ssh/id_ed25519
+ssh-keyscan github.com >> ~/.ssh/known_hosts
+cd .. && git config --global --add url."git@github.com:".insteadOf "https://github.com"
+```
+
+2. `$SSHKEY` 필드를 시크릿 환경 변수로 추가한다.
 
 ---
 
@@ -883,7 +1349,7 @@ Deployment Settings에서 스택 토큰에 조직 역할을 할당할 수 있다
 
 > https://www.pulumi.com/docs/deployments/deployments/using/post-automation/
 
-배포가 완료된 후 추가 작업이나 배포를 트리거하는 두 가지 방법이 있다.
+배포가 완료된 후 추가 작업이나 배포를 트리거하는 두 가지 방법이 있다. 두 방법 모두 스택에 [Deployment Settings](#deployment-settings)가 구성되어 있어야 한다.
 
 ### Deployment Webhook Destinations
 
@@ -895,7 +1361,7 @@ Deployment Settings에서 스택 토큰에 조직 역할을 할당할 수 있다
 import * as pulumiservice from "@pulumi/pulumiservice";
 
 const databaseWebhook = new pulumiservice.Webhook("databaseWebhook", {
-    organizationName: "<YOUR_ORG>",
+    organizationName: "org",
     projectName: "network",
     stackName: "prod",
     format: pulumiservice.WebhookFormat.PulumiDeployments,
@@ -904,11 +1370,112 @@ const databaseWebhook = new pulumiservice.Webhook("databaseWebhook", {
     displayName: "deploy-database",
     filters: [pulumiservice.WebhookFilters.UpdateSucceeded],
 });
+
+const computeWebhook = new pulumiservice.Webhook("computeWebhook", {
+    organizationName: "org",
+    projectName: "database",
+    stackName: "prod",
+    format: pulumiservice.WebhookFormat.PulumiDeployments,
+    payloadUrl: "compute/prod",
+    active: true,
+    displayName: "deploy-compute",
+    filters: [pulumiservice.WebhookFilters.UpdateSucceeded],
+});
+```
+
+**Python 예제:**
+
+```python
+import pulumi_pulumiservice as pulumiservice
+
+database_webhook = pulumiservice.Webhook("databaseWebhook",
+    organization_name="org",
+    project_name="network",
+    stack_name="prod",
+    format=pulumiservice.WebhookFormat.PULUMI_DEPLOYMENTS,
+    payload_url="database/prod",
+    active=True,
+    display_name="deploy-database",
+    filters=[pulumiservice.WebhookFilters.UPDATE_SUCCEEDED])
+
+compute_webhook = pulumiservice.Webhook("computeWebhook",
+    organization_name="org",
+    project_name="database",
+    stack_name="prod",
+    format=pulumiservice.WebhookFormat.PULUMI_DEPLOYMENTS,
+    payload_url="compute/prod",
+    active=True,
+    display_name="deploy-compute",
+    filters=[pulumiservice.WebhookFilters.UPDATE_SUCCEEDED])
+```
+
+**Go 예제:**
+
+```go
+_, err := pulumiservice.NewWebhook(ctx, "databaseWebhook", &pulumiservice.WebhookArgs{
+    OrganizationName: pulumi.String("org"),
+    ProjectName:      pulumi.String("network"),
+    StackName:        pulumi.String("prod"),
+    Format:           pulumiservice.WebhookFormatPulumiDeployments,
+    PayloadUrl:       pulumi.String("database/prod"),
+    Active:           pulumi.Bool(true),
+    DisplayName:      pulumi.String("deploy-database"),
+    Filters: pulumiservice.WebhookFiltersArray{
+        pulumiservice.WebhookFiltersUpdateSucceeded,
+    },
+})
+```
+
+**C# 예제:**
+
+```csharp
+var databaseWebhook = new PulumiService.Webhook("databaseWebhook", new()
+{
+    OrganizationName = "org",
+    ProjectName = "network",
+    StackName = "prod",
+    Format = PulumiService.WebhookFormat.PulumiDeployments,
+    PayloadUrl = "database/prod",
+    Active = true,
+    DisplayName = "deploy-database",
+    Filters = new[] { PulumiService.WebhookFilters.UpdateSucceeded },
+});
+```
+
+**YAML 예제:**
+
+```yaml
+resources:
+  databaseWebhook:
+    type: pulumiservice:Webhook
+    properties:
+      organizationName: org
+      projectName: network
+      stackName: prod
+      format: pulumi_deployments
+      payloadUrl: database/prod
+      active: true
+      displayName: deploy-database
+      filters:
+        - update_succeeded
 ```
 
 ### Pulumi Auto Deploy Package (Preview)
 
 `@pulumi/auto-deploy` 패키지를 사용하여 스택 간의 의존성을 선언적으로 표현하고, 필요한 Deployment Webhook을 자동으로 관리할 수 있다.
+
+다음 예제는 아래와 같은 의존성 그래프를 구성한다.
+
+```
+a
+├── b
+│   ├── d
+│   ├── e
+│   └── f
+└── c
+```
+
+그래프의 노드가 업데이트되면 모든 하위 노드가 Webhook을 통해 Pulumi Deployments에 의해 자동으로 업데이트된다.
 
 **TypeScript 예제:**
 
@@ -919,14 +1486,42 @@ import * as pulumi from "@pulumi/pulumi";
 const organization = pulumi.getOrganization();
 const project = "dependency-example";
 
-const b = new autodeploy.AutoDeployer("auto-deployer-b", {
+export const f = new autodeploy.AutoDeployer("auto-deployer-f", {
+    organization,
+    project,
+    stack: "f",
+    downstreamRefs: [],
+});
+
+export const e = new autodeploy.AutoDeployer("auto-deployer-e", {
+    organization,
+    project,
+    stack: "e",
+    downstreamRefs: [],
+});
+
+export const d = new autodeploy.AutoDeployer("auto-deployer-d", {
+    organization,
+    project,
+    stack: "d",
+    downstreamRefs: [],
+});
+
+export const c = new autodeploy.AutoDeployer("auto-deployer-c", {
+    organization,
+    project,
+    stack: "c",
+    downstreamRefs: [],
+});
+
+export const b = new autodeploy.AutoDeployer("auto-deployer-b", {
     organization,
     project,
     stack: "b",
     downstreamRefs: [d.ref, e.ref, f.ref],
 });
 
-const a = new autodeploy.AutoDeployer("auto-deployer-a", {
+export const a = new autodeploy.AutoDeployer("auto-deployer-a", {
     organization,
     project,
     stack: "a",
@@ -943,6 +1538,30 @@ import pulumi_auto_deploy as auto_deploy
 organization = pulumi.get_organization()
 project = "dependency-example"
 
+f = auto_deploy.AutoDeployer("f",
+    organization=organization,
+    project=project,
+    stack="f",
+    downstream_refs=[])
+
+e = auto_deploy.AutoDeployer("e",
+    organization=organization,
+    project=project,
+    stack="e",
+    downstream_refs=[])
+
+d = auto_deploy.AutoDeployer("d",
+    organization=organization,
+    project=project,
+    stack="d",
+    downstream_refs=[])
+
+c = auto_deploy.AutoDeployer("c",
+    organization=organization,
+    project=project,
+    stack="c",
+    downstream_refs=[])
+
 b = auto_deploy.AutoDeployer("b",
     organization=organization,
     project=project,
@@ -954,4 +1573,32 @@ a = auto_deploy.AutoDeployer("a",
     project=project,
     stack="a",
     downstream_refs=[b.ref, c.ref])
+```
+
+**C# 예제:**
+
+```csharp
+var f = new AutoDeploy.AutoDeployer("f", new()
+{
+    Organization = organization,
+    Project = projectVar,
+    Stack = "f",
+    DownstreamRefs = new[] {},
+});
+
+var b = new AutoDeploy.AutoDeployer("b", new()
+{
+    Organization = organization,
+    Project = projectVar,
+    Stack = "b",
+    DownstreamRefs = new[] { d.Ref, e.Ref, f.Ref },
+});
+
+var a = new AutoDeploy.AutoDeployer("a", new()
+{
+    Organization = organization,
+    Project = projectVar,
+    Stack = "a",
+    DownstreamRefs = new[] { b.Ref, c.Ref },
+});
 ```
