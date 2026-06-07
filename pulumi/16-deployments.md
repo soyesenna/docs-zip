@@ -9,6 +9,16 @@
 > https://www.pulumi.com/docs/deployments/deployments/using/settings/
 >
 > https://www.pulumi.com/docs/deployments/deployments/using/triggers/
+>
+> https://www.pulumi.com/docs/deployments/deployments/permissions/
+>
+> https://www.pulumi.com/docs/deployments/deployments/oidc/
+>
+> https://www.pulumi.com/docs/deployments/deployments/oidc/aws/
+>
+> https://www.pulumi.com/docs/deployments/deployments/runs/
+>
+> https://www.pulumi.com/docs/deployments/deployments/drift/
 
 Pulumi Deployments는 인프라스트럭처 코드(IaC)를 위해 목적에 맞게 구축된 관리형 CI/CD 플랫폼이다. 관리형 컴퓨트, 안전한 시크릿 처리, 버전 관리 시스템과의 깊은 통합을 제공하여 조직 전반의 인프라 변경 사항을 안전하게 배포할 수 있다. Git Push 배포, 풀 리퀘스트 자동 프리뷰, 스케줄된 작업, Drift Detection, 임시 환경(Review Stacks, TTL Stacks) 등 다양한 배포 자동화 기능을 제공한다.
 
@@ -33,12 +43,34 @@ Pulumi Deployments는 세 가지 핵심 컴포넌트로 구성된다.
 | 트리거 | 설명 | 사용 가능한 작업 |
 |---|---|---|
 | **Click to Deploy** | Pulumi Cloud 콘솔 UI에서 버튼 클릭으로 주문형 실행 | Update, Preview, Refresh, Destroy, Detect drift, Remediate drift |
-| **Push to Deploy** | PR 생성 시 `pulumi preview`, 병합 시 `pulumi up` 자동 실행. Git Tag Push 시에도 배포 가능 | Update, Preview |
+| **Push to Deploy** | PR 생성 시 `pulumi preview`, 병합 시 `pulumi up` 자동 실행. Git Tag Push 시에도 배포 가능. VCS 통합 필수 | Update, Preview |
 | **Review Stacks** | PR이 열릴 때마다 임시 스택을 자동 생성하고 배포. PR 병합/종료 시 자동 삭제 | Update, Destroy |
 | **Scheduled Deployments** | Cron 표현식으로 정기적으로 Pulumi 작업 실행 | Update, Preview, Refresh, Destroy |
 | **TTL Stacks** | 지정된 시간이 지난 후 스택 자동 삭제. 임시 인프라 비용 및 보안 관리 | Destroy |
 | **REST API** | HTTP 요청으로 프로그래밍 방식 배포 트리거. Deployment Settings를 요청 본문에 전달 가능 | Update, Preview, Refresh, Destroy |
 | **Deployment Webhooks** | 다른 스택의 이벤트 발생 시 Deployment 트리거 | Update, Preview, Refresh, Destroy |
+
+> 모든 트리거가 모든 작업을 지원하지는 않는다.
+
+### Push to Deploy 상세
+
+Push to Deploy는 조직에 VCS(Version Control System) 통합이 구성되어 있어야 한다. 모든 Pulumi VCS 통합(GitHub, GitLab, Bitbucket, Azure DevOps, Custom VCS)에서 지원된다. 통합은 리포지토리에 대한 읽기 권한이 필요하며, Pulumi 프로그램을 클론하고 merge 커밋을 수신하여 git push 시 자동으로 배포를 트리거한다.
+
+- **PR Preview**: 특정 git 브랜치(예: `main`)에 대한 PR이 열리면 스택(예: `dev`)에 대해 `pulumi preview` 실행. VCS 통합이 PR에 preview 결과를 댓글로 게시
+- **Merge Deploy**: 특정 브랜치에 변경 사항이 병합되면 `pulumi up` 실행. 공유 개발/QA 환경의 지속적 배포에 유용
+
+### Deploying on Git Tags
+
+브랜치 Push 외에도 git tag가 push될 때 `pulumi up`을 실행할 수 있다. 이는 릴리즈 기반 워크플로우에 적합하다. 예를 들어 `v1.2.0`과 같은 버전 tag를 push할 때만 배포한다.
+
+| 설정 | 설명 |
+|---|---|
+| `deployTags` | Tag Push 시 배포 활성화 여부 (boolean) |
+| `tagFilters` | Tag 이름에 대한 Glob 패턴 목록 |
+
+Tag trigger는 모든 VCS 통합에서 지원된다. Tag 삭제는 배포를 트리거하지 않는다. Tag push로 배포가 트리거되면 `PULUMI_CI_TAG_NAME` 환경 변수에 Tag 이름이 설정된다.
+
+> GitLab 통합이 이 기능 이전에 생성된 경우, Tag push 이벤트를 활성화하려면 기존 GitLab 그룹 웹훅에서 Tag push events를 활성화해야 한다.
 
 ### Deployment Operations
 
@@ -143,16 +175,12 @@ Push to Deploy를 사용할 때, 특정 파일 변경 시에만 배포가 트리
 
 ## Tag Filtering
 
-Git Tag Push 시 배포를 트리거할 수 있다. 릴리즈 기반 워크플로우(예: `v1.2.0` Tag Push 시에만 배포)에 유용하다.
-
-| 설정 | 설명 |
-|---|---|
-| `deployTags` | Tag Push 시 배포 활성화 여부 (boolean) |
-| `tagFilters` | Tag 이름에 대한 Glob 패턴 목록 |
+> 위 "Deploying on Git Tags" 섹션 참조. Tag 필터링은 tag trigger와 함께 사용되어 어떤 tag 이름이 배포를 트리거할지 제어한다.
 
 | 패턴 | 설명 |
 |---|---|
 | `v*` | `v`로 시작하는 모든 Tag 포함 |
+| `v1.0.0` | 해당 Tag만 정확히 일치 |
 | `!*-rc*` | RC(Release Candidate) Tag 제외 |
 
 > Tag 삭제는 배포를 트리거하지 않는다. Tag 푸시 시 `PULUMI_CI_TAG_NAME` 환경 변수에 Tag 이름이 설정된다.
@@ -252,6 +280,18 @@ AWS에서는 Web Identity Provider를 생성하여 IAM Role을 수임(Assume)하
 1. IAM 콘솔에서 Identity Provider 생성 (Provider URL: `https://api.pulumi.com/oidc`, Audience: Pulumi 조직 이름)
 2. IAM Role 및 Trust Policy 구성
 3. Pulumi 콘솔에서 OIDC 활성화 (Role ARN, Session Name 입력)
+
+**IAM 권한 권장 사항:**
+
+많은 Pulumi 프로그램이 IAM Role, Policy, Instance Profile(예: Lambda, ECS, EKS용)을 생성하므로 IAM 권한이 필요하다. `AdministratorAccess`는 IAM을 포함한 모든 서비스를 포함하는 가장 간단한 정책이지만, 대부분의 워크로드에 필요 이상으로 광범위하다.
+
+| 권한 접근 방식 | 설명 |
+|---|---|
+| **PowerUserAccess + IAMFullAccess** | 광범위한 서비스 액세스와 IAM 권한을 제공하지만 AWS Organizations 관리는 제외 |
+| **커스텀 최소 권한 정책** | Pulumi 프로그램이 사용하는 AWS 서비스와 IAM 작업(예: `ec2:*`, `s3:*`, `iam:CreateRole`, `iam:AttachRolePolicy`, `iam:PassRole`)으로만 범위 제한 |
+| **권한 경계(Permissions Boundary)** | 더 광범위한 역할 정책을 사용하되 IAM 권한 경계를 연결하여 Pulumi가 생성하는 IAM 엔터티의 권한을 제한. 권한 에스컬레이션 방지 |
+
+> Pulumi Deployments OIDC 구성의 Policy ARNs 필드를 사용하여 세션의 권한을 추가로 제한할 수도 있다.
 
 **신뢰 관계 제한 예시 (조직 전체):**
 
@@ -368,6 +408,14 @@ Pulumi는 Deployments OIDC보다 ESC Environments 사용을 권장한다.
 
 Drift Detection은 클라우드 환경의 실제 상태가 Pulumi Cloud에 저장된 예상 상태와 다른 경우 이를 식별하는 프로세스다. 수동 변경, 스크립트의 의도치 않은 결과, 또는 무단 변경 등으로 인해 발생할 수 있다.
 
+Pulumi Cloud는 Drift가 감지된 경우 자동으로 수정하는 기능도 제공한다. 수정(Remediation)은 예상 상태와 일치하도록 필요한 변경을 적용하여 인프라를 일관되고 예측 가능하게 유지한다.
+
+> Drift Detection 및 Remediation을 사용하려면 먼저 스택의 Deployment Settings를 구성해야 한다.
+
+### Drift Tab UI
+
+Pulumi Cloud 스택 페이지에 **Drift** 탭이 추가되어 있다. 스택이 현재 Drift 상태인 경우 탭에 경고 벨 아이콘이 표시된다. Drift 실행이 어떤 방식으로 시작되었든 모든 결과가 이 탭에 표시된다. 실행에서 Drift가 감지된 경우 변경 사항의 diff 요약이 정보 카드에 포함된다.
+
 ### Drift Detection 실행 방법
 
 | 방법 | 설명 |
@@ -387,6 +435,30 @@ Drift Detection은 클라우드 환경의 실제 상태가 Pulumi Cloud에 저�
 | Drift detection failed | Drift 실행이 실패 |
 | Drift remediation succeeded | Drift 수정 실행이 성공 |
 | Drift remediation failed | Drift 수정 실행이 실패 |
+
+### Drift Detection 스케줄 구성 (UI)
+
+Pulumi Cloud 콘솔에서 다음 단계로 구성한다.
+
+1. 스택의 Deployment Settings가 구성되어 있는지 확인
+2. **Stack > Settings > Schedules** 로 이동
+3. **Drift** 선택
+4. (선택) 자동 수정(auto-remediation) 활성화
+5. Cron 표현식으로 스케줄 설정
+6. 스케줄 저장
+
+### Drift 알림 구성
+
+Slack, MS Teams 등에 Drift 알림을 통합할 수 있다. Pulumi Webhooks 통합을 사용한다.
+
+1. **Stack > Settings > Webhooks** 로 이동
+2. 원하는 Webhook 형식 선택
+3. Display name, 대상 URL, 선택적 Secret 입력
+4. 모든 이벤트에 Drift 이벤트가 포함되며, Drift 이벤트만 필터링할 수도 있다.
+
+### CLI에서 Drift Detection
+
+`pulumi refresh --preview-only` 또는 `pulumi refresh`를 실행하면 Pulumi Cloud에서 Drift 실행으로 간주된다. 실행 완료 후 스택의 Drift 탭에서 결과를 확인할 수 있다.
 
 ### Drift 스케줄 설정 코드 예제
 
@@ -536,6 +608,102 @@ const reviewSettings = new pulumiservice.DeploymentSettings("reviewSettings", {
 
 ---
 
+## Deployment Runs
+
+> https://www.pulumi.com/docs/deployments/deployments/runs/
+
+모든 Pulumi Deployment은 워크플로 러너의 컨테이너 이미지에서 실행된다. 실행 방식은 두 가지 설정으로 제어된다.
+
+| 설정 | 설명 |
+|---|---|
+| **Image** | 기본적으로 Pulumi 관리 Linux 이미지. 추가 도구가 필요한 경우 커스텀 이미지 사용 |
+| **Runner** | 기본적으로 Pulumi 호스팅. 자체 인프라에서 실행하려면 Customer-Managed |
+
+### 하드웨어 및 운영체제 (Pulumi 호스팅 러너)
+
+Pulumi 호스팅 워크플로 러너에서 실행 시 다음 리소스가 할당된다.
+
+| 리소스 | 사양 |
+|---|---|
+| **vCPU** | 2 |
+| **Memory** | 8 GB |
+| **Disk** | 32 GB 볼륨 (Executor Image 및 의존성 캐시 제외 후 약 절반 사용 가능) |
+
+기본 Executor Image를 사용할 경우 컨테이너의 운영체제는 호스트 OS와 관계없이 **Debian**이다. 커스텀 Executor Image를 제공하면 해당 이미지의 OS가 사용된다. 특정 OS, 패키지 매니저, 시스템 라이브러리에 의존하는 경우 사용하는 이미지와 일치시켜야 한다.
+
+> 위 사양은 Pulumi 호스팅 워크플로 러너에 적용된다. Customer-Managed Workflow Runners는 자체 프로비저닝한 인프라에서 실행되므로 하드웨어와 OS를 직접 구성한다.
+
+---
+
+## Deployment Permissions
+
+> https://www.pulumi.com/docs/deployments/deployments/permissions/
+
+Deployment Permissions는 Pulumi Cloud 내에서 Deployment가 수행할 수 있는 작업(예: ESC 환경 열기, Stack References 액세스)을 제어한다. 클라우드 제공자의 리소스 관리 권한은 Cloud Credentials 및 OIDC 설정에서 다룬다.
+
+### 기본 Deployment Permissions
+
+기본적으로 Deployment에 부여되는 권한은 실행 방식에 따라 다르다.
+
+| 실행 방식 | 권한 |
+|---|---|
+| **REST API / UI Actions 버튼** | 작업을 실행한 사용자의 권한을 상속 |
+| **Git Push / Pull Request** | 스택 자체에 대해서만 admin 권한을 가진 임시 스택 토큰 사용. 다른 리소스에는 접근 불가 |
+
+### 권한 모델 영향
+
+| 조건 | 영향 |
+|---|---|
+| 조직 기본 스택 권한이 `NONE` | Git push/PR으로 생성된 Deployment는 Stack References에 접근할 수 없으며, 시도 시 실패 |
+| 조직 기본 환경 권한이 `NONE` | Git push/PR으로 생성된 Deployment는 스택 설정 파일에 나열된 ESC Environments에 접근할 수 없음 |
+
+### 추가 권한 부여
+
+**Role Assignment (권장):**
+
+스택의 Deployment Settings에서 **Settings > Deploy** 의 Role assignment 섹션에서 조직 역할을 선택할 수 있다. 역할이 할당되면 Deployment의 스택 토큰이 해당 역할의 권한을 상속하여 Stack References, ESC Environments, 조직 리소스에 접근할 수 있다.
+
+**PULUMI_ACCESS_TOKEN 환경 변수:**
+
+또는 `PULUMI_ACCESS_TOKEN` 환경 변수를 개인, 팀, 또는 조직 토큰으로 설정할 수 있다. 이 환경 변수가 설정되면 Deployment 생성 방식(Rest API, Git Push 등)과 관계없이 해당 토큰의 권한이 사용된다.
+
+**토큰 최소 필요 권한:**
+
+| 권한 | 대상 |
+|---|---|
+| **WRITE** | 배포 중인 스택 |
+| **READ** | Stack References를 사용하는 모든 스택 |
+| **OPEN** | 스택 설정 파일에 나열된 모든 ESC Environment (전이적으로 Import된 환경 포함) |
+
+### Pulumi ESC와 Deployments 통합
+
+Pulumi ESC를 Deployments와 함께 사용하면 보안이 강화되고 자격 증명 관리가 간소화된다.
+
+| 장점 | 설명 |
+|---|---|
+| **동적 단기 자격 증명** | 장기 정적 자격 증명 대신 동적 단기 자격 증명 사용 |
+| **세분화된 제어** | 자격 증명 범위 및 권한에 대한 세분화된 제어 |
+| **중앙 집중식 관리** | 자격 증명의 중앙 집중식 관리 |
+| **노출 위험 감소** | 자격 증명 노출 위험 감소 |
+| **완전한 감사 추적** | 자격 증명 사용에 대한 완전한 감사 추적 |
+
+**ESC 구성 단계:**
+
+1. 적절한 클라우드 제공자 자격 증명으로 ESC 환경 생성
+2. Pulumi 스택 설정에서 해당 환경 참조
+3. 적절한 권한을 가진 Pulumi 액세스 토큰 생성
+4. Deployment Settings의 `PULUMI_ACCESS_TOKEN` 환경 변수에 토큰 추가
+
+**Pre-Run 명령에서 ESC 사용:**
+
+```bash
+pulumi env run my-aws-env -- aws s3 ls
+```
+
+> 중요한 차이: Pulumi Deployments OIDC는 Pre-Run 명령을 포함한 전체 배포 프로세스에 적용되지만, Pulumi ESC 환경은 Pulumi IaC 작업(예: `pulumi up`)에만 적용된다. Pre-Run 명령에서 ESC를 사용하려면 `pulumi env run` 명령을 접두사로 사용해야 한다.
+
+---
+
 ## Deployment Runner Images
 
 > https://www.pulumi.com/docs/deployments/deployments/runs/images/
@@ -672,6 +840,19 @@ Pulumi 관리 에이전트를 사용할 때 Dependency Caching으로 배포 속�
 
 ---
 
+## GitHub App 통합
+
+Pulumi Deployments는 GitHub와의 깊은 통합을 제공한다. GitHub App을 설치하면 Push to Deploy, Pull Request Preview, Review Stacks 등의 기능을 GitHub 리포지토리에서 직접 사용할 수 있다.
+
+- **PR 자동 Preview**: PR이 열리거나 업데이트될 때 자동으로 `pulumi preview` 실행 후 결과를 PR 댓글에 게시
+- **Merge 자동 배포**: PR이 병합되면 자동으로 `pulumi up` 실행
+- **Review Stacks**: PR에서 임시 인프라 환경 자동 생성/삭제
+- **Git Tag 배포**: Tag Push 시 자동 배포 트리거
+
+> GitHub App은 Pulumi Cloud 조직 설정의 Integrations에서 구성할 수 있다.
+
+---
+
 ## 기타 설정 옵션
 
 ### 의존성 설치 건너뛰기
@@ -681,6 +862,16 @@ Pulumi 관리 에이전트를 사용할 때 Dependency Caching으로 배포 속�
 ### 중간 배포 건너뛰기
 
 여러 배포가 Push될 때 기본적으로 순차적으로 실행된다. `Skip intermediate deployments` 설정을 활성화하면 동일 유형의 중간 배포를 모두 건너뛰고 가장 최근 배포만 실행한다.
+
+### Execution Mode
+
+Deployment 실행 모드를 통해 배포가 어떻게 실행되는지 제어할 수 있다. 기본적으로 모든 배포는 Pulumi 호스팅 러너에서 실행되지만, Customer-Managed Workflow Runners를 사용하면 자체 인프라에서 실행할 수 있다.
+
+### Deployment 승인 (Approvals)
+
+Deployment 실행 전에 승인(Approval)을 요구하도록 구성할 수 있다. 이를 통해 중요한 인프라 변경이 배포되기 전에 지정된 승인자의 검토를 거치도록 할 수 있다.
+
+승인 설정은 Deployment Settings에서 구성하며, 조직의 컴플라이언스 요구 사항에 따라 프로덕션 스택에만 선택적으로 적용할 수 있다.
 
 ### Role Assignment
 
