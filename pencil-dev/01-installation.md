@@ -1,8 +1,8 @@
 # Pencil Dev 설치 및 설정
 
-> 원문: https://docs.pencil.dev/getting-started/installation, https://docs.pencil.dev/getting-started/authentication
+> 원문: https://www.pencil.dev/downloads, https://docs.pencil.dev/getting-started/installation, https://docs.pencil.dev/getting-started/authentication
 
-Pencil은 IDE 확장과 독립 데스크톱 애플리케이션으로 제공됩니다. 워크플로에 맞는 설치 방법을 선택하세요.
+Pencil은 IDE 확장, 독립 데스크톱 애플리케이션, CLI로 제공됩니다. 워크플로에 맞는 설치 방법을 선택하세요.
 
 ---
 
@@ -12,6 +12,9 @@ Pencil은 IDE 확장과 독립 데스크톱 애플리케이션으로 제공됩�
 | --- | --- | --- | --- |
 | VS Code 확장 | macOS, Linux, Windows | Claude Code 필요 | 가장 많이 사용 |
 | Cursor 확장 | macOS, Linux, Windows | Claude Code 필요 | Cursor IDE 사용자용 |
+| Antigravity IDE 확장 | macOS, Linux, Windows | Claude Code 필요 | Antigravity IDE 사용자용 |
+| Windsurf 확장 | macOS, Linux, Windows | Claude Code 필요 | Windsurf 사용자용 |
+| Open VSX | macOS, Linux, Windows | Claude Code 필요 | Open VSX 레지스트리 지원 IDE |
 | 데스크톱 앱 | macOS, Linux, Windows | Claude Code 필요 | 독립 실행 |
 
 ---
@@ -67,35 +70,57 @@ VS Code와 동일: `.pen` 파일 생성 후 Pencil 아이콘 확인
 
 ### macOS
 
-**다운로드:**
+**Apple Silicon (M1/M2/M3/M4):**
 
-- Pencil 웹사이트 또는 releases 페이지에서 최신 `.dmg` 다운로드
+- Pencil 웹사이트 또는 releases 페이지에서 최신 Apple Silicon DMG 다운로드
+- Pencil을 Applications 폴더로 드래그
+- Pencil 실행
+
+**Intel:**
+
+- Pencil 웹사이트 또는 releases 페이지에서 최신 Intel(x64) DMG 다운로드
 - Pencil을 Applications 폴더로 드래그
 - Pencil 실행
 
 **첫 실행 시:** macOS 보안 경고가 뜨면 우클릭 → 열기로 실행. 활성화 과정 완료 후 AI 기능 사용을 위해 Claude Code 로그인.
 
+### Windows
+
+| 아키텍처 | 상태 | 파일 |
+| --- | --- | --- |
+| Intel/AMD x64 | 지원 | `.exe` 다운로드 |
+| ARM64 | Coming soon | - |
+
 ### Linux
 
-```bash
-# .deb 패키지
-sudo dpkg -i pencil-*.deb
+**AppImage (권장):**
 
-# .AppImage
+모든 Linux 배포판에서 동작. 별도 설치 불필요.
+
+| 아키텍처 | 파일 |
+| --- | --- |
+| x64 | `.AppImage` 다운로드 |
+| ARM | `.AppImage` 다운로드 |
+
+```bash
 chmod +x pencil-*.AppImage
 ./pencil-*.AppImage
 ```
+
+**Tarball (수동 설치):**
+
+고급 사용자 또는 커스텀 설정에 적합.
+
+| 아키텍처 | 파일 |
+| --- | --- |
+| x64 | `.tar.gz` 다운로드 |
+| ARM | `.tar.gz` 다운로드 |
 
 | 환경 | 상태 |
 | --- | --- |
 | X11 | 안정적 |
 | Wayland | 일부 UI 이슈 발생 가능 |
 | Hyprland | 일부 UI 이슈 발생 가능 |
-
-### Windows
-
-- 데스크톱 앱 또는 VS Code/Cursor 확장 사용
-- 확장 설치는 macOS/Linux와 동일
 
 ---
 
@@ -107,7 +132,7 @@ Pencil의 AI 기능을 사용하려면 Claude Code CLI 설치와 인증이 필�
 
 ```bash
 # npm으로 설치
-npm install -g @anthropic-ai/claude-code-cli
+npm install -g @anthropic-ai/claude-code
 
 # 또는 공식 설치 스크립트
 curl https://claude.ai/cli/install.sh | sh
@@ -169,8 +194,6 @@ Pencil 설치 완료 후 다음 단계를 진행하세요:
 2. **Claude Code 로그인** — AI 기능 사용을 위해 필요
 3. **웰컴 파일 열기** — 캔버스 우클릭 → Open Welcome File
 4. **첫 디자인 생성** — `.pen` 파일 생성 방법 참고
-5. **AI 프롬프트 패널 열기** — `Cmd/Ctrl + K`
-6. **디자인 요청** — 예: "Create a login form with email and password"
 
 ---
 
