@@ -30,8 +30,9 @@ Pulumi CLI는 기본적으로 Pulumi Cloud에 상태를 저장한다. Pulumi Clo
 
 | 항목 | AWS | Azure | Google Cloud | Kubernetes |
 |---|---|---|---|---|
-| **필수 계정** | AWS 계정 | Azure 구독 | Google Cloud 프로젝트 | Kubernetes 클러스터 접근 |
+| **필수 계정** | AWS 계정 | Azure 구독 | Google Cloud 프로젝트 | Kubernetes 클러스터 접근 (로컬: Minikube, kind, Docker Desktop / 클라우드: GKE, AKS, EKS) |
 | **CLI 도구** | AWS CLI | Azure CLI (`az login`) | gcloud CLI (인증 완료) | kubectl (설정 완료) |
+| **Python 패키지 매니저** | pip, Poetry 또는 uv | pip, Poetry 또는 uv | pip, Poetry 또는 uv | pip, Poetry 또는 uv |
 | **인증 방식** | AWS 액세스 키 / 환경 변수 | Azure CLI 로그인 / 서비스 주체 | gcloud 인증 / 서비스 계정 | kubeconfig 파일 |
 | **기본 리전/위치** | `us-east-1` | `WestUS2` | `US` | 클러스터에 따라 다름 |
 | **프로젝트 템플릿** | `aws-typescript` / `aws-python` | `azure-typescript` / `azure-python` | `gcp-typescript` / `gcp-python` | `kubernetes-typescript` / `kubernetes-python` |
@@ -45,6 +46,8 @@ Pulumi CLI는 기본적으로 Pulumi Cloud에 상태를 저장한다. Pulumi Clo
 | **Azure** | `az login` 실행 후 구독에 로그인. 서비스 주체를 사용할 경우 `ARM_CLIENT_ID`, `ARM_CLIENT_SECRET`, `ARM_SUBSCRIPTION_ID`, `ARM_TENANT_ID` 환경 변수 설정 |
 | **Google Cloud** | `gcloud auth login` 및 `gcloud config set project <PROJECT_ID>` 실행. 서비스 계정 키를 사용할 경우 `GOOGLE_CREDENTIALS` 또는 `GOOGLE_APPLICATION_CREDENTIALS` 환경 변수 설정 |
 | **Kubernetes** | kubeconfig 파일이 `~/.kube/config`에 위치하거나 `KUBECONFIG` 환경 변수로 경로 지정 |
+
+> **Pulumi ESC OIDC 추천**: 장수명(static) 자격 증명 대신 Pulumi ESC의 클라우드별 로그인 지원을 통해 OpenID Connect(OIDC) 기반의 단기 자격 증명을 사용하는 것이 보안 모범 사례이다. AWS, Azure, Google Cloud 모두 Pulumi ESC를 통한 OIDC 인증을 지원한다.
 
 ---
 
@@ -106,6 +109,62 @@ pulumi up
 ### 3단계: 수정 및 업데이트
 
 코드를 수정한 후 다시 `pulumi up`을 실행하면 변경 사항이 클라우드에 반영된다. Pulumi는 이전 상태와 비교하여 최소한의 변경만 수행한다.
+
+#### AWS S3 정적 웹사이트 변환 예시
+
+AWS의 경우 기본 S3 Bucket을 정적 웹사이트로 변환하려면 세 가지 추가 리소스가 필요하다.
+
+| 리소스 | 역할 |
+|---|---|
+| `BucketWebsiteConfiguration` | Bucket을 웹사이트로 구성 (`indexDocument` 설정) |
+| `BucketOwnershipControls` | Bucket 접근 제어 구성 (`ObjectWriter` 소유권 설정) |
+| `BucketPublicAccessBlock` | 공용 접근 허용 (기본적으로 비활성화되어 있으므로 명시적 활성화 필요) |
+
+**TypeScript 예시**:
+
+```typescript
+// S3 Bucket을 웹사이트로 전환
+const website = new aws.s3.BucketWebsiteConfiguration("website", {
+    bucket: bucket.id,
+    indexDocument: { suffix: "index.html" },
+});
+
+// 접근 제어 구성 허용
+const ownershipControls = new aws.s3.BucketOwnershipControls("ownership-controls", {
+    bucket: bucket.id,
+    rule: { objectOwnership: "ObjectWriter" },
+});
+
+// 공용 접근 허용
+const publicAccessBlock = new aws.s3.BucketPublicAccessBlock("public-access-block", {
+    bucket: bucket.id,
+    blockPublicAcls: false,
+});
+```
+
+**Python 예시**:
+
+```python
+# S3 Bucket을 웹사이트로 전환
+website = s3.BucketWebsiteConfiguration("website",
+    bucket=bucket.id,
+    index_document={"suffix": "index.html"},
+)
+
+# 접근 제어 구성 허용
+ownership_controls = s3.BucketOwnershipControls("ownership-controls",
+    bucket=bucket.id,
+    rule={"object_ownership": "ObjectWriter"},
+)
+
+# 공용 접근 허용
+public_access_block = s3.BucketPublicAccessBlock("public-access-block",
+    bucket=bucket.id,
+    block_public_acls=False,
+)
+```
+
+이후 `index.html` 파일을 업로드하고 Bucket Policy를 설정하여 웹사이트를 공개한다. `pulumi up`을 실행하면 추가된 리소스가 클라우드에 반영된다.
 
 ### 4단계: pulumi destroy
 
@@ -337,9 +396,18 @@ Kubernetes 튜토리얼을 시작하기 전에 다음이 필요하다.
 
 | 요구사항 | 설명 |
 |---|---|
-| Kubernetes 클러스터 | 로컬(Minikube 등) 또는 클라우드 기반 |
+| Kubernetes 클러스터 | 로컬 클러스터(Minikube, kind, Docker Desktop) 또는 클라우드 관리 클러스터(GKE, AKS, EKS) |
 | kubectl | 설치 및 클러스터에 연결되도록 구성 완료 |
 | 언어 런타임 | Node.js + npm, Python + pip, Go, .NET, Java 11+ + Maven 3.6.1+ 중 선택 |
+
+클러스터 접근을 테스트하려면 다음 명령을 실행한다.
+
+```bash
+kubectl cluster-info
+kubectl get nodes
+```
+
+Pulumi는 kubectl과 동일한 kubeconfig 파일(일반적으로 `~/.kube/config`)을 사용하므로, kubectl이 정상 동작하면 Pulumi도 자동으로 클러스터에 접근할 수 있다.
 
 ---
 
@@ -419,8 +487,7 @@ Pulumi로 클라우드 리소스를 프로비저닝하는 기본 워크플로우
 
 | 단계 | 설명 |
 |---|---|
-| Pulumi ESC 체험 | 중앙 집중식 시크릿 관리 및 오케스트레이션 서비스. 환경 변수와 시크릿을 안전하게 관리 |
+| Pulumi ESC 체험 | 중앙 집중식 시크릿 관리 및 오케스트레이션 서비스. 환경 변수와 시크릿을 안전하게 관리. 시크릿 스프롤 방지, RBAC 기반 접근 제어, .env 파일 대체 |
 | 튜토리얼 진행 | 클라우드별 핵심 Pulumi 개념을 안내하는 튜토리얼 |
 | 템플릿으로 새 프로젝트 시작 | 정적 웹사이트, 서버리스 애플리케이션, 가상 머신, 컨테이너 서비스, Kubernetes 클러스터 등 일반적인 아키텍처 템플릿 |
 | 공식 문서 심화 학습 | 프로젝트, Stack, 설정, 시크릿, 리소스, 상태 등 핵심 개념 학습 |
-| Pulumi ESC | 시크릿 스프롤 방지, RBAC 기반 접근 제어, .env 파일 대체 |
