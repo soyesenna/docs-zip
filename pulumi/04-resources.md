@@ -39,7 +39,14 @@ bucket = aws.s3.Bucket("my-bucket")
 
 `ComponentResource`는 여러 관련 리소스를 하나의 리소스로 노출하는 논리적 그룹이다. 소비자는 복잡한 인프라를 간단한 인터페이스로 생성할 수 있으며, 내부 구현 세부 사항을 알 필요가 없다.
 
-컴포넌트는 Pulumi 프로그램 내에 인라인으로 정의되거나, 언어 생태계 라이브러리를 통해 공유되거나, Pulumi 패키지의 일부로 배포될 수 있다.
+컴포넌트는 Pulumi 프로그램 내에 인라인으로 정의되거나, 언어 생태계 라이브러리를 통해 공유되거나, Pulumi 패키지의 일부로 배포될 수 있다. 플랫폼 팀은 컴포넌트를 활용해 인프라 모범 사례, 보안 정책, 컴플라이언스 요구 사항을 재사용 가능한 빌딩 블록으로 구현할 수 있다. [Pulumi IDP Private Registry](https://www.pulumi.com/docs/idp/concepts/private-registry/)에 게시하면 조직 전체에서 컴포넌트가 포함된 패키지를 검색하고, 기본 구현을 이해할 필요 없이 모든 팀이 소비할 수 있다.
+
+> **참고:** 컴포넌트는 [Terraform modules](https://developer.hashicorp.com/terraform/language/modules) 및 [AWS CDK Constructs](https://docs.aws.amazon.com/cdk/v2/guide/constructs.html)와 유사한 개념이다. Pulumi는 Terraform 모듈과 CDK Construct를 Pulumi 프로그램에서 직접 사용할 수도 있다. 자세한 내용은 [Use a Terraform Module](https://www.pulumi.com/docs/iac/guides/building-extending/using-existing-tools/use-terraform-module/) 및 [Pulumi CDK Adapter](https://www.pulumi.com/docs/iac/guides/clouds/aws/cdk/)를 참조하라.
+
+| 비교 대상 | 유사점 | 차이점 |
+|---|---|---|
+| **Terraform Module** | 관련 리소스를 논리적으로 그룹화하여 재사용 가능 단위로 제공 | 컴포넌트는 일반 프로그래밍 언어로 작성, 언어 생태계 패키지로 배포 가능 |
+| **AWS CDK Construct** | 클라우드 인프라를 객체 지향적으로 추상화 | 컴포넌트는 AWS뿐 아니라 모든 클라우드 프로바이더에 적용 가능 |
 
 ```typescript
 import * as awsx from "@pulumi/awsx";
@@ -108,7 +115,7 @@ res = Resource(name, args, options)
 
 ## 리소스 이름과 식별
 
-각 리소스는 서로 다른 목적을 가진 **네 가지 식별 형태(four distinct forms of identity)** 를 갖는다.
+각 리소스는 서로 다른 목적을 가진 **네 가지 식별 형태(four distinct forms of identity)** 를 갖는다. 어떤 상황에서 어떤 식별 형태를 사용해야 하는지 이해하는 것이 Pulumi 프로그램을 올바르게 작성하는 핵심이다.
 
 | 식별 형태 | 출처 | 예시 값 | 사용 시기 |
 |---|---|---|---|
@@ -116,8 +123,9 @@ res = Resource(name, args, options)
 | **물리적 이름** | 프로바이더 (논리적 이름과 자동 명명에 영향을 받음) | `"my-bucket-d7c3a1f"` | 프로바이더 API 호출에 사용. 프로바이더별 출력 속성으로 읽기 |
 | **물리적 ID** | 프로바이더 — 리소스 생성 후 반환 | `"my-bucket-d7c3a1f"` (S3), `"vpc-0abc1234"` (VPC) | `import`, `get`, 프로바이더 API에 전달. `resource.id`로 접근 |
 | **URN** | Pulumi — 프로젝트, 스택, 타입, 논리적 이름에서 파생 | `"urn:pulumi:dev::app::aws:s3/bucket:Bucket::my-bucket"` | Pulumi CLI 명령(`pulumi state`). 프로그램 코드에서는 거의 사용하지 않음. `resource.urn`으로 접근 |
+| **리소스 참조(변수)** | 코드 — 리소스 객체를 담은 프로그래밍 변수 | `const bucket = ...` | `ResourceOptions` 필드(`parent`, `dependsOn`, `provider`, `deletedWith`)에 전달. URN이나 ID 문자열이 아닌 **변수 자체**를 전달해야 함 |
 
-> **참고:** Pulumi 프로그램에서 리소스 객체를 담은 변수(예: `bucket`)는 식별 형태가 아니라 프로그래밍 언어의 변수 참조다. `ResourceOptions` 필드(`parent`, `dependsOn`, `provider`, `deletedWith`)에 전달할 때는 URN이나 ID 문자열이 아닌 **리소스 변수 자체**를 전달해야 한다.
+> **참고:** 물리적 ID(`resource.id`)와 URN(`resource.urn`)은 서로 다른 목적을 가진다. 물리적 ID는 클라우드 프로바이더가 할당하는 식별자로 `import`나 `get`에 사용되고, URN은 Pulumi가 내부적으로 상태 추적에 사용하는 식별자다. 두 값을 혼동하지 않도록 주의하라.
 
 ### 자동 명명 (Auto-Naming)
 
@@ -128,7 +136,9 @@ res = Resource(name, args, options)
 1. **스택 간 충돌 방지** — 동일한 프로젝트의 여러 스택이 리소스 이름 충돌 없이 배포될 수 있다.
 2. **무중단 업데이트** — 일부 클라우드 프로바이더는 특정 업데이트 시 리소스 교체가 필요하다. Pulumi는 먼저 새 리소스를 생성하고 기존 참조를 업데이트한 뒤 이전 리소스를 삭제한다.
 
-명시적 이름을 지정하려면 대부분의 리소스에 `name` 속성을 사용한다:
+> **참고:** 자동 생성된 물리적 이름의 정확한 형식은 프로바이더마다 다르다. 기본 패턴은 논리적 이름 뒤에 임의 접미사가 붙는 것이지만, 개별 프로바이더는 플랫폼 명명 제약을 충족하기 위해 하이픈 제거, 이름 잘림 등 논리적 이름을 변환할 수 있다. 프로바이더별 세부 사항은 [Pulumi Registry](https://www.pulumi.com/registry/)에서 확인하라.
+
+명시적 이름을 지정하려면 대부분의 리소스에 `name` 속성을 사용한다. 단, 리소스에 `name` 속성이 없는 경우 [Pulumi Registry](https://www.pulumi.com/registry/)에서 해당 리소스의 문서를 확인하라. 일부 리소스는 자동 명명을 재정의하기 위해 다른 속성을 사용한다. 예를 들어 `aws.s3.Bucket`은 `name` 대신 `bucket` 속성을 사용한다. 또한 `aws.kms.Key`와 같은 일부 리소스는 물리적 이름을 갖지 않으며, 다른 자동 생성 ID로 고유 식별한다:
 
 ```typescript
 let role = new aws.iam.Role("my-role", {
@@ -665,6 +675,19 @@ go get github.com/pulumi/pulumi-awsx/sdk/v3/go/awsx
 # C#
 dotnet add package Pulumi.Awsx
 ```
+
+---
+
+## 컴포넌트 작성 (Authoring Components)
+
+컴포넌트를 작성하려면 `ComponentResource` 클래스를 상속받아 새로운 클래스를 정의한다. 공식 문서에서 제공하는 다음 가이드를 통해 빌드, 패키징, 테스트 과정을 단계적으로 진행할 수 있다.
+
+| 가이드 | 설명 | 링크 |
+|---|---|---|
+| **Build a Component** | 클래스 정의, 인자 구조화, 자식 리소스 생성, 출력 등록, 프로바이더 상속 구성 | [공식 문서](https://www.pulumi.com/docs/iac/guides/building-extending/components/build-a-component/) |
+| **Packaging Components** | 세 가지 배포 옵션 비교 및 공유를 위한 컴포넌트 패키징 | [공식 문서](https://www.pulumi.com/docs/iac/guides/building-extending/components/packaging-components/) |
+| **Testing Components** | 컴포넌트 리소스에 대한 테스트 작성 | [공식 문서](https://www.pulumi.com/docs/iac/guides/building-extending/components/testing-components/) |
+| **Pulumi IDP Private Registry** | 조직 내 컴포넌트 게시 및 검색 | [공식 문서](https://www.pulumi.com/docs/idp/concepts/private-registry/) |
 
 ---
 
