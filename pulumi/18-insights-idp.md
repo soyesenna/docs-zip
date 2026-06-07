@@ -75,7 +75,8 @@ Discovery는 필요시 자동으로 자식 어카운트를 생성한다. AWS의 
 |---|---|
 | **AWS** | ESC를 통한 OIDC. IAM Role에 `ReadOnlyAccess` 관리형 정책 권장. 모든 AWS 파티션 지원 (Standard, GovCloud, ISO, ISOB, ISOF, ISOE, European Sovereign Cloud, China) |
 | **Azure** | ESC를 통한 OIDC(권장) 또는 클라이언트 시크릿. Microsoft Entra 앱 구성 필요 |
-| **Oracle Cloud (OCI)** | API 키 인증. `OCI_TENANCY_OCID`, `OCI_USER_OCID`, `OCI_FINGERPRINT`, `OCI_REGION`, `OCI_PRIVATE_KEY_PATH` 필요 |
+| **Oracle Cloud (OCI)** | API 키 인증. `OCI_TENANCY_OCID`, `OCI_USER_OCID`, `OCI_PRIVATE_KEY_PASSWORD`(선택), `OCI_FINGERPRINT`, `OCI_REGION`, `OCI_PRIVATE_KEY_PATH` 필요 |
+| **Google Cloud** | ESC를 통한 OIDC. Service Account에 Viewer 역할 부여. `fn::open::gcp-login` 사용. `GOOGLE_PROJECT`, `GOOGLE_OAUTH_ACCESS_TOKEN` 환경 변수 설정 필요 |
 | **Kubernetes** | kubeconfig 기반. `get` 및 `list` 권한이 있는 ServiceAccount + ClusterRole 권장. client-go credential plugin 미지원 |
 
 ### Resource Search
@@ -507,7 +508,7 @@ new PolicyPack("component-version-enforcement", {
 |---|---|---|---|
 | **목적** | 기존 인프라 전수 검색 및 가시성 | 정책 실행 및 컴플라이언스 | 셀프 서비스 인프라 워크플로 |
 | **대상** | 클라우드 어카운트 리소스 | Pulumi 스택 + 클라우드 어카운트 | 전체 인프라 라이프사이클 |
-| **프로바이더 지원** | AWS, Azure, OCI, Kubernetes | 모든 Pulumi 프로바이더 | 모든 Pulumi 프로바이더 |
+| **프로바이더 지원** | AWS, Azure, OCI, Google Cloud, Kubernetes | 모든 Pulumi 프로바이더 | 모든 Pulumi 프로바이더 |
 | **실행 시점** | 예약 스캔 (24시간) 또는 수동 | 배포 시 (Preventative) / 지속적 (Audit) | Day 0-2 전체 |
 | **차단 기능** | 아니오 | 예 (Preventative + Mandatory) | 정책을 통해 간접적 |
 | **Private Registry** | 해당 없음 | 해당 없음 | 핵심 기능 |
