@@ -6,10 +6,12 @@
 > - https://www.pulumi.com/docs/iac/cli/environment-variables/
 > - https://www.pulumi.com/docs/iac/cli/exit-codes/
 > - https://www.pulumi.com/docs/iac/cli/api/
+> - https://www.pulumi.com/docs/iac/cli/command-line-completion/
+> - https://www.pulumi.com/docs/iac/cli/direct-resource-operations/
 
 Pulumi는 주로 CLI(명령줄 인터페이스)를 통해 제어된다. CLI는 Pulumi Cloud와 연동하여 클라우드 앱 및 인프라에 변경 사항을 배포하며, 팀 내에서 누가 언제 무엇을 업데이트했는지에 대한 이력을 유지한다. CLI는 내부 루프(inner loop) 생산성과 CI/CD 시나리오 모두에 최적화되어 설계되었다.
 
-이 문서는 핵심 명령어의 용법·옵션·예제, 환경변수, 종료 코드, `pulumi api` 서브커맨드, 셸 자동완성을 정리한다.
+이 문서는 핵심 명령어의 용법·옵션·예제, 환경변수, 종료 코드, `pulumi api` 서브커맨드, 셸 자동완성, 직접 리소스 작업(`pulumi do`), ESC CLI를 정리한다.
 
 ---
 
@@ -26,6 +28,7 @@ Pulumi는 주로 CLI(명령줄 인터페이스)를 통해 제어된다. CLI는 P
 | `pulumi convert` | Pulumi 프로그램을 다른 지원 언어로 변환 |
 | `pulumi deployment` | **[EXPERIMENTAL]** Pulumi Cloud 스택 배포 관리 |
 | `pulumi destroy` | 스택의 모든 기존 리소스 삭제 |
+| `pulumi do` | **[RESEARCH PREVIEW]** 프로젝트·프로그램 없이 직접 클라우드 리소스 작업 수행 |
 | `pulumi env` | 환경 관리 |
 | `pulumi gen-completion` | 셸 자동완성 스크립트 생성 |
 | `pulumi import` | 기존 리소스를 스택으로 임포트 |
@@ -102,8 +105,10 @@ pulumi new [template|url] [flags]
 | `-l, --list-templates` | 로컬에 설치된 템플릿 목록 출력 후 종료 |
 | `-n, --name string` | 프로젝트 이름 |
 | `-o, --offline` | 네트워크 요청 없이 로컬 캐시된 템플릿 사용 |
+| `--runtime-options strings` | 언어 런타임에 전달할 추가 옵션 (형식: `key1=value1,key2=value2`) |
 | `--secrets-provider string` | 시크릿 암호화/복호화 프로바이더 (`default`, `passphrase`, `awskms`, `azurekeyvault`, `gcpkms`, `hashivault`, 기본값 `default`) |
 | `-s, --stack string` | 스택 이름 |
+| `-t, --template-mode` | 템플릿 모드로 실행. AI 또는 템플릿 기능에 대한 프롬프트 건너뜀 |
 | `-y, --yes` | 프롬프트 건너뛰고 기본값으로 진행 |
 
 **예제**
@@ -198,6 +203,7 @@ pulumi stack [flags]
 | `pulumi stack output` | 스택 출력 속성 표시 |
 | `pulumi stack history` | 스택 업데이트 이력 |
 | `pulumi stack export` | 스택 배포 상태를 stdout으로 내보내기 |
+| `pulumi stack get` | **[EXPERIMENTAL]** 스택의 상세 정보 조회 (`pulumi stack --output=json`의 편의 별칭). 조직·프로젝트·스택 이름, 현재 버전, 태그, 활성 업데이트 작업, 로컬 리소스 스냅샷 등을 반환 |
 | `pulumi stack import` | stdin에서 배포 상태를 스택으로 가져오기 |
 | `pulumi stack rename` | 스택 이름 변경 |
 | `pulumi stack graph` | 스택 의존성 그래프를 파일로 내보내기 |
@@ -261,6 +267,24 @@ pulumi config [flags]
 | `pulumi config env` | 스택의 ESC 환경 관리 |
 | `pulumi config refresh` | 스택의 최신 배포 기준으로 로컬 구성 업데이트 |
 
+**`pulumi config set` 옵션**
+
+| 옵션 | 설명 |
+| --- | --- |
+| `--path` | 구성 키에 맵/리스트 내 속성 경로 포함 |
+| `--plaintext` | 값을 평문(암호화하지 않음)으로 저장 |
+| `--secret` | 값을 암호화하여 시크릿으로 저장 |
+| `--type string` | 값의 타입 지정. 허용값: `string`, `bool`, `int`, `float` |
+
+**`pulumi config set-all` 옵션**
+
+| 옵션 | 설명 |
+| --- | --- |
+| `--plaintext stringArray` | 평문(암호화하지 않음)으로 저장할 `key=value` 쌍 |
+| `--secret stringArray` | 암호화하여 저장할 `key=value` 쌍 |
+| `--json string` | `pulumi config --json` 형식의 JSON 문자열에서 값 읽기. `--plaintext`, `--secret`, `--path`와 함께 사용 불가 |
+| `--path` | 키를 맵/리스트 내 경로로 파싱 |
+
 **예제**
 
 ```bash
@@ -292,21 +316,25 @@ pulumi up [template|url] [flags]
 
 | 옵션 | 설명 |
 | --- | --- |
+| `--attach-debugger stringArray[=program]` | 프로그램 및 소스 기반 플러그인에 디버거 연결. `program`, `plugins`, `plugin:<name>`, `all`로 제한 가능 |
 | `-c, --config stringArray` | 업데이트 중 사용할 구성 값 (스택 구성 파일에 저장) |
 | `--config-file string` | 지정한 파일의 구성 값 사용 |
+| `--config-path` | 구성 키에 맵/리스트 내 속성 경로 포함 |
 | `--continue-on-error` | 오류 발생 시에도 리소스 업데이트 계속 (`PULUMI_CONTINUE_ON_ERROR` 환경변수로도 설정 가능) |
 | `-d, --debug` | 리소스 작업 중 상세 디버깅 출력 |
 | `--diff` | 전체 변경 사항을 rich diff로 표시 |
 | `--exclude stringArray` | 무시할 리소스 URN. 와일드카드(`*`, `**`) 지원 |
+| `--exclude-dependents` | `--exclude`에 명시되지 않은 종속 리소스도 무시 |
 | `--expect-no-changes` | 변경 발생 시 오류 반환 (업데이트 적용 후 검사) |
 | `-j, --json` | 업데이트 diff, 작업, 전체 출력을 JSON으로 직렬화 |
 | `-m, --message string` | 업데이트 작업에 연결할 메시지 |
+| `--neo` | Neo(AI 어시스턴트)를 활성화하여 CLI 경험 개선 (`PULUMI_NEO` 환경변수로도 설정 가능) |
+| `--neo-task-on-failure` | 작업 실패 시 Neo 디버그 태스크 자동 시작 |
 | `-p, --parallel int32` | 병렬로 실행할 리소스 작업 수 (기본값 16) |
 | `--plan string` | **[EXPERIMENTAL]** 업데이트에 사용할 계획 파일 경로 |
 | `--policy-pack strings` | 업데이트의 일부로 실행할 정책 팩 |
+| `--policy-pack-config strings` | 정책 팩 설정 JSON 파일 경로 (해당 `--policy-pack` 플래그와 대응) |
 | `-r, --refresh` | 업데이트 전 스택 리소스 상태 새로고침 |
-| `--neo` | Neo(AI 어시스턴트)를 활성화하여 CLI 경험 개선 |
-| `--neo-task-on-failure` | 작업 실패 시 Neo 디버그 태스크 자동 시작 |
 | `--remote` | **[EXPERIMENTAL]** 원격으로 작업 실행 |
 | `--remote-agent-pool-id string` | 원격 배포에 사용할 에이전트 풀 ID |
 | `--remote-env stringArray` | 원격 배포에 전달할 환경변수 (`키=값` 형식, 반복 가능) |
@@ -327,13 +355,26 @@ pulumi up [template|url] [flags]
 | `--remote-skip-install-dependencies` | 원격 배포에서 의존성 설치 건너뛰기 |
 | `--replace stringArray` | 교체할 리소스 URN. 와일드카드 지원 |
 | `--run-program` | `--refresh` 설정 시 프로그램을 실행하여 최신 상태 확인 |
+| `--secrets-provider string` | 시크릿 암호화/복호화 프로바이더. 템플릿에서 새 스택 생성 시에만 사용 (기본값 `default`) |
+| `--show-config` | 구성 키와 변수 표시 |
+| `--show-full-output` | 입력 및 출력의 전체 길이 표시 |
+| `--show-policy-remediations` | 리소스별 정책 수정(remediation) 상세 표시 |
+| `--show-reads` | 직접 관리되는 리소스와 함께 읽기(read) 리소스 표시 |
+| `--show-replacement-steps` | 리소스 교체 생성 및 삭제를 단일 단계 대신 상세 단계로 표시 |
+| `--show-sames` | 변경되지 않은 리소스도 함께 표시 |
 | `--show-secrets` | 시크릿 출력을 CLI에 평문으로 표시 |
+| `--skip-plugin-pre-install` | 사전 프로바이더 플러그인 설치 건너뛰기. 누락된 플러그인은 엔진에서 지연 설치 |
 | `-f, --skip-preview` | 미리보기 없이 바로 업데이트 수행 |
+| `-s, --stack string` | 대상 스택 이름 (기본값: 현재 스택) |
 | `--strict` | **[EXPERIMENTAL]** strict plan 동작 활성화. `--skip-preview`와 함께 사용 불가 |
 | `--suppress-outputs` | 스택 출력 표시 억제 |
+| `--suppress-permalink` | 상태 퍼마링크 표시 억제 |
+| `--suppress-progress` | 주기적 진행 점(progress dots) 표시 억제 |
+| `--suppress-stream-logs` | **[EXPERIMENTAL]** 배포 작업의 로그 스트리밍 억제 |
 | `-t, --target stringArray` | 업데이트할 리소스 URN. 와일드카드 지원 |
 | `--target-dependents` | `--target`에 명시되지 않은 종속 리소스도 업데이트 |
 | `--target-replace stringArray` | 교체할 리소스 URN (`--target urn --replace urn`의 약식) |
+| `--urns` | 짧은 리소스 이름 대신 전체 URN 표시 |
 | `-y, --yes` | 미리보기 후 자동 승인 및 업데이트 수행 |
 
 **예제**
@@ -679,7 +720,7 @@ Pulumi CLI는 명령어의 결과를 나타내는 숫자 종료 코드를 반환
 
 ## pulumi api 서브커맨드
 
-`pulumi api` 명령어를 사용하면 CLI에서 Pulumi Cloud REST API 엔드포인트를 직접 호출할 수 있다. 비대화형으로 실행되어 스크립팅에 안전하며, `pulumi login`에서 이미 사용 중인 자격 증명을 재사용하므로 별도의 토큰 관리가 필요 없다. `gh api`를 모델로 설계되었다.
+`pulumi api` 명령어를 사용하면 CLI에서 Pulumi Cloud REST API 엔드포인트를 직접 호출할 수 있다. **[EXPERIMENTAL]** 비대화형으로 실행되어 스크립팅에 안전하며, `pulumi login`에서 이미 사용 중인 자격 증명을 재사용하므로 별도의 토큰 관리가 필요 없다. `gh api`를 모델로 설계되었다. 위치 인수는 경로(템플릿 변수 포함, 예: `/api/orgs/{orgName}/members`), Operation ID(예: `ListOrganizationMembers`), 또는 붙여넣기 가능한 행(예: `GET /api/...`)이 될 수 있다.
 
 ### 서브커맨드 구조
 
@@ -711,7 +752,8 @@ Pulumi CLI는 명령어의 결과를 나타내는 숫자 종료 코드를 반환
 | `-H` / `--header` | 커스텀 HTTP 헤더 `Key: Value` (반복 가능). 사용자 헤더가 기본값(`Accept`, `Content-Type`)보다 우선 |
 | `--body` | 인라인 요청 본문. `--input`과 상호 배타적 |
 | `--input` | 파일에서 요청 본문 읽기; `-`는 stdin에서 읽기 |
-| `--paginate` | 연속 커서를 따라 단일 결합 JSON 봉투를 출력. 최대 1000페이지 |
+| `--all` | 페이지네이션 커서를 따라 결합된 결과를 출력 |
+| `--envelope-version int` | 호출자가 기대하는 JSON 봉투 버전 고정 (기본값 1) |
 | `-i` / `--include` | 출력에 HTTP 상태 라인 및 응답 헤더 포함 |
 | `--silent` | 성공 시 응답 본문 억제 (오류는 여전히 출력됨) |
 | `--verbose` | 해석된 요청과 전체 응답을 stderr에 출력 |
@@ -776,7 +818,7 @@ cat tags.json | pulumi api UpdateStackTags --input -
 pulumi api /api/user --output=json | jq '.githubLogin'
 
 # 페이지네이션
-pulumi api ListUserStacks --paginate | jq -r '.stacks[].stackName'
+pulumi api ListUserStacks --all | jq -r '.stacks[].stackName'
 
 # API 탐색
 pulumi api list --output=json | jq '.operations[] | select(.tag == "Stacks")'
@@ -793,22 +835,236 @@ pulumi api CreateOrgToken -F orgName=acme \
 
 ## 셸 자동완성
 
-`pulumi gen-completion` 명령어로 셸 자동완성 스크립트를 생성할 수 있다.
+> **원문**: https://www.pulumi.com/docs/iac/cli/command-line-completion/
+
+Pulumi CLI는 Bash, Zsh, Fish용 명령줄 자동완성 스크립트를 생성할 수 있다. 모든 명령어, 서브커맨드, 플래그에 대해 탭 완성이 제공된다.
 
 ```bash
 pulumi gen-completion <shell>
 ```
 
-지원 셸에 대한 설정 예제:
+### Bash
+
+bash-completion이 설치되어 있어야 한다.
+
+- **Linux**: 대부분의 배포판에 기본 포함
+- **macOS**: `brew install bash-completion`으로 설치
 
 ```bash
-# Bash
-pulumi gen-completion bash > ~/.pulumi/completion.bash
-echo 'source ~/.pulumi/completion.bash' >> ~/.bashrc
+# 자동완성 스크립트 저장
+## Linux
+pulumi gen-completion bash > /etc/bash_completion.d/pulumi
+## macOS
+pulumi gen-completion bash > /usr/local/etc/bash_completion.d/pulumi
 
-# Zsh
+# ~/.bash_profile에 추가
+## Linux
+if [ -f /etc/bash_completion ]; then
+  . /etc/bash_completion
+fi
+## macOS
+if [ -f /usr/local/etc/bash_completion ]; then
+  . /usr/local/etc/bash_completion
+fi
+
+# 적용 (새 터미널을 열거나 프로파일 다시 로드)
+. ~/.bash_profile
+```
+
+### Zsh
+
+```bash
+# $fpath 디렉터리 확인
+echo $fpath
+
+# 자동완성 스크립트를 $fpath 디렉터리 중 하나에 저장
 pulumi gen-completion zsh > "${fpath[1]}/_pulumi"
 
-# Fish
-pulumi gen-completion fish > ~/.config/fish/completions/pulumi.fish
+# 또는 임의 디렉터리 사용 (~/.zsh/completion/)
+fpath=(~/.zsh/completion $fpath)
+
+# ~/.zshrc에 compinit 로드
+autoload -Uz compinit && compinit -i
+
+# 셸 재시작
+exec $SHELL -l
 ```
+
+### Fish
+
+```bash
+# 현재 세션에서 즉시 사용
+pulumi gen-completion fish | source
+
+# 영구적으로 사용하려면 파일로 저장
+pulumi gen-completion fish > ~/.config/fish/completions/pulumi.fish
+
+# 새 터미널을 열면 적용됨
+```
+
+---
+
+## 직접 리소스 작업 (pulumi do)
+
+> **원문**: https://www.pulumi.com/docs/iac/cli/direct-resource-operations/
+
+> **참고**: `pulumi do`는 **research preview** 상태이다. 명령 인터페이스는 피드백에 따라 변경될 수 있다.
+
+`pulumi do` 명령어는 프로젝트, 프로그램 또는 상태 파일 없이 Pulumi CLI를 통해 클라우드 리소스에 대한 직접 작업을 수행한다. 전체 Pulumi 프로바이더 생태계를 CLI로 노출하며, 각 프로바이더의 스키마에서 동적으로 명령어가 생성된다.
+
+### 명령 구문
+
+```bash
+# 프로바이더 함수 (읽기 전용)
+pulumi do <package:module:function> [flags]
+
+# 리소스 작업 (Create, Read, Patch, Delete)
+pulumi do <package:module:type> <operation> [<id>] [flags]
+```
+
+명령 트리의 어떤 수준에서든 `--help`를 전달하여 사용 가능한 서브커맨드를 탐색할 수 있다.
+
+### pulumi do vs pulumi up
+
+| 시나리오 | `pulumi do` | `pulumi up` |
+| --- | --- | --- |
+| 클라우드 API 조회 | O | X |
+| 개별 리소스 생성/수정 | O | O |
+| 프로바이더 기능 탐색 | O | X |
+| 에이전트 기반 임시 작업 | O | 반복 워크플로에 적합 |
+| 프로덕션 인프라 관리 | X | O |
+| 상태 추적 및 드리프트 감지 | X (상태 비저장) | O |
+| 다중 리소스 의존성 그래프 | X | O |
+| 정책 강제 및 컴플라이언스 | X | O |
+| 반복 가능하고 검토 가능한 배포 | X | O |
+
+### 프로바이더 함수
+
+프로바이더 함수는 Pulumi의 프로바이더 계층을 통해 클라우드 API를 쿼리하는 읽기 전용 작업이다.
+
+```bash
+pulumi do <package:module:function> --input-file <path>
+```
+
+입력 파일은 함수의 인수를 포함하며, 출력은 stdout으로 JSON이 작성된다.
+
+**예제: VPC 조회**
+
+입력 파일 `query.pcl`:
+```
+tags = {
+    "Name" = "production"
+}
+```
+
+```bash
+pulumi do aws:ec2:getVpc --input-file query.pcl
+```
+
+출력:
+```json
+{
+    "arn": "arn:aws:ec2:us-west-2:123456789:vpc/vpc-abc123",
+    "cidrBlock": "10.0.0.0/16",
+    "id": "vpc-abc123",
+    "tags": {"Name": "production"}
+}
+```
+
+**입력 파일 형식**: PCL(기본값). 최상위 할당이 함수 파라미터에 매핑되며, 실행 전 함수 스키마에 대해 전체 타입 검사가 수행된다.
+
+### 리소스 작업
+
+| 작업 | 설명 | 구문 |
+| --- | --- | --- |
+| `create` | 새 클라우드 리소스 생성. 확인 프롬프트 후 생성 | `pulumi do <pkg:mod:type> create --input-file <path>` |
+| `read` | 클라우드 프로바이더 ID로 기존 리소스의 현재 상태 읽기 | `pulumi do <pkg:mod:type> read <provider-id>` |
+| `patch` | 기존 리소스 업데이트. 현재 상태를 읽고 변경 사항을 병합하여 diff 표시 후 확인 프롬프트 | `pulumi do <pkg:mod:type> patch <provider-id> --input-file <path>` |
+| `delete` | 리소스 삭제. 확인 프롬프트 후 삭제 | `pulumi do <pkg:mod:type> delete <provider-id>` |
+
+### 플래그
+
+| 플래그 | 타입 | 기본값 | 설명 |
+| --- | --- | --- | --- |
+| `--input-file` | string | - | 함수 또는 리소스 입력이 포함된 파일 경로 |
+| `--input` | - | pcl | 입력 파일 형식 |
+| `--provider-file` | string | - | 프로바이더 구성이 포함된 파일 경로 |
+| `--provider-format` | string | pcl | 프로바이더 구성 파일 형식 |
+| `--dry-run` | bool | false | 미리보기 모드로 실행 (프로바이더가 플레이스홀더 값 반환) |
+| `--show-secrets` | bool | false | 출력에 시크릿 값 표시 |
+| `--yes` | bool | false | 확인 프롬프트 자동 승인 |
+
+### 출력 형식
+
+모든 `pulumi do` 작업은 stdout에 구조화된 JSON을 작성한다. 진행 메시지와 프롬프트는 stderr로 전송되어 파이핑과 스크립팅이 깔끔하게 이루어진다.
+
+```bash
+# 함수 출력을 jq로 파이핑
+pulumi do aws:ec2:getVpc --input-file query.pcl | jq '.cidrBlock'
+
+# 리소스 출력을 파일로 리다이렉트 (진행 상태는 stderr에 표시)
+pulumi do aws:s3:Bucket read my-bucket > result.json
+```
+
+시크릿은 기본적으로 출력에 `[secret]`으로 표시된다. `--show-secrets`로 노출할 수 있다.
+
+### 프로바이더 구성
+
+프로바이더는 작동하기 위해 자격 증명과 구성이 필요하다. `pulumi do`는 다음을 통해 프로바이더 구성을 해석한다:
+
+- **앰비언트 자격 증명**: 셸에 이미 존재하는 환경변수 및 자격 증명 파일 (예: `AWS_ACCESS_KEY_ID`, `~/.aws/credentials`)
+- **프로바이더 구성 파일**: `--provider-file` 플래그로 PCL 파일을 통해 프로바이더 구성 제공
+
+```bash
+pulumi do aws:ec2:getVpc --input-file query.pcl \
+  --provider-file aws-config.pcl
+```
+
+---
+
+## pulumi state 명령어 그룹
+
+> **원문**: https://www.pulumi.com/docs/iac/cli/commands/pulumi_state/
+
+현재 스택의 상태를 편집한다. 스택 문제 해결 또는 수동 편집이 필요한 특정 작업에 유용하다.
+
+| 서브커맨드 | 설명 |
+| --- | --- |
+| `pulumi state delete` | 스택 상태에서 하나 이상의 리소스 삭제 |
+| `pulumi state edit` | 편집기(`$EDITOR`)에서 현재 스택의 상태 편집 |
+| `pulumi state move` | 리소스를 한 스택에서 다른 스택으로 이동 |
+| `pulumi state protect` | 스택 상태의 리소스를 보호 상태로 설정 |
+| `pulumi state rename` | 스택 상태의 리소스 이름 변경 |
+| `pulumi state repair` | 유효하지 않은 상태 복구 |
+| `pulumi state taint` | 스택 상태의 하나 이상의 리소스를 테인트(taint) 처리 |
+| `pulumi state unprotect` | 스택 상태의 리소스 보호 해제 |
+| `pulumi state untaint` | 스택 상태의 하나 이상의 리소스 테인트 해제 |
+| `pulumi state upgrade` | 현재 백엔드를 최신 지원 버전으로 마이그레이션 |
+
+---
+
+## ESC CLI (pulumi esc)
+
+> **원문**: https://www.pulumi.com/docs/esc/cli/commands/
+
+Pulumi ESC(Environment, Secrets, and Configuration)는 별도의 CLI(`esc`)를 통해 환경을 관리한다. ESC CLI >= 0.10.0부터 ESC Projects를 사용할 수 있다.
+
+### 주요 명령어
+
+| 명령어 | 설명 |
+| --- | --- |
+| `esc env` | 환경 관리 |
+| `esc env diff` | 환경 버전 간 차이 표시 |
+| `esc env edit` | 환경 정의 편집 |
+| `esc env get` | 환경 내 특정 값 조회 |
+| `esc env init` | 빈 환경 생성 |
+| `esc env ls` | 환경 목록 조회 |
+| `esc env rm` | 환경 또는 환경 내 특정 값 제거 |
+| `esc env set` | 환경 내 값 설정 |
+| `esc env version` | 환경 버전 관리 |
+| `esc env version rollback` | 환경 정의를 특정 버전으로 롤백 |
+| `esc env version tag` | 태그가 지정된 버전 관리 |
+| `esc login` | Pulumi Cloud에 로그인 |
+| `esc open` | 지정한 이름의 환경 열기 |
+| `esc run` | 지정한 이름의 환경을 열고 명령어 실행 |
+| `esc version` | ESC 버전 번호 출력 |
