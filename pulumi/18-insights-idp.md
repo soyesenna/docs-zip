@@ -78,7 +78,6 @@ Discovery는 필요시 자동으로 자식 어카운트를 생성한다. AWS의 
 |---|---|
 | **AWS** | ESC를 통한 OIDC. IAM Role에 `ReadOnlyAccess` 관리형 정책 권장. 모든 AWS 파티션 지원 (Standard, GovCloud, ISO, ISOB, ISOF, ISOE, European Sovereign Cloud, China) |
 | **Azure** | ESC를 통한 OIDC(권장) 또는 클라이언트 시크릿. Microsoft Entra 앱 구성 필요 |
-| **Google Cloud (GCP)** | ESC를 통한 OIDC. `project`, `workloadPoolId`, `providerId`, `serviceAccount` 구성 필요. ESC 동적 ServiceAccount 자격 증명 생성 지원 |
 | **Oracle Cloud (OCI)** | API 키 인증. `OCI_TENANCY_OCID`, `OCI_USER_OCID`, `OCI_PRIVATE_KEY_PASSWORD`(선택), `OCI_FINGERPRINT`, `OCI_REGION`, `OCI_PRIVATE_KEY_PATH` 필요 |
 | **Kubernetes** | kubeconfig 기반. `get` 및 `list` 권한이 있는 ServiceAccount + ClusterRole 권장. client-go credential plugin 미지원 |
 
@@ -273,13 +272,15 @@ Policy Findings는 클라우드 인프라 전체의 컴플라이언스를 관리
 
 | 필드 그룹 | 세부 필드 |
 |---|---|
-| **Policy 정보** | Policy Pack 이름 및 버전, Policy Group, Policy Group 유형 (Audit / Preventative), Severity |
-| **Resource 정보** | Entity Type (Stack 또는 Insights-Account), Entity Project, Entity Name, Issue Resource ID, Cloud Provider |
-| **Timestamps** | First Seen (최초 감지일), Last Updated (최근 갱신일) |
-| **Issue Description** | 위반된 정책 규칙에 대한 설명 메시지 |
-| **Policy Description** | 해당 정책의 요구사항에 대한 추가 컨텍스트 |
+| **Policy 정보** | Policy Pack 이름 및 버전, Policy Group, Policy Group 유형 (Audit / Preventative), Enforcement Level (Advisory / Mandatory), Severity |
+| **Resource 정보** | Entity Type (Stack 또는 Insights-Account), Entity Project, Entity Stack, Entity Name, Issue Resource URN, Issue Resource ID, Cloud Provider, Cloud Provider별 리소스 식별자 (ARN, 리소스 ID 등) |
+| **Timestamps** | First Seen (최초 감지일), Last Updated (최근 갱신일), Last Scanned (최근 스캔 일시) |
+| **Issue Description** | 위반된 정책 규칙에 대한 설명 메시지. 위반된 속성 및 기대값 vs 실제값 포함 |
+| **Policy Description** | 해당 정책의 요구사항에 대한 추가 컨텍스트. 관련 컴플라이언스 프레임워크 참조 (예: CIS 8.1, NIST 800-53) |
+| **Violation Details** | 위반된 리소스 속성 경로, 감지된 값, 정책에서 요구하는 값 |
+| **Related Resources** | 해당 이슈와 연관된 다른 리소스 (그래프 관계 기반) |
 
-상세 뷰에서 이슈 할당, 상태 및 우선순위 업데이트, **Create Neo Task** 버튼으로 AI 기반 수정 작업 생성이 가능하다.
+상세 뷰에서 이슈 할당, 상태 및 우선순위 업데이트, **Create Neo Task** 버튼으로 AI 기반 수정 작업 생성이 가능하다. 이슈 무시(Ignore) 처리 시 무시 사유 입력이 가능하며, 무시된 이슈는 Overview에서 제외되어 준수 점수에 반영되지 않는다.
 
 Policy Findings는 [Pulumi Cloud REST API](https://www.pulumi.com/docs/reference/cloud-rest-api/policy-results/)를 통해서도 접근 가능하다.
 
@@ -329,13 +330,13 @@ Pulumi IDP 모범 사례의 핵심은 네 가지 요소(Templates, Components, E
 
 ### Custom IDP
 
-Pulumi의 유연한 빌딩 블록은 맞춤형 IDP를 구축해야 하는 조직의 요구도 지원한다. 기존 개발자 포털과 Pulumi를 통합할 수 있다.
+Pulumi의 유연한 빌딩 블록은 맞춤형 IDP를 구축해야 하는 조직의 요구도 지원한다. Pulumi Cloud 콘솔 내장 기능뿐 아니라 기존 개발자 포털 및 CI/CD 파이프라인과 Pulumi를 통합할 수 있다.
 
 | 통합 방식 | 설명 |
 |---|---|
-| **Organization Templates** | Pulumi Cloud 콘솔 내에서 조직 표준 템플릿을 제공하여 개발자가 승인된 골든 패스로 프로젝트를 스캐폴딩 |
-| **Backstage Plugin** | Spotify의 Backstage 등 기존 개발자 포털에 Pulumi 인프라 관리 기능을 통합. 자세한 내용은 [Pulumi Backstage Plugin](https://www.pulumi.com/docs/idp/guides/backstage-plugin/) 참조 |
-| **GitHub Actions** | CI/CD 파이프라인에서 Pulumi 워크플로를 실행하여 인프라 프로비저닝 및 정책 실행을 자동화. 자세한 내용은 [GitHub Actions Integration](https://www.pulumi.com/docs/insights/policy/integrations/) 참조 |
+| **Organization Templates** | Pulumi Cloud 콘솔 내에서 조직 표준 템플릿을 제공하여 개발자가 승인된 골든 패스로 프로젝트를 스캐폴딩. [New Project Wizard](https://www.pulumi.com/docs/idp/concepts/new-project-wizard/)를 통해 브라우저에서 직접 템플릿 선택 및 배포 가능 |
+| **Backstage Plugin** | Spotify의 Backstage 등 기존 개발자 포털에 Pulumi 인프라 관리 기능을 통합. 스택 상태 조회, 배포 트리거, 리소스 메타데이터 확인 등의 기능 제공. 자세한 내용은 [Pulumi Backstage Plugin 가이드](https://www.pulumi.com/docs/idp/guides/backstage-plugin/) 참조 |
+| **GitHub Actions** | CI/CD 파이프라인에서 Pulumi 워크플로를 실행하여 인프라 프로비저닝 및 정책 실행을 자동화. `pulumi/actions` GitHub Action으로 `pulumi up`, `pulumi preview`, 정책 검증을 워크플로에 통합. 자세한 내용은 [CI/CD 통합 가이드](https://www.pulumi.com/docs/insights/policy/integrations/) 및 [GitHub Actions 가이드](https://www.pulumi.com/docs/guides/continuous-delivery/github-actions/) 참조 |
 
 ---
 
@@ -585,14 +586,17 @@ new PolicyPack("component-version-enforcement", {
 
 > https://www.pulumi.com/docs/insights/self-hosted/
 
-Pulumi Insights는 **Business Critical** 에디션에서 Self-hosted 운영을 지원한다. 고객 관리 워크플로 러너(customer-managed workflow runner)를 사용하여 Discovery 스캔과 Policy 평가를 자체 인프라 내에서 실행할 수 있다.
+Pulumi Insights는 **Business Critical** 에디션에서만 Self-hosted 운영을 지원한다. 고객 관리 워크플로 러너(customer-managed workflow runner)를 사용하여 Discovery 스캔과 Policy 평가를 자체 인프라 내에서 실행할 수 있다.
 
 **활성화 조건:**
 
 | 조건 | 설명 |
 |---|---|
-| **에디션** | Pulumi Cloud **Business Critical** 전용 |
-| **문의** | Sales 팀에 문의하여 기능 활성화 필요 |
+| **에디션** | Pulumi Cloud **Business Critical** 전용 (Team, Enterprise 에디션에서는 사용 불가) |
+| **기능 활성화** | Sales 팀에 문의하여 조직에 Self-hosted Insights 기능 활성화 요청 필요 |
+| **워크플로 러너** | [customer-managed agent](https://www.pulumi.com/docs/deployments/deployments/runs/customer-managed-agents/) 설정이 사전 완료되어야 함 |
+| **네트워크** | 워크플로 러너가 Pulumi Cloud API (`api.pulumi.com`)에 아웃바운드로 접근 가능해야 함 |
+| **클라우드 접근** | 워크플로 러너가 스캔 대상 클라우드 프로바이더의 리소스에 읽기 접근 가능해야 함 |
 
 **Self-hosted 이점:**
 
@@ -600,26 +604,40 @@ Pulumi Insights는 **Business Critical** 에디션에서 Self-hosted 운영을 �
 |---|---|
 | **Data residency** | 모든 스캔 데이터와 정책 평가 결과를 사설 네트워크 내에 유지 |
 | **Private infrastructure access** | 공용 인터넷에서 접근 불가능한 완전 프라이빗 VPC 및 환경의 리소스 스캔 가능 |
-| **Compliance** | 클라우드 프로바이더 자격 증명이 네트워크를 떠나지 않음 |
+| **Compliance** | 클라우드 프로바이더 자격 증명이 네트워크를 떠나지 않음. 규제 요구사항(데이터 주권, 자격 증명 외부 전송 금지 등) 충족 |
 | **Flexible hosting** | Linux 및 macOS를 포함한 모든 하드웨어/환경에서 워크플로 러너 호스팅 가능 |
 
 **설정 절차:**
 
-Insights 스캔 설정:
+**사전 준비 - Customer-managed Workflow Runner Pool 생성:**
 
 | 단계 | 설명 |
 |---|---|
-| 1 | [customer-managed workflow runner pool 설정](https://www.pulumi.com/docs/deployments/deployments/runs/customer-managed-agents/) |
-| 2 | Pulumi Cloud의 **Management > Accounts**에서 해당 어카운트의 워크플로 러너 풀 선택 |
-| 3 | 스캔 트리거 후 정상 완료 확인 |
+| 1 | 워크플로 러너를 실행할 호스트 머신 준비 (Linux 또는 macOS) |
+| 2 | Pulumi Cloud에서 액세스 토큰 생성 (`pulumi login` 시 사용) |
+| 3 | `pulumi-workflow-agent` 바이너리 다운로드 및 설치 |
+| 4 | 에이전트 구성 파일(`pulumi-workflow-agent.yaml`) 작성. Pulumi Cloud 조직, 액세스 토큰, 워크플로 타입 설정 |
+| 5 | 에이전트 실행 후 Pulumi Cloud의 **Management > Workflow Runner Pools**에서 러너가 정상 등록되었는지 확인 |
 
-Policy 평가 설정:
+자세한 설정 가이드는 [Customer-managed agents 문서](https://www.pulumi.com/docs/deployments/deployments/runs/customer-managed-agents/)를 참조.
+
+**Insights 스캔 설정:**
 
 | 단계 | 설명 |
 |---|---|
-| 1 | customer-managed workflow runner pool 설정 |
-| 2 | Pulumi Cloud의 **Management > Policies > Policy Groups**에서 Audit Policy Group의 워크플로 러너 풀 선택 |
-| 3 | 스택에 대해 Policy 평가 실행 후 결과 확인 |
+| 1 | 위 절차에 따라 customer-managed workflow runner pool 설정 완료 |
+| 2 | Pulumi Cloud의 **Management > Accounts**에서 해당 Discovery 어카운트 선택 |
+| 3 | 어카운트 설정의 **Workflow Runner Pool** 드롭다운에서 생성한 풀 선택 |
+| 4 | 스캔 트리거 (수동 또는 예약). 스캔이 지정된 러너에서 실행되는지 로그로 확인 |
+
+**Policy 평가 설정:**
+
+| 단계 | 설명 |
+|---|---|
+| 1 | customer-managed workflow runner pool 설정 완료 |
+| 2 | Pulumi Cloud의 **Management > Policies > Policy Groups**에서 대상 Audit Policy Group 선택 |
+| 3 | Policy Group 설정의 **Workflow Runner Pool** 드롭다운에서 생성한 풀 선택 |
+| 4 | 스택에 대해 Policy 평가 실행. 평가가 지정된 러너에서 실행되는지 결과에서 확인 |
 
 **조직 기본 풀:**
 
@@ -630,10 +648,21 @@ Policy 평가 설정:
 기본적으로 워크플로 러너는 모든 워크플로 타입(deployments, Insights scans, policy evaluations)을 처리한다. `pulumi-workflow-agent.yaml`의 `enabled_workflow_types` 설정으로 특정 타입만 처리하도록 제한할 수 있다.
 
 ```yaml
+# pulumi-workflow-agent.yaml 예시
+organization: my-org
+accessToken: ${PULUMI_ACCESS_TOKEN}
 enabled_workflow_types:
   - insights_scan
   - policy_evaluation
 ```
+
+**제한 사항:**
+
+| 항목 | 설명 |
+|---|---|
+| **지원 워크플로** | Insights 스캔, Policy 평가. 일반 Deployments도 동일 러너에서 처리 가능 |
+| **런타임** | Linux, macOS 지원. Windows는 현재 미지원 |
+| **스캔 결과** | 스캔 결과는 Pulumi Cloud에 저장됨 (메타데이터만 전송, 원본 자격 증명은 전송되지 않음) |
 
 ---
 
