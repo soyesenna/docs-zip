@@ -15,8 +15,14 @@
 > - https://www.pulumi.com/docs/iac/comparisons/aws-cdk/
 > - https://www.pulumi.com/docs/iac/comparisons/cdktf/
 > - https://www.pulumi.com/docs/iac/comparisons/arm-templates/
+> - https://www.pulumi.com/docs/iac/comparisons/crossplane/
+> - https://www.pulumi.com/docs/iac/comparisons/opentofu/
+> - https://www.pulumi.com/docs/iac/comparisons/helm/
 > - https://www.pulumi.com/docs/iac/comparisons/k8s-yaml-dsls/
 > - https://www.pulumi.com/docs/iac/comparisons/serverless/
+> - https://www.pulumi.com/docs/iac/comparisons/chef-puppet/
+> - https://www.pulumi.com/docs/iac/comparisons/cloud-sdks/
+> - https://www.pulumi.com/docs/iac/comparisons/custom-solutions/
 
 이미 실행 중인 기존 인프라가 있는 경우에도 Pulumi를 채택할 수 있다. 신규 프로젝트는 처음부터 Pulumi로 시작하면 되지만, 이미 다른 도구로 프로비저닝된 인프라도 마이그레이션이 가능하다. Pulumi는 **공존(coexistence)**, **임포트(importing)**, **변환(conversion)** 세 가지 기본 접근 방식을 제공하며, 각 소스 도구마다 지원 수준이 다르다.
 
@@ -39,11 +45,9 @@
 | Azure ARM Templates / Bicep | O | O | O |
 | Kubernetes YAML / Helm | O | O | O |
 | Serverless Framework | O | O | O |
-| AWS CDK | O | O | O* |
-| CDKTF (deprecated) | O | O | O |
 | 기타 (수동 프로비저닝 등) | O | O | - |
 
-> **CDK 변환(O*) 각주**: AWS CDK는 `pulumi convert --from cdk` 같은 독립적 변환 도구를 제공하지 않는다. CDK 마이그레이션은 Neo(자동 변환), CDK Adapter(공존), 수동 import+재작성 세 가지 경로만 지원된다. 매트릭스의 O*는 Neo를 통한 자동 변환만 해당됨을 의미한다. Terraform(`--from terraform`), ARM(`--from arm`), Kubernetes(`--from kubernetes`)는 실제 `pulumi convert` 대상이 존재한다.
+> **참고**: AWS CDK와 CDKTF는 공식 마이그레이션 개요 페이지의 지원 매트릭스에 별도로 나열되지 않는다. CDK는 CloudFormation 기반이므로 CloudFormation 전략이 적용되며, CDKTF는 Terraform 기반이므로 Terraform 전략이 적용된다. 본 문서의 각 소스별 섹션에서 CDK와 CDKTF 마이그레이션 경로를 별도로 다룬다.
 
 ---
 
@@ -103,7 +107,9 @@ pulumi plugin install resource aws 7.12.0
 pulumi stack import --file /tmp/pulumi-state.json
 
 # 4. LLM 에이전트로 코드 변환 후 검증
-pulumi preview
+# 사용 가능한 LLM 에이전트: Neo, Claude Code, Cursor, Codex
+# 에이전트에게 .tf 파일, 대상 언어, pulumi-state.json을 컨텍스트로 제공
+pulumi preview --diff   # --diff 플래그로 상세 변경 내용 확인
 pulumi up
 ```
 
@@ -172,6 +178,75 @@ pulumi convert --from terraform --language python
 
 변환기가 지원하지 않는 기능은 `notImplemented` 호출로 TODO가 생성되며, 대부분의 프로젝트에서 90~95%의 코드가 자동 변환된다.
 
+### CDKTF 합성 관점에서의 통합
+
+CDKTF(CDK for Terraform)는 2025년 12월에 deprecated 되었으며, CDKTF로 프로비저닝한 인프라를 Pulumi로 마이그레이션하려면 다음 통합적 접근을 사용할 수 있다:
+
+1. **CDKTF를 HCL로 합성**: `cdktf synth --hcl` 명령으로 CDKTF 코드를 HCL로 합성한 후, 위의 `pulumi convert --from terraform` 경로를 사용하여 Pulumi 코드로 변환
+2. **상태 이관**: CDKTF의 내부 Terraform state를 `pulumi-terraform-migrate`로 Pulumi state로 변환 (Terraform state 이관 절차와 동일)
+3. **CDKTF 구성의 근본적 재구조화가 필요한 경우**: 마이그레이션을 먼저 완료한 후 Pulumi 코드를 리팩터링하는 방식이 권장됨
+
+CDKTF의 Terraform state는 표준 Terraform state와 동일한 형식이므로, Terraform 마이그레이션 도구와 절차가 그대로 적용된다.
+
+### Conversion Examples (변환 예제)
+
+다음은 일반적인 HCL 구문이 Pulumi 코드로 어떻게 변환되는지 보여주는 예제이다.
+
+**Terraform HCL 변수 및 출력:**
+
+```hcl
+variable "vpc_cidr" {
+  type    = string
+  default = "10.0.0.0/16"
+}
+
+output "vpc_id" {
+  value = aws_vpc.main.id
+}
+```
+
+**Pulumi TypeScript 변환:**
+
+```typescript
+import * as pulumi from "@pulumi/pulumi";
+import * as aws from "@pulumi/aws";
+
+const config = new pulumi.Config();
+const vpcCidr = config.get("vpcCidr") || "10.0.0.0/16";
+
+const vpc = new aws.ec2.Vpc("main", {
+    cidrBlock: vpcCidr,
+});
+
+export const vpcId = vpc.id;
+```
+
+**Terraform HCL data source:**
+
+```hcl
+data "aws_ami" "ubuntu" {
+  most_recent = true
+  owners      = ["099720109477"]
+  filter {
+    name   = "name"
+    values = ["ubuntu/images/hvm-ssd/ubuntu-jammy-*"]
+  }
+}
+```
+
+**Pulumi TypeScript 변환:**
+
+```typescript
+const ubuntuAmi = aws.ec2.getAmiOutput({
+    mostRecent: true,
+    owners: ["099720109477"],
+    filters: [{
+        name: "name",
+        values: ["ubuntu/images/hvm-ssd/ubuntu-jammy-*"],
+    }],
+});
+```
+
 ### 기존 리소스 일괄 임포트
 
 ```bash
@@ -189,6 +264,29 @@ pulumi package add terraform-module terraform-aws-modules/vpc/aws 5.19.0 vpc
 ```
 
 > 출처: https://www.pulumi.com/docs/iac/comparisons/terraform/
+
+### Terraform 사용자를 위한 단계별 튜토리얼 (get-started/terraform)
+
+> 출처: https://www.pulumi.com/docs/iac/get-started/terraform/
+
+Pulumi는 기존 Terraform 사용자가 Pulumi를 점진적으로 도입할 수 있도록 단계별 튜토리얼을 제공한다. 이 튜토리얼은 기존 Terraform 인프라를 대체하지 않고 Pulumi를 함께 사용하는 **공존 패턴**에 초점을 맞춘다.
+
+**학습 내용:**
+
+| 단계 | 제목 | 내용 |
+|------|------|------|
+| 1 | Reference Terraform State | Pulumi에서 Terraform state 파일 참조 |
+| 2 | Import Terraform Modules | 기존 Terraform Module을 Pulumi에서 직접 사용 |
+| 3 | Use Terraform Providers | Terraform Provider를 Pulumi에서 사용 |
+| 4 | Convert HCL Code | HCL 코드를 Pulumi 코드로 변환 (`pulumi convert`) |
+| 5 | Orchestrate Together | Terraform과 Pulumi 배포를 통합 관리 |
+| 6 | Store Terraform State | Pulumi Cloud를 Terraform state backend로 사용 |
+
+**전제조건**: 기본 Terraform 지식 및 기존 Terraform 인프라, AWS 계정, Docker (컨테이너 예제용), Git
+
+**예상 소요 시간**: 30~45분 (전체 섹션 완료 기준)
+
+튜토리얼은 Terraform으로 관리되는 ECS 인프라와 Pulumi로 관리되는 컨테이너화된 웹 애플리케이션을 통합하는 과정을 통해 공존, Provider 공유, 모듈 재사용, 선택적 변환, 통합 오케스트레이션 패턴을 실습한다.
 
 ### Pulumi Cloud를 Terraform State Backend로 사용 (Store Terraform State)
 
@@ -265,6 +363,8 @@ pulumi.export("vpc_id", my_vpc.vpc_id)
 | **공존** | `aws.cloudformation.getStack`으로 스택 출력값 참조 | 점진적 전환 |
 | **CloudFormation Stack 리소스 사용** | `aws.cloudformation.Stack`으로 기존 템플릿을 Pulumi에서 배포 | 중간 단계 |
 | **임포트 + 코드 재작성** | 리소스를 개별적으로 임포트하고 코드로 재작성 | 전면 전환 |
+
+AWS 리소스 임포트 시 필요한 ID 찾기 및 CloudFormation 특수 케이스(CDK 생성 스택 포함)에 대한 자세한 지침은 [AWS import IDs and special cases](https://www.pulumi.com/docs/iac/guides/migration/finding-aws-import-ids/)를 참조하라.
 
 ### CloudFormation 스택 출력값 참조 (공존)
 
@@ -407,8 +507,15 @@ pulumi.export('vpc_id', vpc.id)
 | 재사용 | 제한적 (복사/붙여넣기) | 함수, 클래스, 모듈 |
 | 논리/반복 | 복잡한 표현식 | `if` / `for` / `switch` |
 | 타입 안전성 | 없음 | 컴파일 타임 타입 검사 |
+| 툴링 | 기본 검증 | 전체 IDE 및 IntelliSense |
 | 테스팅 | 수동 또는 없음 | xUnit, NUnit, pytest 등 |
+| 코드 공유 | 어려움 | NuGet 패키지 및 프로젝트 |
+| 디버깅 | 배포 후 문제 해결 | IDE에서 단계별 디버깅 |
+| 리팩터링 | 번거로운 수동 편집 | IDE 지원 리팩터링 |
+| 모듈성 | 중첩 템플릿 | 실제 모듈 및 컴포넌트 |
 | 상태 파일 | 없음 (Azure가 관리) | 암호화된 상태 파일 |
+
+> **Bicep 관련 참고**: Bicep은 ARM Templates의 일부 단점을 해결하지만, 여전히 Azure 전용 배포 모델과 ARM 엔진의 근본적 한계에 묶여 있다. Pulumi는 Azure 인프라를 선호하는 언어로 관리할 수 있게 하며, CI/CD, 재사용 가능한 컴포넌트, 테스트 가능성을 기본 지원한다. 특히 .NET 팀에게는 Pulumi의 C# 지원이 정적 JSON보다 우수한 개발 경험을 제공한다.
 
 ### ARM 배포 출력값 참조 (공존)
 
@@ -479,19 +586,38 @@ const storagecreatedbyarm = new azure_native.storage.StorageAccount("storagecrea
 
 > 출처: https://www.pulumi.com/docs/iac/guides/migration/migrating-to-pulumi/from-cdk/
 
-### 마이그레이션 경로 선택
+### 세 가지 마이그레이션 전략
 
-| 경로 | 방식 | 추천 대상 |
+공식 문서는 CDK 마이그레이션에 대해 다음 세 가지 전략을 제시한다:
+
+| 전략 | 방식 | 추천 대상 |
 |------|------|-----------|
-| **Pulumi Neo (권장)** | CDK 코드 자동 변환 + CloudFormation 리소스 임포트 | 대부분의 경우 |
-| **Pulumi CDK Adapter** | 기존 CDK Construct를 Pulumi 프로그램 내에서 직접 사용 | 최소 코드 변경 |
-| **수동 마이그레이션** | `pulumi import`로 리소스를 개별 편입 후 코드 재작성 | 전면 전환 |
+| **Neo (권장)** | CDK 코드 자동 변환 + CloudFormation 리소스 임포트 + `pulumi preview` 검증 | 대부분의 경우 |
+| **공존 (Coexist by referencing stack outputs)** | CloudFormation 스택 출력값 참조 | 점진적 전환 |
+| **변환 (Convert)** | Pulumi CDK Adapter 사용 또는 기존 리소스 임포트 후 Pulumi 프로그램으로 마이그레이션 | 전면 전환 |
 
-### Pulumi CDK Adapter를 사용한 공존
+### Neo를 사용한 자동 마이그레이션 (권장)
 
-Pulumi CDK Adapter(`pulumi-cdk`)를 사용하면 기존 CDK Construct를 Pulumi 프로그램 내부에 직접 포함할 수 있다. CDK Construct의 출력값은 다른 Pulumi 리소스의 입력으로 사용할 수 있고, 그 반대도 가능하다.
+대부분의 팀에 Neo가 가장 빠르고 안전한 CDK 마이그레이션 경로이다. Neo는 CDK 코드 변환, CloudFormation 리소스 임포트, 변경 없음 검증을 자동으로 수행하여 수동 작업과 마이그레이션 위험을 제거한다.
 
-### CDK에서 Pulumi로의 전면 전환
+자세한 내용은 다음을 참조하라:
+- [Migrating existing AWS CDK applications to Pulumi](https://www.pulumi.com/docs/iac/guides/migration/migrating-to-pulumi/from-cdk/migrating-existing-cdk/)
+- [Using Pulumi with AWS CDK](https://www.pulumi.com/docs/iac/guides/migration/migrating-to-pulumi/from-cdk/using-pulumi-with-cdk/)
+
+Neo가 지원하지 않는 특정 사용 사례의 경우 두 가지 대안 경로가 있다.
+
+### 공존: 스택 출력값 참조
+
+CDK는 CloudFormation 스택으로 배포되므로, CloudFormation 마이그레이션 가이드의 `aws.cloudformation.getStackOutput` 방식으로 CDK 스택의 출력값을 참조할 수 있다. 이를 통해 기존 CDK 인프라를 수정하지 않고 새 Pulumi 인프라에서 참조만 수행한다.
+
+### 변환: Pulumi CDK Adapter 또는 수동 마이그레이션
+
+| 변환 방식 | 설명 |
+|-----------|------|
+| **Pulumi CDK Adapter** (`pulumi-cdk`) | 기존 CDK Construct를 Pulumi 프로그램 내에서 직접 사용. CDK 라이브러리와 패턴을 유지하면서 Pulumi의 엔진, 상태, 정책 기능 활용. 최소 코드 변경으로 Pulumi의 이점 획득 |
+| **수동 마이그레이션** | `pulumi import`로 리소스를 개별 편입 후 코드 재작성. 전면 제어가 필요한 경우나 Neo가 아직 지원하지 않는 엣지 케이스에 적합 |
+
+수동 마이그레이션 시 전면 전환 절차:
 
 1. CDK Construct를 점진적으로 Pulumi 네이티브 코드로 교체
 2. AWS CDK의 CloudFormation 기반 실행 모델을 Pulumi의 직접 실행 모델로 전환
@@ -882,7 +1008,40 @@ pulumi convert --from kubernetes --language typescript --out <output_dir>
 
 ### Serverless Framework와 CloudFormation의 관계
 
-Serverless Framework는 `sls deploy` 실행 시 CloudFormation 템플릿을 생성하여 `{service}-{stage}` 이름 패턴의 CloudFormation 스택으로 배포한다. 따라서 CloudFormation 마이그레이션 전략이 그대로 적용된다.
+Serverless Framework는 `sls deploy` 실행 시 CloudFormation 템플릿을 생성하여 `{service}-{stage}` 이름 패턴의 CloudFormation 스택으로 배포한다. 스택에는 다음 리소스가 포함된다:
+
+- Lambda 함수 및 실행 역할
+- API Gateway REST API 또는 HTTP API
+- 이벤트 소스 매핑 (SQS, DynamoDB Streams, Kinesis)
+- CloudWatch 로그 그룹
+- `resources:` 섹션에 정의된 추가 리소스 (DynamoDB 테이블, SQS 큐, S3 버킷 등)
+
+CloudFormation 스택 이름을 확인하려면:
+
+```bash
+# Serverless Framework CLI 사용
+sls info --stage dev
+
+# 또는 AWS CLI 직접 사용
+aws cloudformation list-stacks --stack-status-filter CREATE_COMPLETE UPDATE_COMPLETE \
+    --query "StackSummaries[?starts_with(StackName, 'my-api-')].StackName"
+```
+
+따라서 CloudFormation 마이그레이션 전략이 그대로 적용된다.
+
+### Key differences and benefits (주요 차이점과 이점)
+
+| 항목 | Serverless Framework | Pulumi |
+|------|---------------------|--------|
+| 언어 | YAML (`serverless.yml`) | TypeScript, Python, Go, C#, Java, YAML |
+| 범용 프로그래밍 | 제한적 (커스텀 플러그인 필요) | 함수, 클래스, 루프, 조건문 자유 사용 |
+| 클라우드 지원 | AWS 중심 (다른 클라우드는 플러그인) | AWS, Azure, GCP, Kubernetes 등 모든 클라우드 |
+| 테스팅 | 수동 또는 없음 | 단위 테스트, 통합 테스트 프레임워크 |
+| 구성 관리 | `serverless.yml`의 `provider.environment` | Pulumi ESC (Environment, Secrets, and Configuration) |
+| 컴포넌트 재사용 | 플러그인 시스템 | 함수, 클래스, 패키지를 통한 재사용 |
+| 상태 관리 | CloudFormation이 관리 | 암호화된 상태 파일 (Pulumi Cloud 또는 셀프 매니지드) |
+
+> **Pulumi ESC**: Pulumi의 ESC(Environment, Secrets, and Configuration)를 사용하면 클라우드 자격 증명, 시크릿, 구성 값을 중앙에서 관리하고, 여러 스택과 프로젝트에서 안전하게 공유할 수 있다. Serverless Framework의 `provider.environment`와 `serverless.yml` 내 변수 참조보다 더 강력한 구성 관리를 제공한다.
 
 ### 마이그레이션 경로
 
@@ -890,7 +1049,7 @@ Serverless Framework는 `sls deploy` 실행 시 CloudFormation 템플릿을 생�
 |------|------|-----------|
 | **Pulumi Neo (권장)** | CloudFormation 스택 자동 변환 | 대부분의 경우 |
 | **공존** | `aws.cloudformation.getStack`으로 스택 출력값 참조 | 점진적 전환 |
-| **임포트** | `pulumi import` | 기존 리소스 편입 |
+| **임포트** | `pulumi import` 또는 코드 내 `import` 리소스 옵션 | 기존 리소스 편입 |
 | **재작성** | `serverless.yml`을 Pulumi 코드로 직접 변환 | 전면 전환 |
 
 ### Serverless Framework 리소스 매핑 표
@@ -1172,7 +1331,7 @@ aws cloudformation list-stack-resources --stack-name my-api-dev \
     --output table
 ```
 
-2. **Pulumi로 임포트**:
+2. **Pulumi로 임포트 (CLI)**:
 
 ```bash
 # Lambda 함수 임포트
@@ -1183,6 +1342,38 @@ pulumi import aws:dynamodb/table:Table orders-table my-api-orders-dev
 
 # API Gateway v2 임포트
 pulumi import aws:apigatewayv2/api:Api api abc123def
+```
+
+**코드 내 `import` 리소스 옵션 사용 예제:**
+
+TypeScript:
+
+```typescript
+import * as aws from "@pulumi/aws";
+
+// import 옵션으로 기존 Lambda 함수 편입
+const existingFn = new aws.lambda.Function("create-order", {
+    runtime: aws.lambda.Runtime.NodeJS20dX,
+    handler: "src/handlers/createOrder.handler",
+    role: existingRoleArn,
+    code: new pulumi.asset.FileArchive("./app"),
+}, { import: "my-api-dev-createOrder" });
+```
+
+Python:
+
+```python
+import pulumi
+import pulumi_aws as aws
+
+# import 옵션으로 기존 DynamoDB 테이블 편입
+orders_table = aws.dynamodb.Table("orders-table",
+    name="my-api-orders-dev",
+    billing_mode="PAY_PER_REQUEST",
+    hash_key="id",
+    attributes=[aws.dynamodb.TableAttributeArgs(name="id", type="S")],
+    opts=pulumi.ResourceOptions(import_="my-api-orders-dev")
+)
 ```
 
 3. **CloudFormation에서 리소스 분리**: `DeletionPolicy: Retain` 설정 후 스택 삭제

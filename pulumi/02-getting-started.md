@@ -11,6 +11,11 @@
 > https://www.pulumi.com/docs/iac/get-started/gcp/configure/
 > https://www.pulumi.com/docs/iac/get-started/kubernetes/
 > https://www.pulumi.com/docs/iac/get-started/kubernetes/configure/
+> https://www.pulumi.com/docs/iac/get-started/azure/modify-program/
+> https://www.pulumi.com/docs/iac/get-started/gcp/modify-program/
+> https://www.pulumi.com/docs/iac/get-started/kubernetes/modify-program/
+> https://www.pulumi.com/docs/iac/get-started/azure/create-component/
+> https://www.pulumi.com/docs/iac/get-started/aws/next-steps/
 > https://www.pulumi.com/docs/iac/get-started/kubernetes/create-project/
 
 Pulumi는 모던 인프라스트럭처 as Code(IaC) 플랫폼으로, 익숙한 프로그래밍 언어와 도구를 사용해 클라우드에서 실행하는 모든 것을 자동화, 보안, 관리할 수 있다. Pulumi IaC는 무료 오픈소스이며, Pulumi Cloud와 선택적으로 연동하여 인프라 관리를 안전하고 간편하게 만들 수 있다.
@@ -382,6 +387,415 @@ export const url = pulumi.interpolate`http://${website.websiteEndpoint}`;
 pulumi.export('url', pulumi.Output.concat('http://', website.website_endpoint))
 ```
 
+#### Azure Storage 정적 웹사이트 변환 예시
+
+Azure의 경우 Storage Account를 정적 웹사이트로 변환하려면 두 가지 추가 리소스가 필요하다.
+
+| 리소스 | 역할 |
+|---|---|
+| `StorageAccountStaticWebsite` | Storage Account에서 정적 웹사이트 지원 활성화 (`indexDocument` 설정) |
+| `Blob` | 웹사이트 콘텐츠를 스토리지 컨테이너에 업로드 |
+
+프로젝트 디렉터리에 `index.html` 파일을 생성한 후, Storage Account 생성 코드 바로 뒤에 정적 웹사이트 지원을 추가한다.
+
+**TypeScript 예시 - StorageAccountStaticWebsite 추가**:
+
+```typescript
+// 정적 웹사이트 지원 활성화
+const staticWebsite = new storage.StorageAccountStaticWebsite("staticWebsite", {
+    accountName: storageAccount.name,
+    resourceGroupName: resourceGroup.name,
+    indexDocument: "index.html",
+});
+
+// index.html 파일 업로드
+const indexHtml = new storage.Blob("index.html", {
+    resourceGroupName: resourceGroup.name,
+    accountName: storageAccount.name,
+    containerName: staticWebsite.containerName,
+    source: new pulumi.asset.FileAsset("index.html"),
+    contentType: "text/html",
+});
+
+// 웹사이트 엔드포인트 내보내기
+export const staticEndpoint = storageAccount.primaryEndpoints.web;
+```
+
+**Python 예시 - StorageAccountStaticWebsite 추가**:
+
+```python
+# 정적 웹사이트 지원 활성화
+static_website = storage.StorageAccountStaticWebsite(
+    "staticWebsite",
+    account_name=account.name,
+    resource_group_name=resource_group.name,
+    index_document="index.html",
+)
+
+# index.html 파일 업로드
+index_html = storage.Blob(
+    "index.html",
+    resource_group_name=resource_group.name,
+    account_name=account.name,
+    container_name=static_website.container_name,
+    source=pulumi.FileAsset("index.html"),
+    content_type="text/html",
+)
+
+# 웹사이트 엔드포인트 내보내기
+pulumi.export("staticEndpoint", account.primary_endpoints.web)
+```
+
+**Go 예시 - StorageAccountStaticWebsite 추가**:
+
+```go
+// 정적 웹사이트 지원 활성화
+staticWebsite, err := storage.NewStorageAccountStaticWebsite(ctx, "staticWebsite", &storage.StorageAccountStaticWebsiteArgs{
+    AccountName:       account.Name,
+    ResourceGroupName: resourceGroup.Name,
+    IndexDocument:     pulumi.String("index.html"),
+})
+if err != nil {
+    return err
+}
+
+// index.html 파일 업로드
+_, err = storage.NewBlob(ctx, "index.html", &storage.BlobArgs{
+    ResourceGroupName: resourceGroup.Name,
+    AccountName:       account.Name,
+    ContainerName:     staticWebsite.ContainerName,
+    Source:            pulumi.NewFileAsset("index.html"),
+    ContentType:       pulumi.String("text/html"),
+})
+if err != nil {
+    return err
+}
+
+// 웹사이트 엔드포인트 내보내기
+ctx.Export("staticEndpoint", account.PrimaryEndpoints.Web())
+```
+
+**C# 예시 - StorageAccountStaticWebsite 추가**:
+
+```csharp
+// 정적 웹사이트 지원 활성화
+var staticWebsite = new StorageAccountStaticWebsite("staticWebsite", new StorageAccountStaticWebsiteArgs
+{
+    AccountName = storageAccount.Name,
+    ResourceGroupName = resourceGroup.Name,
+    IndexDocument = "index.html",
+});
+
+// index.html 파일 업로드
+var indexHtml = new Blob("index.html", new BlobArgs
+{
+    ResourceGroupName = resourceGroup.Name,
+    AccountName = storageAccount.Name,
+    ContainerName = staticWebsite.ContainerName,
+    Source = new FileAsset("./index.html"),
+    ContentType = "text/html",
+});
+```
+
+**Java 예시 - StorageAccountStaticWebsite 추가**:
+
+```java
+// 정적 웹사이트 지원 활성화
+var staticWebsite = new StorageAccountStaticWebsite("staticWebsite",
+    StorageAccountStaticWebsiteArgs.builder()
+        .accountName(storageAccount.name())
+        .resourceGroupName(resourceGroup.name())
+        .indexDocument("index.html")
+        .build());
+
+// index.html 파일 업로드
+var index_html = new Blob("index.html", BlobArgs.builder()
+    .resourceGroupName(resourceGroup.name())
+    .accountName(storageAccount.name())
+    .containerName(staticWebsite.containerName())
+    .source(new FileAsset("index.html"))
+    .contentType("text/html")
+    .build());
+```
+
+**YAML 예시 - StorageAccountStaticWebsite 추가**:
+
+```yaml
+# 정적 웹사이트 지원 활성화
+staticWebsite:
+  type: azure-native:storage:StorageAccountStaticWebsite
+  properties:
+    accountName: ${sa.name}
+    resourceGroupName: ${resourceGroup.name}
+    indexDocument: index.html
+
+# index.html 파일 업로드
+index-html:
+  type: azure-native:storage:Blob
+  properties:
+    resourceGroupName: ${resourceGroup.name}
+    accountName: ${sa.name}
+    containerName: ${staticWebsite.containerName}
+    source:
+      fn::fileAsset: ./index.html
+    contentType: text/html
+    blobName: index.html
+    type: Block
+```
+
+Azure Storage Account의 엔드포인트는 배포 시점에 Azure가 할당하는 출력 속성이다. `pulumi up` 실행 후 `staticEndpoint` 출력값으로 웹사이트 URL을 확인할 수 있다.
+
+#### Google Cloud Storage 정적 웹사이트 변환 예시
+
+Google Cloud의 경우 버킷을 정적 웹사이트로 변환하려면 두 가지 추가 리소스가 필요하다.
+
+| 리소스 | 역할 |
+|---|---|
+| `BucketObject` | 웹사이트 콘텐츠를 버킷에 업로드 |
+| `BucketIAMBinding` | 버킷 콘텐츠를 공개 접근 가능하게 설정 (`allUsers` 권한 부여) |
+
+프로젝트 디렉터리에 `index.html` 파일을 생성한 후, 버킷 정의 바로 뒤에 `BucketObject`와 `BucketIAMBinding`을 추가한다. `BucketObject`는 Pulumi의 **FileAsset**을 사용하여 로컬 파일을 버킷에 업로드한다.
+
+**TypeScript 예시**:
+
+```typescript
+// index.html 파일 업로드
+const bucketObject = new gcp.storage.BucketObject("index.html", {
+    bucket: bucket.name,
+    name: "index.html",
+    source: new pulumi.asset.FileAsset("index.html"),
+});
+
+// 버킷 공개 접근 허용
+const bucketBinding = new gcp.storage.BucketIAMBinding("my-bucket-binding", {
+    bucket: bucket.name,
+    role: "roles/storage.objectViewer",
+    members: ["allUsers"],
+});
+```
+
+**Python 예시**:
+
+```python
+# index.html 파일 업로드
+bucket_object = storage.BucketObject(
+    "index.html",
+    bucket=bucket.name,
+    name="index.html",
+    source=pulumi.FileAsset("index.html"),
+)
+
+# 버킷 공개 접근 허용
+bucket_iam_binding = storage.BucketIAMBinding(
+    "my-bucket-binding",
+    bucket=bucket.name,
+    role="roles/storage.objectViewer",
+    members=["allUsers"],
+)
+```
+
+**Go 예시**:
+
+```go
+// index.html 파일 업로드
+_, err = storage.NewBucketObject(ctx, "index.html", &storage.BucketObjectArgs{
+    Bucket: bucket.Name,
+    Name:   pulumi.String("index.html"),
+    Source: pulumi.NewFileAsset("index.html"),
+})
+if err != nil {
+    return err
+}
+
+// 버킷 공개 접근 허용
+_, err = storage.NewBucketIAMBinding(ctx, "my-bucket-binding", &storage.BucketIAMBindingArgs{
+    Bucket:  bucket.Name,
+    Role:    pulumi.String("roles/storage.objectViewer"),
+    Members: pulumi.StringArray{pulumi.String("allUsers")},
+})
+if err != nil {
+    return err
+}
+```
+
+**C# 예시**:
+
+```csharp
+// index.html 파일 업로드
+var bucketObject = new BucketObject("index.html", new BucketObjectArgs
+{
+    Bucket = bucket.Name,
+    Name = "index.html",
+    Source = new FileAsset("./index.html"),
+});
+
+// 버킷 공개 접근 허용
+var bucketBinding = new BucketIAMBinding("my-bucket-binding", new BucketIAMBindingArgs
+{
+    Bucket = bucket.Name,
+    Role = "roles/storage.objectViewer",
+    Members = new[] { "allUsers" },
+});
+```
+
+**Java 예시**:
+
+```java
+// index.html 파일 업로드
+var bucketObject = new BucketObject("index.html", BucketObjectArgs.builder()
+    .bucket(bucket.name())
+    .name("index.html")
+    .source(new FileAsset("index.html"))
+    .build());
+
+// 버킷 공개 접근 허용
+var bucketBinding = new BucketIAMBinding("my-bucket-binding", BucketIAMBindingArgs.builder()
+    .bucket(bucket.name())
+    .role("roles/storage.objectViewer")
+    .members("allUsers")
+    .build());
+```
+
+**YAML 예시**:
+
+```yaml
+# index.html 파일 업로드
+index-html:
+  type: gcp:storage:BucketObject
+  properties:
+    bucket: ${my-bucket}
+    name: index.html
+    source:
+      fn::fileAsset: ./index.html
+
+# 버킷 공개 접근 허용
+my-bucket-binding:
+  type: gcp:storage:BucketIAMBinding
+  properties:
+    bucket: ${my-bucket.name}
+    role: "roles/storage.objectViewer"
+    members:
+      - allUsers
+```
+
+그 후 버킷 정의를 수정하여 웹사이트 속성을 구성한다. `website`의 `mainPageSuffix`를 `index.html`로 설정한다. 파일 업로드 시 권한 오류가 발생하면 IAM 바인딩이 아직 전파 중일 수 있으며, 컴포넌트 예시에서 명시적 종속성을 추가하여 순서를 보장할 수 있다.
+
+**웹사이트 URL 내보내기**:
+
+```typescript
+// TypeScript
+export const url = pulumi.concat("http://storage.googleapis.com/", bucket.name, "/", bucketObject.name);
+```
+
+```python
+# Python
+pulumi.export("url", pulumi.Output.concat("http://storage.googleapis.com/", bucket.name, "/", bucket_object.name))
+```
+
+```go
+// Go
+ctx.Export("url", pulumi.Sprintf("http://storage.googleapis.com/%s/%s", bucket.Name, bucketObjectName))
+```
+
+#### Kubernetes 배포 수정 예시
+
+Kubernetes의 경우 Minikube 환경을 지원하고 Service 리소스를 추가하여 배포에 접근할 수 있도록 수정한다.
+
+**TypeScript 예시**:
+
+```typescript
+import * as pulumi from "@pulumi/pulumi";
+import * as k8s from "@pulumi/kubernetes";
+
+// Minikube 환경 감지 (minikube tunnel 실행 시 false로 설정)
+const config = new pulumi.Config();
+const isMinikube = config.requireBoolean("isMinikube");
+
+const appName = "nginx";
+const appLabels = { app: appName };
+const deployment = new k8s.apps.v1.Deployment(appName, {
+    spec: {
+        selector: { matchLabels: appLabels },
+        replicas: 1,
+        template: {
+            metadata: { labels: appLabels },
+            spec: { containers: [{ name: appName, image: "nginx" }] },
+        },
+    },
+});
+
+// Service로 배포에 IP 할당
+const frontend = new k8s.core.v1.Service(appName, {
+    metadata: { labels: deployment.spec.template.metadata.labels },
+    spec: {
+        type: isMinikube ? "ClusterIP" : "LoadBalancer",
+        ports: [{ port: 80, targetPort: 80, protocol: "TCP" }],
+        selector: appLabels,
+    },
+});
+
+// 공인 IP 주소 내보내기
+export const ip = isMinikube
+    ? frontend.spec.clusterIP
+    : frontend.status.loadBalancer.apply(
+          (lb) => lb.ingress[0].ip || lb.ingress[0].hostname
+      );
+```
+
+**Python 예시**:
+
+```python
+import pulumi
+from pulumi_kubernetes.apps.v1 import Deployment
+from pulumi_kubernetes.core.v1 import Service
+
+config = pulumi.Config()
+is_minikube = config.require_bool("isMinikube")
+
+app_name = "nginx"
+app_labels = {"app": app_name}
+
+deployment = Deployment(
+    app_name,
+    spec={
+        "selector": {"match_labels": app_labels},
+        "replicas": 1,
+        "template": {
+            "metadata": {"labels": app_labels},
+            "spec": {"containers": [{"name": app_name, "image": "nginx"}]},
+        },
+    },
+)
+
+frontend = Service(
+    app_name,
+    metadata={
+        "labels": deployment.spec["template"]["metadata"]["labels"],
+    },
+    spec={
+        "type": "ClusterIP" if is_minikube else "LoadBalancer",
+        "ports": [{"port": 80, "target_port": 80, "protocol": "TCP"}],
+        "selector": app_labels,
+    },
+)
+
+if is_minikube:
+    result = frontend.spec.apply(lambda v: v["cluster_ip"] if "cluster_ip" in v else None)
+else:
+    ingress = frontend.status.load_balancer.apply(lambda v: v["ingress"][0] if "ingress" in v else "output<string>")
+    result = ingress.apply(lambda v: v["ip"] if v and "ip" in v else (v["hostname"] if v and "hostname" in v else "output<string>"))
+
+pulumi.export("ip", result)
+```
+
+Minikube를 사용하는 경우 `isMinikube` Config 값을 `true`로 설정하여 ClusterIP를 사용하도록 구성한다.
+
+```bash
+pulumi config set isMinikube true
+```
+
+Minikube에서 `minikube tunnel`을 실행한 경우 LoadBalancer를 사용할 수 있으므로 `isMinikube`를 `false`로 설정한다.
+
 ### 4단계: pulumi destroy
 
 모든 리소스를 삭제하려면 다음 명령을 사용한다.
@@ -601,30 +1015,31 @@ pulumi.export("name", deployment.metadata["name"])
 package main
 
 import (
-    "github.com/pulumi/pulumi-kubernetes/sdk/v4/go/kubernetes/apps/v1"
-    "github.com/pulumi/pulumi-kubernetes/sdk/v4/go/kubernetes/core/v1"
+    appsv1 "github.com/pulumi/pulumi-kubernetes/sdk/v4/go/kubernetes/apps/v1"
+    corev1 "github.com/pulumi/pulumi-kubernetes/sdk/v4/go/kubernetes/core/v1"
     metav1 "github.com/pulumi/pulumi-kubernetes/sdk/v4/go/kubernetes/meta/v1"
     "github.com/pulumi/pulumi/sdk/v3/go/pulumi"
 )
 
 func main() {
     pulumi.Run(func(ctx *pulumi.Context) error {
+
         appLabels := pulumi.StringMap{
             "app": pulumi.String("nginx"),
         }
-        _, err := v1.NewDeployment(ctx, "nginx", &v1.DeploymentArgs{
-            Spec: &v1.DeploymentSpecArgs{
+        deployment, err := appsv1.NewDeployment(ctx, "app-dep", &appsv1.DeploymentArgs{
+            Spec: appsv1.DeploymentSpecArgs{
                 Selector: &metav1.LabelSelectorArgs{
                     MatchLabels: appLabels,
                 },
                 Replicas: pulumi.Int(1),
-                Template: &core.PodTemplateSpecArgs{
+                Template: &corev1.PodTemplateSpecArgs{
                     Metadata: &metav1.ObjectMetaArgs{
                         Labels: appLabels,
                     },
-                    Spec: &core.PodSpecArgs{
-                        Containers: core.ContainerArray{
-                            &core.ContainerArgs{
+                    Spec: &corev1.PodSpecArgs{
+                        Containers: corev1.ContainerArray{
+                            corev1.ContainerArgs{
                                 Name:  pulumi.String("nginx"),
                                 Image: pulumi.String("nginx"),
                             },
@@ -636,6 +1051,9 @@ func main() {
         if err != nil {
             return err
         }
+
+        ctx.Export("name", deployment.Metadata.Name())
+
         return nil
     })
 }
@@ -971,6 +1389,355 @@ class AwsS3Website(pulumi.ComponentResource):
 
 > YAML은 컴포넌트를 작성하기 위한 언어 기능이 부족하므로 컴포넌트 섹션은 건너뛸 수 있다.
 
+### Azure 정적 웹사이트 컴포넌트 예시
+
+Azure의 경우 AWS의 `AwsS3Website`와 별개로 `AzureStaticWebsite` 컴포넌트를 정의하여 ResourceGroup, StorageAccount, StaticWebsite, Blob 리소스를 캡슐화할 수 있다.
+
+#### TypeScript 컴포넌트 정의
+
+```typescript
+// website.ts
+import * as azure from "@pulumi/azure-native";
+import * as pulumi from "@pulumi/pulumi";
+
+export interface AzureStaticWebsiteArgs {
+    files: string[]; // a list of files to serve.
+}
+
+export class AzureStaticWebsite extends pulumi.ComponentResource {
+    public readonly url: pulumi.Output<string>; // the website url.
+
+    constructor(name: string, args: AzureStaticWebsiteArgs, opts?: pulumi.ComponentResourceOptions) {
+        super("quickstart:index:AzureStaticWebsite", name, args, opts);
+
+        // ResourceGroup 생성
+        const resourceGroup = new azure.resources.ResourceGroup("resourceGroup", {}, { parent: this });
+
+        // Storage Account 생성
+        const storageAccount = new azure.storage.StorageAccount("sa", {
+            resourceGroupName: resourceGroup.name,
+            sku: { name: azure.storage.SkuName.Standard_LRS },
+            kind: azure.storage.Kind.StorageV2,
+        }, { parent: this });
+
+        // 정적 웹사이트 지원 활성화
+        const staticWebsite = new azure.storage.StorageAccountStaticWebsite("staticWebsite", {
+            accountName: storageAccount.name,
+            resourceGroupName: resourceGroup.name,
+            indexDocument: "index.html",
+        }, { parent: this });
+
+        // files 배열의 각 파일을 Blob으로 업로드
+        for (const file of args.files) {
+            new azure.storage.Blob(file, {
+                resourceGroupName: resourceGroup.name,
+                accountName: storageAccount.name,
+                containerName: staticWebsite.containerName,
+                source: new pulumi.asset.FileAsset(file),
+                contentType: "text/html",
+            }, { parent: this });
+        }
+
+        // URL 출력
+        this.url = storageAccount.primaryEndpoints.apply(pe => pe.web);
+        this.registerOutputs({ url: this.url });
+    }
+}
+```
+
+#### Python 컴포넌트 정의
+
+```python
+# website.py
+import pulumi
+from pulumi_azure_native import storage, resources
+from typing import List
+
+class AzureStaticWebsite(pulumi.ComponentResource):
+    def __init__(self, name: str, files: List[str] = None, opts=None):
+        super().__init__('quickstart:index:AzureStaticWebsite', name, {'files': files}, opts)
+
+        # ResourceGroup 생성
+        resource_group = resources.ResourceGroup("resource_group",
+            opts=pulumi.ResourceOptions(parent=self),
+        )
+
+        # Storage Account 생성
+        storage_account = storage.StorageAccount(
+            "sa",
+            resource_group_name=resource_group.name,
+            sku={"name": storage.SkuName.STANDARD_LRS},
+            kind=storage.Kind.STORAGE_V2,
+            opts=pulumi.ResourceOptions(parent=self),
+        )
+
+        # 정적 웹사이트 지원 활성화
+        static_website = storage.StorageAccountStaticWebsite(
+            "staticWebsite",
+            account_name=storage_account.name,
+            resource_group_name=resource_group.name,
+            index_document="index.html",
+            opts=pulumi.ResourceOptions(parent=self),
+        )
+
+        # files 배열의 각 파일을 Blob으로 업로드
+        for file in (files or []):
+            storage.Blob(file,
+                resource_group_name=resource_group.name,
+                account_name=storage_account.name,
+                container_name=static_website.container_name,
+                source=pulumi.FileAsset(file),
+                content_type="text/html",
+                opts=pulumi.ResourceOptions(parent=self),
+            )
+
+        # URL 출력
+        self.url = storage_account.primary_endpoints.apply(lambda pe: pe.web)
+        self.register_outputs({'url': self.url})
+```
+
+#### Go 컴포넌트 정의
+
+```go
+// website.go
+package main
+
+import (
+    "github.com/pulumi/pulumi-azure-native-sdk/resources/v2"
+    "github.com/pulumi/pulumi-azure-native-sdk/storage/v2"
+    "github.com/pulumi/pulumi/sdk/v3/go/pulumi"
+)
+
+type AzureStaticWebsite struct {
+    pulumi.ResourceState
+    Url pulumi.StringOutput
+}
+
+type AzureStaticWebsiteArgs struct {
+    Files []string
+}
+
+func NewAzureStaticWebsite(ctx *pulumi.Context, name string, args AzureStaticWebsiteArgs, opts ...pulumi.ResourceOption) (*AzureStaticWebsite, error) {
+    self := &AzureStaticWebsite{}
+    err := ctx.RegisterComponentResource("quickstart:index:AzureStaticWebsite", name, self, opts...)
+    if err != nil {
+        return nil, err
+    }
+
+    // ResourceGroup 생성
+    resourceGroup, err := resources.NewResourceGroup(ctx, "resourceGroup", &resources.ResourceGroupArgs{}, pulumi.Parent(self))
+    if err != nil {
+        return nil, err
+    }
+
+    // Storage Account 생성
+    account, err := storage.NewStorageAccount(ctx, "sa", &storage.StorageAccountArgs{
+        ResourceGroupName: resourceGroup.Name,
+        Sku: &storage.SkuArgs{
+            Name: pulumi.String(storage.SkuName_Standard_LRS),
+        },
+        Kind: pulumi.String(storage.Kind_StorageV2),
+    }, pulumi.Parent(self))
+    if err != nil {
+        return nil, err
+    }
+
+    // 정적 웹사이트 지원 활성화
+    staticWebsite, err := storage.NewStorageAccountStaticWebsite(ctx, "staticWebsite", &storage.StorageAccountStaticWebsiteArgs{
+        AccountName:       account.Name,
+        ResourceGroupName: resourceGroup.Name,
+        IndexDocument:     pulumi.String("index.html"),
+    }, pulumi.Parent(self))
+    if err != nil {
+        return nil, err
+    }
+
+    // files 배열의 각 파일을 Blob으로 업로드
+    for _, file := range args.Files {
+        _, err = storage.NewBlob(ctx, file, &storage.BlobArgs{
+            ResourceGroupName: resourceGroup.Name,
+            AccountName:       account.Name,
+            ContainerName:     staticWebsite.ContainerName,
+            Source:            pulumi.NewFileAsset(file),
+            ContentType:       pulumi.String("text/html"),
+        }, pulumi.Parent(self))
+        if err != nil {
+            return nil, err
+        }
+    }
+
+    // URL 출력
+    self.Url = account.PrimaryEndpoints.ApplyT(func(pe storage.EndpointsResponse) string {
+        return *pe.Web
+    }).(pulumi.StringOutput)
+
+    ctx.RegisterResourceOutputs(self, pulumi.Map{"url": self.Url})
+    return self, nil
+}
+```
+
+#### C# 컴포넌트 정의
+
+```csharp
+// Website.cs
+using Pulumi;
+using Pulumi.AzureNative.Resources;
+using Pulumi.AzureNative.Storage;
+using Pulumi.AzureNative.Storage.Inputs;
+using System.Collections.Generic;
+
+public class AzureStaticWebsiteArgs
+{
+    public string[]? Files { get; set; }
+}
+
+public class AzureStaticWebsite : Pulumi.ComponentResource
+{
+    public Output<string> Url { get; private set; }
+
+    public AzureStaticWebsite(string name, AzureStaticWebsiteArgs args, ComponentResourceOptions? opts = null)
+        : base("quickstart:index:AzureStaticWebsite", name, opts)
+    {
+        // ResourceGroup 생성
+        var resourceGroup = new ResourceGroup("resourceGroup", new ResourceGroupArgs(), new ComponentResourceOptions { Parent = this });
+
+        // Storage Account 생성
+        var storageAccount = new StorageAccount("sa", new StorageAccountArgs
+        {
+            ResourceGroupName = resourceGroup.Name,
+            Sku = new SkuArgs { Name = SkuName.StandardLRS },
+            Kind = Kind.StorageV2,
+        }, new ComponentResourceOptions { Parent = this });
+
+        // 정적 웹사이트 지원 활성화
+        var staticWebsite = new StorageAccountStaticWebsite("staticWebsite", new StorageAccountStaticWebsiteArgs
+        {
+            AccountName = storageAccount.Name,
+            ResourceGroupName = resourceGroup.Name,
+            IndexDocument = "index.html",
+        }, new ComponentResourceOptions { Parent = this });
+
+        // files 배열의 각 파일을 Blob으로 업로드
+        foreach (var file in args.Files ?? System.Array.Empty<string>())
+        {
+            var _ = new Blob(file, new BlobArgs
+            {
+                ResourceGroupName = resourceGroup.Name,
+                AccountName = storageAccount.Name,
+                ContainerName = staticWebsite.ContainerName,
+                Source = new FileAsset($"./{file}"),
+                ContentType = "text/html",
+            }, new ComponentResourceOptions { Parent = this });
+        }
+
+        // URL 출력
+        this.Url = storageAccount.PrimaryEndpoints.Apply(pe => pe.Web);
+        this.RegisterOutputs(new Dictionary<string, object?> { ["url"] = this.Url });
+    }
+}
+```
+
+#### Java 컴포넌트 정의
+
+```java
+// AzureStaticWebsite.java
+package myproject;
+
+import com.pulumi.Pulumi;
+import com.pulumi.azurenative.resources.ResourceGroup;
+import com.pulumi.azurenative.resources.ResourceGroupArgs;
+import com.pulumi.azurenative.storage.*;
+import com.pulumi.azurenative.storage.inputs.StorageAccountArgs;
+import com.pulumi.azurenative.storage.inputs.SkuArgs;
+import com.pulumi.azurenative.storage.inputs.StorageAccountStaticWebsiteArgs;
+import com.pulumi.azurenative.storage.inputs.BlobArgs;
+import com.pulumi.resources.ComponentResource;
+import com.pulumi.resources.ComponentResourceOptions;
+import com.pulumi.asset.FileAsset;
+
+public class AzureStaticWebsiteArgs {
+    public String[] files;
+    public AzureStaticWebsiteArgs(String[] files) {
+        this.files = files;
+    }
+}
+
+public class AzureStaticWebsite extends ComponentResource {
+    public Output<String> url;
+
+    public AzureStaticWebsite(String name, AzureStaticWebsiteArgs args, ComponentResourceOptions opts) {
+        super("quickstart:index:AzureStaticWebsite", name, args, opts);
+
+        // ResourceGroup 생성
+        var resourceGroup = new ResourceGroup("resourceGroup",
+            ResourceGroupArgs.Empty, ComponentResourceOptions.builder().parent(this).build());
+
+        // Storage Account 생성
+        var storageAccount = new StorageAccount("sa", StorageAccountArgs.builder()
+            .resourceGroupName(resourceGroup.name())
+            .sku(SkuArgs.builder().name("Standard_LRS").build())
+            .kind("StorageV2")
+            .build(), ComponentResourceOptions.builder().parent(this).build());
+
+        // 정적 웹사이트 지원 활성화
+        var staticWebsite = new StorageAccountStaticWebsite("staticWebsite",
+            StorageAccountStaticWebsiteArgs.builder()
+                .accountName(storageAccount.name())
+                .resourceGroupName(resourceGroup.name())
+                .indexDocument("index.html")
+                .build(), ComponentResourceOptions.builder().parent(this).build());
+
+        // files 배열의 각 파일을 Blob으로 업로드
+        for (String file : args.files) {
+            var _ = new Blob(file, BlobArgs.builder()
+                .resourceGroupName(resourceGroup.name())
+                .accountName(storageAccount.name())
+                .containerName(staticWebsite.containerName())
+                .source(new FileAsset(file))
+                .contentType("text/html")
+                .build(), ComponentResourceOptions.builder().parent(this).build());
+        }
+
+        // URL 출력
+        this.url = storageAccount.primaryEndpoints()
+            .applyValue(pe -> pe.web());
+        this.registerOutputs(Map.of("url", this.url));
+    }
+}
+```
+
+#### Azure 컴포넌트 사용 예시
+
+```typescript
+// TypeScript
+const website = new AzureStaticWebsite("my-website", { files: ["index.html"] });
+```
+
+```python
+# Python
+website = AzureStaticWebsite("my-website", files=["index.html"])
+```
+
+```go
+// Go
+website, err := NewAzureStaticWebsite(ctx, "my-website", AzureStaticWebsiteArgs{
+    Files: []string{"index.html"},
+})
+```
+
+```csharp
+// C#
+var website = new AzureStaticWebsite("my-website", new AzureStaticWebsiteArgs { Files = new[] { "index.html" } });
+```
+
+```java
+// Java
+var website = new AzureStaticWebsite("my-website",
+    new AzureStaticWebsiteArgs(new String[]{"index.html"}), ComponentResourceOptions.Empty);
+```
+
+> YAML은 컴포넌트를 작성하기 위한 언어 기능이 부족하므로 컴포넌트 섹션은 건너뛸 수 있다.
+
 ---
 
 ## 완료 후 다음 단계
@@ -991,3 +1758,4 @@ Pulumi로 클라우드 리소스를 프로비저닝하는 기본 워크플로우
 | 튜토리얼 진행 | 클라우드별 핵심 Pulumi 개념을 안내하는 튜토리얼 |
 | 템플릿으로 새 프로젝트 시작 | 정적 웹사이트, 서버리스 애플리케이션, 가상 머신, 컨테이너 서비스, Kubernetes 클러스터 등 일반적인 아키텍처 템플릿 |
 | 공식 문서 심화 학습 | 프로젝트, Stack, 설정, 시크릿, 리소스, 상태 등 핵심 개념 학습 |
+| AWS 블로그 게시물 확인 | Pulumi와 AWS를 함께 사용하는 방법에 대한 최신 블로그 게시물 탐색. 새로운 AWS 제품 및 기능부터 기술 아키텍처 및 모범 사례까지 다양한 주제 제공. [AWS 블로그 게시물 살펴보기](https://www.pulumi.com/blog/tag/aws/) |

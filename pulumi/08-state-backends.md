@@ -139,15 +139,15 @@ DIY 백엔드는 상태를 사용자가 관리하는 객체 스토리지 또는 
 |------|------|
 | `.pulumi/meta.yaml` | 백엔드 자체의 메타데이터 (스택 정보는 포함하지 않음) |
 | `.pulumi/stacks/` | 각 스택의 활성 상태 파일 (예: `dev.json` 또는 `proj/dev.json`) |
-| `.pulumi/locks/` | Pulumi 작업이 수행 중인 스택의 잠금 파일 |
-| `.pulumi/history/` | 각 스택의 히스토리 파일 (타임스탬프 포함) |
+| `.pulumi/locks/` | Pulumi 작업이 수행 중인 스택의 잠금 파일 (예: `dev/$lock.json` 또는 `proj/dev/$lock.json`. 여기서 `$lock`은 잠금의 고유 식별자) |
+| `.pulumi/history/` | 각 스택의 히스토리 파일 (예: `dev/dev-$timestamp.history.json` 또는 `proj/dev/dev-$timestamp.history.json`. 여기서 `$timestamp`는 파일 생성 시각) |
 
 ### 백엔드별 설정 방법
 
 | 백엔드 | 로그인 명령어 | 인증 방식 | 비고 |
 |--------|-------------|-----------|------|
 | **AWS S3** | `pulumi login 's3://<bucket-name>'` | [AWS Session](https://docs.aws.amazon.com/sdk-for-go/api/aws/session/) (환경 변수, 프로파일 등) | S3 호환 서버(Minio, Ceph, SeaweedFS) 지원. `region`, `endpoint`, `disableSSL`, `s3ForcePathStyle` 쿼리스트링 사용 가능 |
-| **Azure Blob** | `pulumi login azblob://<container-path>` | `AZURE_STORAGE_KEY`, `AZURE_STORAGE_SAS_TOKEN`, 또는 `DefaultAzureCredential` (관리 ID, 서비스 주체 등) | `storage_account` 쿼리스트링으로 스토리지 계정 지정 가능 (CLI v3.41.1+). `Storage Blob Data Contributor` 역할 필요 |
+| **Azure Blob** | `pulumi login azblob://<container-path>` | `AZURE_STORAGE_KEY`, `AZURE_STORAGE_SAS_TOKEN`, 또는 `DefaultAzureCredential` (관리 ID, workload identity federation, 서비스 주체 등) | `storage_account` 쿼리스트링으로 스토리지 계정 지정 가능 (CLI v3.41.1+). `Storage Blob Data Contributor` 역할 필요 |
 | **Google Cloud Storage** | `pulumi login gs://<bucket-path>` | [Application Default Credentials](https://cloud.google.com/docs/authentication/production) | |
 | **PostgreSQL** | `pulumi login 'postgres://<username>:@<hostname>:/<database>'` | 연결 문자열에 포함 | 자격 증명을 명령어에 직접 포함하지 말고 환경 변수 등 사용 권장 |
 | **로컬 파일시스템** | `pulumi login --local` 또는 `pulumi login file://<path>` | 로컬 파일 권한 | 기본 경로는 `~/.pulumi`. 상대 경로는 현재 작업 디렉터리 기준 |
@@ -182,14 +182,16 @@ pulumi login 'azblob://<container-path>?storage_account=<account_name>'
 
 | 환경 변수 | 설명 |
 |-----------|------|
-| `AZURE_STORAGE_ACCOUNT` | (필수) Azure 스토리지 계정 이름 |
+| `AZURE_STORAGE_ACCOUNT` | (선택) Azure 스토리지 계정 이름. `storage_account` 쿼리스트링으로 대체 가능 (CLI v3.41.1+) |
 | `AZURE_STORAGE_KEY` | 스토리지 계정 액세스 키 |
 | `AZURE_STORAGE_SAS_TOKEN` | 공유 액세스 서명 토큰 |
 | `AZURE_TENANT_ID` | 서비스 주체 인증용 테넌트 ID |
 | `AZURE_CLIENT_ID` | 서비스 주체 인증용 클라이언트 ID |
 | `AZURE_CLIENT_SECRET` | 서비스 주체 인증용 클라이언트 시크릿 |
 
-> DIY Azure 백엔드는 Pulumi Azure 프로바이더의 인증 메커니즘이 아닌 Azure SDK for Go를 사용하여 인증한다. `ARM_TENANT_ID`, `ARM_CLIENT_ID` 등은 지원되지 않는다.
+`AZURE_STORAGE_KEY` 또는 `AZURE_STORAGE_SAS_TOKEN`을 설정하지 않으면 Azure SDK for Go의 `DefaultAzureCredential`을 사용하여 인증한다. 이 방식은 순서대로 managed identity, workload identity federation, 서비스 주체 자격 증명(`AZURE_TENANT_ID`, `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET`), Azure CLI 인증을 시도한다.
+
+> DIY Azure 백엔드는 Pulumi Azure 프로바이더의 인증 메커니즘이 아닌 Azure SDK for Go를 사용하여 인증한다. `ARM_TENANT_ID`, `ARM_CLIENT_ID`, `ARM_USE_OIDC` 등은 지원되지 않는다. 서비스 주체 인증에는 `AZURE_TENANT_ID`, `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET`을 사용해야 한다.
 
 ### 프로젝트 범위 스택 (Scoping)
 
@@ -230,6 +232,18 @@ pulumi refresh
 
 이 명령어는 클라우드 제공자에서 스택의 각 리소스를 조회하고 차이점이 있으면 상태 파일을 업데이트한다. 리소스가 Pulumi 외부에서 삭제된 경우 상태에서 제거하고, 속성이 변경된 경우 상태를 일치시킨다.
 
+> `pulumi refresh`는 상태만 업데이트한다. Pulumi 프로그램을 수정하거나 인프라에 어떠한 변경도 적용하지 않는다. 외부 변경 사항을 앞으로도 유지하려면 프로그램도 새 구성에 맞게 업데이트해야 한다. 그렇지 않으면 다음 `pulumi up`이 프로그램에 선언된 상태로 되돌리려 시도한다.
+
+### `pulumi refresh` 실행 권장 시점
+
+다음 상황에서 `pulumi refresh`를 실행하는 것이 권장된다:
+
+| 상황 | 설명 |
+|------|------|
+| **외부 수정 발생** | 리소스가 클라우드 콘솔이나 다른 도구를 통해 Pulumi 외부에서 수정되거나 삭제된 경우 |
+| **예상치 못한 diff 트러블슈팅** | `pulumi preview`에서 예상치 못한 차이가 발생하고 상태가 오래된 것으로 의심되는 경우 |
+| **destroy 전 상태 확인** | `pulumi destroy` 실행 전 Pulumi의 기록된 상태가 실제 인프라를 정확히 반영하는지 확인하려는 경우 |
+
 ### 업데이트와 함께 새로고침
 
 ```sh
@@ -242,7 +256,9 @@ pulumi preview --refresh
 
 ### 자동 드리프트 감지
 
-Pulumi Cloud은 예약된 **드리프트 감지 및 수정** 기능을 제공한다. 구성된 경우 Pulumi Cloud이 주기적으로 스택에 대해 `pulumi refresh`를 실행하고 실제 인프라 상태가 기록된 상태와 다를 경우 알림을 보내거나 자동으로 수정한다.
+Pulumi Cloud은 예약된 **드리프트 감지 및 수정** 기능을 제공한다. 구성된 경우 Pulumi Cloud이 주기적으로 스택에 대해 `pulumi refresh`를 실행하고 실제 인프라 상태가 기록된 상태와 다를 경우 알림을 보내거나 자동으로 수정한다. 자세한 내용은 [Drift detection](https://www.pulumi.com/docs/deployments/deployments/drift/)을 참조.
+
+**CLI-side 드리프트 워크플로**: Pulumi Cloud 기능 외에도 CLI에서 직접 드리프트를 감지하고 조정할 수 있다. 이 워크플로는 remediation vs. adoption 전략 선택, GitOps 기반 지속적 조정(continuous reconciliation), 오탐(false-positive) 감소 등을 다룬다. 자세한 내용은 [Detecting and reconciling drift](https://www.pulumi.com/docs/iac/operations/stack-management/drift/)을 참조.
 
 ---
 
@@ -410,7 +426,7 @@ Pulumi 외부에서 생성된 리소스(클라우드 콘솔, CLI, 다른 IaC 도
 
 | 원인 | 해결 방법 |
 |------|-----------|
-| 만료된 자격 증명 | 임시 자격 증명(AWS SSO 등) 갱신 후 재시도 |
+| 만료된 자격 증명 | 임시 자격 증명 갱신 후 재시도. AWS SSO를 사용하는 경우 `aws sso login --profile <profile>`으로 갱신. `aws sts assume-role`로 얻은 단기 자격 증명은 만료되므로 재발급 필요 |
 | 권한 부족 | 읽기/쓰기/삭제 권한 확인 (Azure: `Storage Blob Data Contributor` 역할 필요) |
 | 리전 누락 (AWS S3) | `?region=us-east-1` 쿼리스트링 추가 또는 `AWS_REGION` 환경 변수 설정 |
 | 인증 환경 변수 누락 | 각 백엔드에 해당하는 환경 변수 확인 |

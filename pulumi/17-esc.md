@@ -14,6 +14,9 @@
 > - https://www.pulumi.com/docs/esc/environments/webhooks/
 > - https://www.pulumi.com/docs/esc/providers/
 > - https://www.pulumi.com/docs/esc/providers/login/
+> - https://www.pulumi.com/docs/esc/providers/login/aws-login/
+> - https://www.pulumi.com/docs/esc/providers/login/gcp-login/
+> - https://www.pulumi.com/docs/esc/providers/login/azure-login/
 > - https://www.pulumi.com/docs/esc/providers/secrets/
 > - https://www.pulumi.com/docs/esc/providers/rotators/
 > - https://www.pulumi.com/docs/esc/cli/
@@ -25,6 +28,7 @@
 > - https://www.pulumi.com/docs/esc/languages-sdks/python/
 > - https://www.pulumi.com/docs/esc/languages-sdks/go/
 > - https://www.pulumi.com/docs/esc/languages-sdks/dotnet/
+> - https://www.pulumi.com/docs/esc/guides/
 > - https://www.pulumi.com/docs/esc/guides/integrate-with-pulumi-iac/
 > - https://www.pulumi.com/docs/esc/guides/running-commands/
 
@@ -101,11 +105,20 @@ ESC 환경은 YAML 문서로, 최상위 키 두 개(`imports`, `values`)를 정�
 ### 기본 예제
 
 ```yaml
+# imports: 다른 환경을 가져와 구성을 계층적으로 조직
 imports:
+  # AWS 자격 증명 via OIDC
   - aws-production
+  # Stripe API 키를 Vault에서 가져옴
   - stripe-production
+  # Docker 이미지 서명 키 via AWS Secrets Manager
+  - docker-signing-production
+
+# values: 환경이 열릴 때 생성할 값 정의
 values:
+  # 환경별 구성
   desiredInstanceCount: 8
+  # import된 값 오버라이드
   aws:region: us-west-2
 ```
 
@@ -349,12 +362,20 @@ values:
 | --- | --- | --- |
 | `oidc.roleArn` | string | Assume할 IAM 역할 ARN |
 | `oidc.sessionName` | string | 역할 세션 이름 |
-| `oidc.duration` | string | 세션 지속 시간(기본 2시간) |
+| `oidc.duration` | string | 세션 지속 시간(기본 2시간). AWS가 기본 MaxDuration을 1시간으로 설정하므로, AWS 역할의 MaxDuration을 높이거나 이 값을 1시간으로 설정해야 할 수 있음 |
 | `oidc.policyArns` | string[] | 추가 정책 ARN |
 | `oidc.subjectAttributes` | string[] | OIDC 토큰에 포함할 subject 속성 |
 | `static.accessKeyId` | string | 정적 AWS 액세스 키 ID |
 | `static.secretAccessKey` | string | 정적 AWS 시크릿 액세스 키 |
 | `static.sessionToken` | string | 정적 세션 토큰(선택) |
+
+**Outputs:**
+
+| 속성 | 타입 | 설명 |
+| --- | --- | --- |
+| `accessKeyId` | string | AWS 액세스 키 ID |
+| `secretAccessKey` | string | AWS 시크릿 액세스 키 |
+| `sessionToken` | string | AWS 세션 토큰(선택) |
 
 ```yaml
 values:
@@ -366,6 +387,7 @@ values:
           roleArn: arn:aws:iam::012345678912:role/role-abcd123
           sessionName: pulumi-esc
   environmentVariables:
+    # Pulumi AWS 프로바이더, aws CLI, AWS SDK 모두 동일한 표준 환경 변수 사용
     AWS_ACCESS_KEY_ID: ${aws.login.accessKeyId}
     AWS_SECRET_ACCESS_KEY: ${aws.login.secretAccessKey}
     AWS_SESSION_TOKEN: ${aws.login.sessionToken}
@@ -383,6 +405,22 @@ values:
 | `oidc` | bool | OIDC 사용 여부(기본 `false`) |
 | `subjectAttributes` | string[] | OIDC 토큰에 포함할 subject 속성 |
 
+**Outputs:**
+
+| 속성 | 타입 | 설명 |
+| --- | --- | --- |
+| `clientId` | string | 구성된 클라이언트 ID |
+| `tenantId` | string | 구성된 테넌트 ID |
+| `subscriptionId` | string | 구성된 구독 ID |
+| `clientSecret` | string | 인증에 사용된 클라이언트 시크릿(선택) |
+| `oidc` | AzureLoginOIDC | OIDC 관련 데이터(OIDC 인증 시) |
+
+**AzureLoginOIDC:**
+
+| 속성 | 타입 | 설명 |
+| --- | --- | --- |
+| `token` | string | 인증에 사용할 OIDC 토큰 |
+
 ```yaml
 values:
   azure:
@@ -393,6 +431,7 @@ values:
         subscriptionId: /subscriptions/<YOUR_SUBSCRIPTION_ID>
         oidc: true
   environmentVariables:
+    # Pulumi Azure 프로바이더(azure-native, azure, azuread) 및 Azure SDK가 모두 동일한 ARM_* 변수 사용
     ARM_USE_OIDC: "true"
     ARM_CLIENT_ID: ${azure.login.clientId}
     ARM_TENANT_ID: ${azure.login.tenantId}
@@ -400,31 +439,65 @@ values:
     ARM_OIDC_TOKEN: ${azure.login.oidc.token}
 ```
 
+> azuredevops 프로바이더는 `ARM_CLIENT_ID`, `ARM_TENANT_ID`, `ARM_OIDC_TOKEN`, `ARM_USE_OIDC`를 동일하게 사용한다. 단 `ARM_SUBSCRIPTION_ID` 대신 `AZDO_ORG_SERVICE_URL` 환경 변수로 조직 URL을 설정한다.
+
 ### gcp-login
 
 | 입력 속성 | 타입 | 설명 |
 | --- | --- | --- |
-| `project` | number | GCP 프로젝트 숫자 ID |
-| `oidc.workloadPoolId` | string | 워크로드 풀 ID |
-| `oidc.providerId` | string | 아이덴티티 프로바이더 ID |
-| `oidc.serviceAccount` | string | 서비스 계정 이메일 |
-| `oidc.region` | string | 워크로드 아이덴티티 풀 위치(기본 `global`) |
-| `oidc.tokenLifetime` | string | 임시 자격 증명 수명 |
+| `project` | number | GCP 프로젝트 숫자 ID(예: `951040570662`) |
 | `accessToken.accessToken` | string | 액세스 토큰(정적 인증 시) |
+| `accessToken.serviceAccount` | string | 가장할 서비스 계정 이메일(선택) |
+| `accessToken.tokenLifetime` | string | 서비스 계정 가장 시 임시 자격 증명 수명(선택) |
+| `oidc.workloadPoolId` | string | 워크로드 풀 ID(단축 ID) |
+| `oidc.providerId` | string | 아이덴티티 프로바이더 ID(단축 ID) |
+| `oidc.serviceAccount` | string | 사용할 서비스 계정 이메일 |
+| `oidc.region` | string | 워크로드 아이덴티티 풀 위치(기본 `global`, 리전별 풀을 명시적으로 생성한 경우만 지정) |
+| `oidc.tokenLifetime` | string | 임시 자격 증명 수명(선택) |
+| `oidc.subjectAttributes` | string[] | OIDC 토큰에 포함할 subject 속성(선택) |
+
+**Outputs:**
+
+| 속성 | 타입 | 설명 |
+| --- | --- | --- |
+| `project` | string | GCP 프로젝트 숫자 ID |
+| `accessToken` | string | Google Cloud 인증용 액세스 토큰 |
+| `tokenType` | string | 액세스 토큰 유형 |
+| `expiry` | string | 액세스 토큰 만료 시간(선택) |
 
 ```yaml
+# Pulumi Google Cloud 프로바이더용 설정
 values:
   gcp:
     login:
       fn::open::gcp-login:
-        project: <YOUR_PROJECT_NUMBER>
+        project: 123456789
         oidc:
           workloadPoolId: pulumi-esc
           providerId: pulumi-esc
-          serviceAccount: pulumi-esc@<YOUR_PROJECT>.iam.gserviceaccount.com
+          serviceAccount: pulumi-esc@foo-bar-123456.iam.gserviceaccount.com
   environmentVariables:
+    # Pulumi Google Cloud 프로바이더는 프로젝트(숫자 ID)와 액세스 토큰을 읽음
     GOOGLE_CLOUD_PROJECT: ${gcp.login.project}
     GOOGLE_OAUTH_ACCESS_TOKEN: ${gcp.login.accessToken}
+```
+
+```yaml
+# gcloud CLI용 설정
+values:
+  gcp:
+    login:
+      fn::open::gcp-login:
+        project: 123456789
+        oidc:
+          workloadPoolId: pulumi-esc
+          providerId: pulumi-esc
+          serviceAccount: pulumi-esc@foo-bar-123456.iam.gserviceaccount.com
+  environmentVariables:
+    # CLOUDSDK_CORE_PROJECT는 프로젝트 ID 문자열(예: "my-project-12345")을 사용,
+    # GOOGLE_CLOUD_PROJECT의 숫자 프로젝트 번호가 아님에 주의
+    CLOUDSDK_CORE_PROJECT: my-project-12345
+    CLOUDSDK_AUTH_ACCESS_TOKEN: ${gcp.login.accessToken}
 ```
 
 ### gh-login
@@ -577,9 +650,92 @@ webhook = pcloud.Webhook("example-webhook",
 
 | 헤더 | 설명 |
 | --- | --- |
-| `Pulumi-Webhook-ID` | 각 웹훅 전송의 고유 ID |
+| `Pulumi-Webhook-ID` | 각 웹훅 전송의 고유 ID. Pulumi Cloud 배달 로그에서 참조 가능 |
 | `Pulumi-Webhook-Kind` | 웹훅 이벤트 종류(예: `environment`) |
-| `Pulumi-Webhook-Signature` | 시크릿이 설정된 경우에만 포함. `sha256` HMAC hex digest |
+| `Pulumi-Webhook-Signature` | 시크릿이 설정된 경우에만 포함. `sha256` HMAC hex digest. 웹훅 시크릿을 HMAC 키로 사용 |
+
+### 페이로드 샘플
+
+**Environment 이벤트:**
+
+```json
+{
+  "user": {
+    "name": "Morty Smith",
+    "githubLogin": "morty",
+    "avatarUrl": "https://crazy-adventures.net/morty.png"
+  },
+  "organization": {
+    "name": "Crazy Adventures",
+    "githubLogin": "crazy-adventures",
+    "avatarUrl": "https://crazy-adventures.net/logo.png"
+  },
+  "projectName": "website",
+  "environmentName": "prod",
+  "action": "created"
+}
+```
+
+**Environment Revision 이벤트:**
+
+```json
+{
+  "user": { "name": "Morty Smith", "githubLogin": "morty", "avatarUrl": "..." },
+  "organization": { "name": "Crazy Adventures", "githubLogin": "crazy-adventures", "avatarUrl": "..." },
+  "projectName": "website",
+  "environmentName": "prod",
+  "action": "created",
+  "revision": 5
+}
+```
+
+**Environment Revision Tag 이벤트:**
+
+```json
+{
+  "user": { "name": "Morty Smith", "githubLogin": "morty", "avatarUrl": "..." },
+  "organization": { "name": "Crazy Adventures", "githubLogin": "crazy-adventures", "avatarUrl": "..." },
+  "projectName": "website",
+  "environmentName": "prod",
+  "tagName": "stable",
+  "action": "created",
+  "revision": 5
+}
+```
+
+**Environment Tag 이벤트:**
+
+```json
+{
+  "user": { "name": "Morty Smith", "githubLogin": "morty", "avatarUrl": "..." },
+  "organization": { "name": "Crazy Adventures", "githubLogin": "crazy-adventures", "avatarUrl": "..." },
+  "projectName": "website",
+  "environmentName": "prod",
+  "tagName": "stable",
+  "action": "created"
+}
+```
+
+**Imported Environment Changed 이벤트:**
+
+```json
+{
+  "user": { "name": "Morty Smith", "githubLogin": "morty", "avatarUrl": "..." },
+  "organization": { "name": "Crazy Adventures", "githubLogin": "crazy-adventures", "avatarUrl": "..." },
+  "projectName": "website",
+  "environmentName": "prod",
+  "affectedRevisions": [2, 5, 6, 7],
+  "importedEnvironmentReference": {
+    "projectName": "website",
+    "environmentName": "base",
+    "revision": 10
+  }
+}
+```
+
+> **주의**: 웹훅은 이벤트의 순서 보장을 하지 않는다. 즉, 이벤트가 발생한 순서대로 수신된다고 가정해서는 안 된다.
+
+> **제약**: 조직 웹훅에서 Deployment 대상은 지원되지 않는다. Deployment 웹훅은 환경 웹훅에서만 생성 가능하다.
 
 ### 웹훅 배달(Delivery)
 
@@ -592,6 +748,27 @@ Pulumi Cloud는 각 웹훅의 최근 배달 이력을 기록하여 이벤트 수
 > **원문**: https://www.pulumi.com/docs/esc/operations/managing-secrets/
 
 ESC 환경에서 시크릿을 저장하고 검색하는 방법에 대한 가이드다. 시크릿은 ESC가 안전하게 암호화하여 저장하며, 기본적으로 값이 숨겨진다.
+
+### ESC 값 유형 분류
+
+ESC 환경은 `values` 최상위 키 아래에 키-값 쌍을 YAML 형식으로 저장한다. 값은 다음 4가지 유형으로 분류된다:
+
+| 유형 | 설명 | 예시 |
+| --- | --- | --- |
+| **Plain text** | 일반 구성 값 | `region: us-west-2`, `apiEndpoint: https://api.example.com` |
+| **Secrets** | `fn::secret`로 표시된 암호화 값 | `apiKey: { fn::secret: my-secret-value }` |
+| **Structured data** | 객체와 배열 형태의 중첩 구조 | `database: { host: db.example.com, port: 5432 }` |
+| **Dynamic values** | 프로바이더에서 생성되는 동적 값 | `fn::open::aws-login`, `fn::open::aws-secrets` 등 |
+
+```yaml
+values:
+  # Plain text
+  apiEndpoint: https://api.example.com
+  region: us-west-2
+  # Secret
+  apiKey:
+    fn::secret: my-secret-value
+```
 
 ### 시크릿 저장
 
@@ -792,6 +969,8 @@ esc env clone my-org/src-project/src-env dest-project/dest-env
 
 ## Pulumi IaC와 통합
 
+> **원문**: https://www.pulumi.com/docs/esc/guides/integrate-with-pulumi-iac/
+
 ### 스택 구성에서 ESC 환경 참조
 
 `Pulumi.<stack-name>.yaml` 파일에 `environment` 블록을 추가한다.
@@ -810,9 +989,25 @@ environment:
   - my-project/dev
 ```
 
+버전 핀을 지정할 수도 있다. 기본적으로 각 환경의 `@latest` 태그(항상 최신 revision)를 사용한다.
+
+```yaml
+environment:
+  - my-project/common@production
+  - my-project/dev@3
+```
+
 ### ESC 환경에서 Pulumi Config 제공
 
-ESC 환경 정의의 `pulumiConfig` 블록이 Pulumi IaC Config API와 연결된다.
+ESC 환경은 CLI 또는 Pulumi Cloud 콘솔에서 편집할 수 있다. CLI로 편집하려면:
+
+```bash
+esc env edit <your-proj>/<your-environment-name>
+```
+
+ESC 환경 정의의 `pulumiConfig` 블록이 Pulumi IaC Config API와 연결된다. `pulumiConfig` 아래의 값은 문자열, 숫자, 불리언, 시크릿(`fn::secret` 사용) 모두 가능하다.
+
+`pulumiConfig` 블록은 ESC와 Pulumi IaC 간의 브릿지다. 이 블록에 정의된 값은 표준 Configuration API(`config.get()`, `config.require()` 등)를 통해 Pulumi 프로그램에서 사용할 수 있다.
 
 ```yaml
 values:
@@ -848,6 +1043,28 @@ api_key = config.get_secret("apiKey")
 
 pulumi.export("Region", region)
 pulumi.export("ApiKey", api_key)
+```
+
+**Go:**
+
+```go
+package main
+
+import (
+    "github.com/pulumi/pulumi/sdk/v3/go/pulumi"
+    "github.com/pulumi/pulumi/sdk/v3/go/pulumi/config"
+)
+
+func main() {
+    pulumi.Run(func(ctx *pulumi.Context) error {
+        cfg := config.New(ctx, "")
+        region := cfg.Get("region")
+        apiKey := cfg.GetSecret("apiKey")
+        ctx.Export("Region", pulumi.String(region))
+        ctx.Export("ApiKey", pulumi.StringOutput(apiKey))
+        return nil
+    })
+}
 ```
 
 ### 동적 클라우드 자격 증명 공유 패턴
@@ -894,9 +1111,13 @@ values:
 
 ### 기존 스택 구성을 ESC 환경으로 변환
 
+기존 스택 구성을 새 ESC 환경으로 변환하려면 Pulumi CLI를 사용한다:
+
 ```bash
 pulumi config env init
 ```
+
+자세한 내용은 `pulumi config env init` 참조 문서를 확인한다.
 
 ### Automation API 지원
 
@@ -907,6 +1128,82 @@ Node.js, Go, Python Automation API에서 환경 관리 메서드를 제공한다
 | `addEnvironments(...)` | 스택의 import 목록에 환경 추가 |
 | `listEnvironments()` | 스택에 현재 import된 환경 목록 조회 |
 | `removeEnvironment(env)` | 스택의 import 목록에서 특정 환경 제거 |
+
+---
+
+## ESC Guides 요약
+
+> **원문**: https://www.pulumi.com/docs/esc/guides/
+
+### 인증(Authentication)
+
+#### OIDC 설정
+
+> **원문**: https://www.pulumi.com/docs/esc/guides/ (Configuring OIDC)
+
+Pulumi Cloud와 AWS, Azure, GCP, Doppler, Infisical, Vault 간에 OpenID Connect(OIDC) 신뢰 관계를 설정한다. OIDC를 사용하면 정적 자격 증명 대신 단기 자격 증명을 발급받을 수 있어 보안이 강화된다. 각 클라우드 제공자별 OIDC 설정 방법은 공식 문서의 인증 가이드를 참조한다.
+
+### 개발 도구(Development Tools)
+
+#### Docker
+
+> **원문**: https://www.pulumi.com/docs/esc/guides/ (Docker)
+
+`esc run` 명령을 사용하여 Docker 워크플로에 환경 변수와 시크릿을 주입한다. Docker 컨테이너 실행 시 ESC 환경에서 동적으로 생성된 자격 증명을 전달할 수 있다.
+
+#### direnv
+
+> **원문**: https://www.pulumi.com/docs/esc/guides/ (direnv)
+
+디렉토리로 `cd`할 때 ESC 값을 자동으로 로드한다. `direnv`와 ESC를 연동하면 개발 환경 전환 시 수동으로 환경 변수를 설정할 필요가 없다.
+
+### CI/CD
+
+#### GitHub Actions
+
+> **원문**: https://www.pulumi.com/docs/esc/guides/ (GitHub Actions)
+
+GitHub Actions 워크플로에 ESC 값과 단기 클라우드 자격 증명을 주입한다. OIDC 기반 자격 증명을 사용하여 GitHub Actions에서 안전하게 클라우드 리소스에 접근할 수 있다.
+
+### 인프라 도구(Infrastructure Tools)
+
+#### Terraform
+
+> **원문**: https://www.pulumi.com/docs/esc/guides/ (Terraform)
+
+`esc run`을 통해 Terraform CLI에 임시 자격 증명과 입력 변수를 제공한다. Terraform 프로젝트에서도 ESC의 중앙 집중식 시크릿 관리를 활용할 수 있다.
+
+### 클라우드 플랫폼(Cloud Platforms)
+
+#### Cloudflare
+
+> **원문**: https://www.pulumi.com/docs/esc/guides/ (Cloudflare)
+
+ESC를 통해 Cloudflare Workers 시크릿을 관리한다. Cloudflare Workers 배포 시 필요한 API 토큰과 설정을 ESC 환경에서 중앙 관리한다.
+
+### Kubernetes
+
+#### 클러스터 접근(Kubernetes Cluster Access)
+
+> **원문**: https://www.pulumi.com/docs/esc/guides/ (Kubernetes)
+
+kubeconfig 파일과 클러스터 자격 증명을 ESC에 저장하고 소비한다. Kubernetes 클러스터 접근에 필요한 인증 정보를 안전하게 관리할 수 있다.
+
+---
+
+## ESC 통합(Integrations)
+
+> **원문**: https://www.pulumi.com/docs/esc/guides/ (Integrations)
+
+ESC는 다양한 통합 방식을 제공한다.
+
+| 통합 | 설명 |
+| --- | --- |
+| **Pulumi Service Provider** | `@pulumi/pulumiservice` 리소스를 통해 ESC 환경, 웹훅 등을 Pulumi IaC 프로그램으로 선언적 관리 |
+| **Automation API** | Node.js, Go, Python에서 프로그래밍 방식으로 환경 관리. `addEnvironments`, `listEnvironments`, `removeEnvironment` 메서드 제공 |
+| **VS Code 확장** | Visual Studio Code 내에서 ESC 환경을 편집하고 미리보기 |
+| **External Secrets Operator** | Kubernetes 클러스터에서 ESC 시크릿을 External Secrets Operator를 통해 동기화 |
+| **Secrets Store CSI Driver** | Kubernetes Secrets Store CSI Driver를 통해 ESC 시크릿을 Pod에 마운트 |
 
 ---
 
@@ -1051,7 +1348,7 @@ for (const env of orgEnvs.environments) {
 ```python
 from pulumi_esc_sdk import esc_client
 
-# 기본 초기화
+# 기본 초기화 (PULUMI_ACCESS_TOKEN 환경 변수 또는 CLI 자격 증명 사용)
 client = esc_client.default_client()
 
 # 수동 초기화
@@ -1059,6 +1356,8 @@ import pulumi_esc_sdk as esc
 configuration = esc.Configuration(access_token=my_access_token)
 client = esc.EscClient(configuration)
 ```
+
+Python SDK는 표준 프록시 환경 변수를 지원한다: `https_proxy`, `http_proxy`, `no_proxy`. 소문자와 대문자 모두 지원된다.
 
 **환경 관리 예제:**
 
@@ -1069,8 +1368,13 @@ import os
 org_name = os.getenv("PULUMI_ORG")
 client = esc.esc_client.default_client()
 
-# 환경 생성 및 업데이트
-client.create_environment(org_name, "examples", "my-env")
+proj_name = "examples"
+env_name = "sdk-python-example"
+
+# 환경 생성
+client.create_environment(org_name, proj_name, env_name)
+
+# 시크릿이 포함된 환경 정의 생성
 env_def = esc.EnvironmentDefinition(
     imports=[],
     values=esc.EnvironmentDefinitionValues(
@@ -1079,10 +1383,12 @@ env_def = esc.EnvironmentDefinition(
         }
     )
 )
-client.update_environment(org_name, "examples", "my-env", env_def)
+
+# 환경 업데이트
+client.update_environment(org_name, proj_name, env_name, env_def)
 
 # 환경 열기 및 시크릿 접근
-env, values, yaml_text = client.open_and_read_environment(org_name, "examples", "my-env")
+env, values, yaml_text = client.open_and_read_environment(org_name, proj_name, env_name)
 print(f'Secret: {values["my_secret"]}')
 
 # 환경 목록 조회
@@ -1121,28 +1427,59 @@ authCtx := esc.NewAuthContext(myAccessToken)
 **환경 관리 예제:**
 
 ```go
-orgName := os.Getenv("PULUMI_ORG")
-authCtx, escClient, _ := esc.DefaultLogin()
+package main
 
-// 환경 생성 및 업데이트
-escClient.CreateEnvironment(authCtx, orgName, "examples", "my-env")
-updatePayload := &esc.EnvironmentDefinition{
-    Values: &esc.EnvironmentDefinitionValues{
-        AdditionalProperties: map[string]interface{}{
-            "my_secret": map[string]string{"fn::secret": "shh! don't tell anyone"},
+import (
+    "log"
+    "os"
+    esc "github.com/pulumi/esc-sdk/sdk/go"
+)
+
+func main() {
+    orgName := os.Getenv("PULUMI_ORG")
+    authCtx, escClient, err := esc.DefaultLogin()
+
+    projName := "examples"
+    envName := "sdk-go-example"
+
+    // 환경 생성
+    err = escClient.CreateEnvironment(authCtx, orgName, projName, envName)
+    if err != nil {
+        log.Fatalf("Failed to create environment: %v", err)
+    }
+
+    // 시크릿이 포함된 환경 업데이트
+    updatePayload := &esc.EnvironmentDefinition{
+        Values: &esc.EnvironmentDefinitionValues{
+            AdditionalProperties: map[string]interface{}{
+                "my_secret": map[string]string{"fn::secret": "shh! don't tell anyone"},
+            },
         },
-    },
-}
-escClient.UpdateEnvironment(authCtx, orgName, "examples", "my-env", updatePayload)
+    }
+    _, err = escClient.UpdateEnvironment(authCtx, orgName, projName, envName, updatePayload)
+    if err != nil {
+        log.Fatalf("Failed to update environment: %v", err)
+    }
 
-// 환경 열기 및 시크릿 접근
-_, values, _ := escClient.OpenAndReadEnvironment(authCtx, orgName, "examples", "my-env")
-log.Printf("my_secret: %v\n", values["my_secret"])
+    // 환경 열기 및 시크릿 접근
+    _, values, err := escClient.OpenAndReadEnvironment(authCtx, orgName, projName, envName)
+    if err != nil {
+        log.Fatalf("Failed to open environment: %v", err)
+    }
+    mySecret, ok := values["my_secret"]
+    if !ok {
+        log.Fatalf("Secret 'my_secret' not found")
+    }
+    log.Printf("my_secret: %v\n", mySecret)
 
-// 환경 목록 조회
-orgEnvs, _ := escClient.ListEnvironments(authCtx, orgName, nil)
-for _, env := range orgEnvs.Environments {
-    log.Printf("Environment: %v/%v\n", env.Project, env.Name)
+    // 환경 목록 조회
+    orgEnvs, err := escClient.ListEnvironments(authCtx, orgName, nil)
+    if err != nil {
+        log.Fatalf("Failed to list environments: %v", err)
+    }
+    for _, env := range orgEnvs.Environments {
+        log.Printf("Environment: %v/%v\n", env.Project, env.Name)
+    }
 }
 ```
 

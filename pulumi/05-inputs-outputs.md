@@ -6,6 +6,7 @@
 > - https://www.pulumi.com/docs/iac/concepts/inputs-outputs/all/
 > - https://www.pulumi.com/docs/iac/concepts/inputs-outputs/helpers/
 > - https://www.pulumi.com/docs/iac/concepts/functions/
+> - https://www.pulumi.com/docs/iac/concepts/functions/provider-functions/
 
 Pulumi 리소스는 속성을 정의하기 위해 **Input**과 **Output**이라는 특수 타입을 사용한다. 이 타입들은 일반 값(string, integer 등)을 래핑하며, Pulumi가 인프라 리소스를 **선언적**으로 관리할 수 있게 한다. Input은 리소스에 전달하는 값이고, Output은 리소스가 프로비저닝된 후에야 알 수 있는 값이다. 이 둘을 결합해 Pulumi는 리소스 간 의존성을 자동 추적하고 올바른 순서로 생성·수정·삭제를 수행한다.
 
@@ -295,7 +296,21 @@ cert_validation = aws.route53.Record("certValidation",
 
 ### apply 내부 에러 처리
 
-`apply` 콜백에서 발생한 미처리 에러는 배포 실패로 이어진다. 에러를 우아하게 처리하려면 콜백 내부에서 try/catch를 수행하고 대체 값을 반환한다.
+`apply`에 전달한 콜백 함수는 실패할 수 있다. 예를 들어, 리졸브된 값이 프로그램이 요구하는 조건을 만족하지 않을 때 에러를 발생시킬 수 있다.
+
+**모든 Pulumi 언어에서**, `apply` 콜백 내부에서 발생한 미처리 에러는 **배포 실패(deployment failure)**로 보고된다. `pulumi up`이 업데이트를 중단하고 진단 정보에 에러를 출력한다. 에러가 삼켜지지 않으며(아래 설명하는 Go 관련 예외 하나만 제외), 언어 프로세스가 복구 불가능한 상태에 빠지지도 않는다. 즉, `apply`를 언어의 `try/catch` 구문으로 감쌀 필요가 없다. 오히려 콜백 내부에서 에러를 발생시키는 것이 값이 요구 사항을 충족하지 않을 때 업데이트를 실패시키는 **관용적인(idiomatic) 방식**이다.
+
+#### 언어별 에러 전파 방식
+
+에러를 콜백에서 신호하는 방법은 언어마다 다르다.
+
+| 언어 | 에러 발생 방식 | 동작 |
+|---|---|---|
+| **TypeScript** | 콜백에서 예외를 `throw` (또는 rejected Promise 반환) | 발생한 에러가 결과 Output을 reject하고 업데이트를 실패시킨다 |
+| **Python** | 콜백에서 예외를 `raise` | 예외가 결과 Output을 reject하고 업데이트를 실패시킨다 |
+| **C#** | 콜백에서 예외를 `throw` | 예외가 결과 Output을 reject하고 업데이트를 실패시킨다 |
+| **Java** | 콜백에서 예외를 `throw` | 예외가 결과 Output을 reject하고 업데이트를 실패시킨다 |
+| **Go** | 콜백에서 `error` 반환 (`(T, error)` 시그니처 사용) | **예외**: Go는 소비되는 Output(스택 출력으로 export되거나 다른 리소스의 Input으로 전달되는 경우)에서만 rejected Output의 에러를 표시한다. `ApplyT`를 부수 효과(예: 출력) 목적으로만 호출하고 반환된 Output을 버리면, 콜백에서 반환한 에러가 **조용히 무시**되고 업데이트가 성공한다. 검증 에러가 업데이트를 실패시키게 하려면, 결과 Output을 소비하거나 콜백 내부에서 에러를 직접 처리해야 한다. |
 
 ```typescript
 const validated = name.apply(n => {
@@ -304,6 +319,7 @@ const validated = name.apply(n => {
     }
     return n;
 });
+// validated가 이후에 사용되지 않아도 업데이트는 실패한다.
 ```
 
 ```python
@@ -313,6 +329,7 @@ def validate(n: str) -> str:
     return n
 
 validated = name.apply(validate)
+# validated가 이후에 사용되지 않아도 업데이트는 실패한다.
 ```
 
 ### apply 체이닝 패턴
@@ -596,33 +613,41 @@ policy = aws.s3.BucketPolicy(
 
 ## Input\<T\>를 Output\<T\>로 변환
 
-`Input<T>` 값을 확실한 `Output<T>`로 변환해야 하는 경우가 있다. 주로 컴포넌트 리소스나 `Input<T>`를 받는 유틸리티 함수 내부에서 `apply`를 호출해야 할 때 필요하다.
+Pulumi 리소스 인자는 `Input<T>` 값을 받으므로, 평문 값이든 `Output<T>`든 모두 전달할 수 있다. 대부분의 프로그램에서는 이 유연성만으로 충분하다. 하지만 `Input<T>`로 타입된 값을 확실한 `Output<T>`로 변환해야 하는 상황이 있다. 가장 일반적으로 **`apply`를 호출해야 할 때** 필요하다. 이 상황은 주로 다음 세 가지 경우에 발생한다.
 
-| 언어 | 변환 함수 |
+| 사용 사례 | 설명 |
 |---|---|
-| TypeScript | `pulumi.output(value)` |
-| Python | `pulumi.Output.from_input(value)` |
-| Go | `input.ToXxxOutput()` (예: `ToStringOutput()`) |
-| C# | `Output.Create(value)` |
-| Java | `Output.of(value)` |
+| **컴포넌트 리소스 작성** | 컴포넌트 생성자는 호출자에게 평문 값 또는 기존 Output 전달의 유연성을 제공하기 위해 `Input<T>` 매개변수를 받는다. 컴포넌트 본문 내부에서 `apply`나 다른 Output 연산을 체이닝하려면 `Output<T>`가 필요하다. |
+| **`Input<T>`를 받는 유틸리티 함수 작성** | 호출자의 유연성을 위해 `Input<T>`를 받는 함수는 내부적으로 변환 작업을 수행하려면 먼저 `Output<T>`로 변환한 뒤 `apply`를 호출해야 한다. |
+| **`all`로 값 조합** | `all` 함수는 대부분의 SDK에서 평문 값과 Output의 혼합을 허용하지만, 명시적으로 Output으로 변환해 두면 프로그램의 데이터 흐름이 더 명확하고 예측 가능해진다. |
 
-값이 이미 `Output<T>`면 변환 함수는 그대로 반환하고, 평문 값이면 즉시 확정되는 새 Output으로 래핑한다.
+### 언어별 변환 함수
+
+| 언어 | 변환 함수 | 동작 |
+|---|---|---|
+| TypeScript | `pulumi.output(value)` | 값이 이미 `Output<T>`면 그대로 반환, 평문 값이면 즉시 확정되는 새 `Output<T>`로 래핑 |
+| Python | `pulumi.Output.from_input(value)` | 동일 |
+| Go | `input.ToXxxOutput()` (예: `ToStringOutput()`) | 동일 |
+| C# | `Output.Create(value)` | 동일 |
+| Java | `Output.of(value)` | 동일 |
 
 ```typescript
+// Input<T>를 받아 Output<T>로 변환 후 apply를 호출하는 유틸리티 함수
 function buildUrl(host: pulumi.Input<string>): pulumi.Output<string> {
     return pulumi.output(host).apply(h => `https://${h}`);
 }
 
-const fromPlain = buildUrl("example.com");       // 평문 값
-const fromOutput = buildUrl(bucket.websiteEndpoint); // Output 값
+const fromPlain = buildUrl("example.com");            // 평문 값 전달 — 자동으로 Output으로 래핑됨
+const fromOutput = buildUrl(bucket.websiteEndpoint);  // Output 값 전달 — 그대로 사용됨
 ```
 
 ```python
+# Input[T]를 받아 Output[T]로 변환 후 apply를 호출하는 유틸리티 함수
 def build_url(host: pulumi.Input[str]) -> pulumi.Output[str]:
     return pulumi.Output.from_input(host).apply(lambda h: f"https://{h}")
 
-from_plain = build_url("example.com")            # 평문 값
-from_output = build_url(bucket.website_endpoint)  # Output 값
+from_plain = build_url("example.com")            # 평문 값 전달 — 자동으로 Output으로 래핑됨
+from_output = build_url(bucket.website_endpoint)  # Output 값 전달 — 그대로 사용됨
 ```
 
 ---
@@ -666,6 +691,25 @@ if candidates.ids:
         instance_type="t3.micro",
     )
 ```
+
+### 직접 형식 vs Output 형식: 실행 시점 차이
+
+두 형식은 호출 시 결과 데이터는 동일하지만, **언제 실행되는지**가 다르다.
+
+- **직접 형식**은 Pulumi 프로그램 언어의 일반 함수 호출처럼 실행된다. Pulumi Input/Output을 받지 않으므로 엔진의 의존성 그래프에 참여하지 않으며, 리소스와 동일한 방식으로 추적되지 않는다.
+- **Output 형식**은 Input을 인자로 받고 Output을 반환하므로 Pulumi 엔진에 의해 추적된다. 엔진은 함수의 모든 Input 값이 리졸브된 후에 함수를 실행한다. (이것이 `dependsOn`이 Output 형식에서만 사용 가능한 이유다.)
+
+### 직접 형식과 Output 형식 중 선택
+
+공식 문서는 특별한 이유가 없는 한 **Output 형식을 권장**한다. Output 형식을 사용하면 하나의 프로그래밍 모델(Input/Output)만 다루면 되고, 직접 형식은 언어별 반환 타입(`Promise`, `Task`, `CompletableFuture` 등)도 함께 관리해야 하기 때문이다. 성능이나 코드 유지보수성 면에서 두 형식 간에 유의미한 차이는 없다.
+
+다음과 같은 시나리오에서는 특정 형식을 반드시 사용해야 하거나 권장한다.
+
+| 시나리오 | 권장 형식 | 이유 |
+|---|---|---|
+| 조건부 리소스 생성 | **직접 형식 (필수)** | 직접 형식은 Pulumi 엔진이 의존성 그래프를 형성하는 동안(어떤 리소스를 생성/수정/삭제할지 결정하는 단계) 실행된다. 리소스가 그래프에 속할지 여부를 결정하려면 이 결정이 항상 **사전에(up front)** 계산되어야 하므로 직접 형식이 필요하다. |
+| 리소스 생성/수정 후 함수 실행 | **Output 형식 (권장)** | Output 형식은 Input으로 전달된 의존성이 모두 리졸브된 후에 실행되므로 자연스럽게 순서가 보장된다. 직접 형식도 `apply` 내부에서 호출하면 가능하지만, 가독성이 떨어진다. |
+| Input에 명시적이지 않은 추가 의존성 필요 | **Output 형식 (필수)** | `dependsOn` 옵션이 Output 형식에서만 지원되므로, 함수 인자에 의해 암시되지 않은 의존성을 지정해야 할 때는 Output 형식을 사용해야 한다. |
 
 ### Output 형식(output form)을 사용해야 하는 경우
 
@@ -782,14 +826,18 @@ Resource Methods는 Pulumi가 관리 중인 **특정 리소스 타입에 연결�
 
 ### 직접 형식 vs Output 형식
 
-Provider Functions는 두 가지 형식으로 노출된다.
+Provider Functions는 두 가지 형식으로 노출된다. 대부분의 언어에서 두 변형은 단일 함수의 오버로드가 아닌 **별도의 이름을 가진 두 개의 함수**로 제공된다. 예를 들어 AWS의 `aws.ec2.getAmi`에 해당하는 Output 형식은 `aws.ec2.getAmiOutput`이다. **Java의 이름 규칙은 반전**되어 있다: `Ec2Functions.getAmi()`가 Output 형식이고, `Ec2Functions.getAmiPlain()`이 직접 형식이다. YAML에서는 두 형식 모두 `fn::invoke`로 호출되며, 런타임이 차이를 투명하게 처리한다.
 
 | 구분 | 직접 형식 (Direct Form) | Output 형식 (Output Form) |
 |---|---|---|
-| **인자** | 평문 값 | Pulumi Input (또는 평문 값) |
-| **반환** | Promise / 평문 값 | `Output<T>` |
-| **실행 시점** | 프로그램 평가 중 즉시 실행 | Pulumi 엔진이 의존성 그래프 내에서 관리 |
-| **이름 규칙** | `getX()` (TS), `get_x()` (Py) | `getXOutput()` (TS), `get_x_output()` (Py) |
+| **인자** | 평문 값 (예: `string`, `pulumi.Input<string>` 아님) | Pulumi Input (또는 평문 값) |
+| **반환** | 언어별 비동기/동기 타입 (Promise, Task 등) | `Output<T>` |
+| **실행 시점** | 프로그램 평가 중 일반 함수처럼 즉시 실행. Pulumi Input/Output을 받지 않으므로 엔진의 의존성 그래프에 참여하지 않음 | Pulumi 엔진이 의존성 그래프 내에서 관리. 모든 Input 값이 리졸브된 후에 함수가 실행됨 |
+| **TypeScript 이름** | `getX()` — `Promise<T>` 반환 | `getXOutput()` — `Output<T>` 반환 |
+| **Python 이름** | `get_x()` — 동기 결과 반환 | `get_x_output()` — `Output[T]` 반환 |
+| **Go 이름** | `GetX()` 또는 `LookupX()` — `(T, error)` 동기 반환 | `GetXOutput()` 또는 `LookupXOutput()` — `Output` 반환 |
+| **C# 이름** | `GetX.InvokeAsync()` — `Task<T>` 반환 | `GetX.Invoke()` — `Output<T>` 반환 |
+| **Java 이름** | `ModuleFunctions.getXPlain()` — `CompletableFuture<T>` 반환 | `ModuleFunctions.getX()` — `Output<T>` 반환 |
 | **`dependsOn`** | 사용 불가 | 사용 가능 |
 | **적합한 경우** | 조건부 리소스 생성 여부 결정 | Output/Input 값 전달, 의존성 추적 필요 |
 
