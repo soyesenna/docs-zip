@@ -29,8 +29,14 @@ Pulumi IaC 프로그램은 완전한 애플리케이션으로, 런타임 환경�
 
 | 환경 | 권한 수준 | 설명 |
 |---|---|---|
-| 개발/테스트 | 직접 실행 허용 | `pulumi up` 직접 실행, 빠른 반복과 디버깅 가능 |
+| 개발/테스트 | 직접 실행 허용 | `pulumi up` 직접 실행, 빠른 반복과 디버깅 가능. ESC 환경 접근 허용 |
 | 프로덕션 | 직접 실행 제한 | PR 승인 프로세스 필수, 격리된 CI/CD 시스템에서 배포 |
+
+### 최소 권한 구현 단계
+
+1. **스택 및 ESC 권한 구성:** RBAC를 사용하여 조직 수준 기본 권한을 `None` 또는 `Read`로 설정. 필요한 경우에만 `Write`/`Admin` 부여
+2. **팀 기반 권한 설정:** Settings > Teams에서 사용자를 팀으로 조직화. 스택 및 ESC 권한을 조직 역할에 맞게 명시적으로 할당
+3. **프로덕션 보안 배포 접근 방식 선택:** Pulumi Deployments, OIDC 기반 CI/CD, 또는 다른 CI/CD 프로바이더 중 선택
 
 ---
 
@@ -46,16 +52,25 @@ Pulumi IaC 프로그램은 완전한 애플리케이션으로, 런타임 환경�
 
 > **참고:** Teams 기능은 Pulumi Enterprise 및 Business Critical 에디션에서만 사용할 수 있다.
 
+### 조직 기본 역할(Organization Default Role)
+
+조직에 커스텀 역할이 있는 경우, **조직 기본 역할**을 설정할 수 있다. 기본 역할은 `Member` 조직 역할을 가지면서 명시적으로 커스텀 역할을 할당받지 않은 모든 멤버에게 자동으로 적용되는 커스텀 역할이다.
+
+**설정 방법:** Settings > Roles에서 커스텀 역할을 열고 **Set as default role**을 선택한다.
+
+> **참고:** 기본 역할은 Settings > Roles(접근 관리 페이지가 아님)에서 설정한다.
+
 ### 팀 기반 권한 관리
 
 Pulumi Cloud는 팀을 통한 RBAC를 제공한다. 조직 관리자는 팀에 스택 권한을 일괄 할당할 수 있다.
 
 **팀 생성 및 권한 할당 흐름:**
 
-1. **Settings > Teams**에서 팀 생성
+1. **Settings > Teams**에서 팀 생성 (기본적으로 조직 관리자만 생성 가능. Settings > Access Management에서 **Allow organization members to create teams** 토글을 켜면 모든 멤버가 생성 가능)
 2. 스택 권한 할당: `Read`, `Write`, `Admin`
 3. ESC 환경 권한 할당: `Environment reader`, `opener`, `editor`, `admin`
-4. 스택 초기화 시 팀 권한 부여:
+4. Insights 계정 권한 할당
+5. 스택 초기화 시 팀 권한 부여:
 
 ```bash
 pulumi stack init --teams YourTeamName
@@ -65,29 +80,112 @@ pulumi stack init --teams YourTeamName
 
 | 유형 | 설명 |
 |---|---|
-| `Team admin` | 팀 멤버 추가 가능 |
+| `Team admin` | 팀 멤버 추가 가능. Settings > Teams에서 멤버 역할 변경 가능 |
 | `Team member` | 기본 역할, 팀에 할당된 권한만 행사 |
+
+### Role-backed Teams
+
+커스텀 역할이 활성화된 조직에서는 팀에 역할(default 또는 커스텀)을 할당할 수 있다. 이를 **Role-backed teams**라고 한다.
+
+- 팀에 여러 역할을 할당할 수 있다(다중 역할 할당).
+- 팀 멤버는 자신의 사용자 역할과 팀에 할당된 모든 역할의 권한을 합산하여 받는다(합성성, Composability).
+- 역할 할당 관리에는 `role:update` 및 `team:update` 스코프를 가진 역할이 필요하다. 팀 관리자(Team admin)만으로는 충분하지 않다.
+
+**Role-backed teams 설정 흐름:**
+
+1. 커스텀 역할 생성 (예: 특정 스택 또는 태그 기반 규칙만 포함)
+2. Settings > Teams에서 팀 생성
+3. 팀의 **Access** 탭에서 **Add role**로 역할 할당
+4. 멤버 추가 — 멤버는 팀의 역할 권한을 자동으로 획득
+
+### 팀 엔티티 접근 권한 부여(Entity Access Grants)
+
+팀 관리자는 조직 수준 역할 관리 권한 없이도 팀의 스택, 환경, Insights 계정에 대한 직접 접근 권한을 관리할 수 있다. 이를 통해 팀이 자체 엔티티 접근을 자율 관리하면서도 더 광범위한 역할 관리는 중앙 집중화된다.
+
+### 팀 환경 권한 REST API 관리
+
+팀 환경 권한은 Pulumi Cloud REST API를 통해 프로그래밍 방식으로 관리할 수 있다. 세 가지 작업 모두 동일한 엔드포인트를 사용한다.
+
+```bash
+# 환경 권한 추가
+curl -s -X PATCH \
+    "https://api.pulumi.com/api/orgs/{orgName}/teams/{teamName}" \
+    -H "Authorization: token $PULUMI_ACCESS_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{"addEnvironmentPermission":{"projectName":"{projectName}","envName":"{envName}","permission":"read"}}'
+
+# pulumi cloud api 명령으로 동등하게 실행
+pulumi cloud api PATCH /orgs/{orgName}/teams/{teamName} \
+    -- --body '{"addEnvironmentPermission":{"projectName":"{projectName}","envName":"{envName}","permission":"read"}}'
+
+# 환경 권한 수정
+curl -s -X PATCH \
+    "https://api.pulumi.com/api/orgs/{orgName}/teams/{teamName}" \
+    -H "Authorization: token $PULUMI_ACCESS_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{"editEnvironmentPermission":{"projectName":"{projectName}","envName":"{envName}","permission":"write"}}'
+
+# 환경 권한 제거
+curl -s -X PATCH \
+    "https://api.pulumi.com/api/orgs/{orgName}/teams/{teamName}" \
+    -H "Authorization: token $PULUMI_ACCESS_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{"removeEnvironment":{"projectName":"{projectName}","envName":"{envName}"}}'
+```
+
+> **참고:** 성공 시 `204 No Content`를 반환한다. `projectName`은 환경이 속한 ESC 프로젝트 이름이다(명시적 프로젝트를 지정하지 않은 경우 `default`).
 
 ### 커스텀 역할
 
-Enterprise/Business Critical 에디션에서는 커스텀 역할을 생성하여 세분화된 접근 제어가 가능하다.
+Enterprise/Business Critical 에디션에서는 커스텀 역할을 생성하여 세분화된 접근 제어가 가능하다. 커스텀 역할은 엔티티 접근 규칙(직접, 전역, 태그 기반)과 조직 접근 수준을 조합하여 구성한다.
+
+**생성 방법:** Settings > Roles에서 **Create custom role**을 클릭한다. 고유한 이름과 설명을 입력한 후 규칙을 추가한다.
 
 | 규칙 유형 | 설명 |
 |---|---|
-| Direct entity access | 개별 엔티티(스택, 환경)에 직접 권한 부여 |
-| Global entity access | 해당 유형의 모든 엔티티에 권한 일괄 부여 |
-| Tag-based rules (ABAC) | 태그 조건(`env=production` 등)에 따라 권한 부여 |
+| Direct entity access | 개별 엔티티(스택, 환경, Insights 계정)에 직접 권한 부여. 엔티티 유형을 선택 후 **Select specific [type]**으로 검색 가능한 목록에서 선택 |
+| Global entity access | 해당 유형의 모든 엔티티에 권한 일괄 부여. 현재 및 향후 생성되는 모든 엔티티에 적용 |
+| Tag-based rules (ABAC) | 태그 조건(`env=production`, `team exists` 등)에 따라 권한 부여. 대규모 조직에서 개별 리소스 나열 없이 태그로 일괄 접근 부여 |
 
-### 스택 및 ESC 환경 권한
+**태그 기반 규칙(ABAC) 구성 요소:**
 
-| 권한 | 스택 | ESC 환경 |
+| 구성 요소 | 설명 |
+|---|---|
+| Entity type | `Stack`, `Environment`, `Insights Account` 중 선택 |
+| Tag conditions | 하나 이상의 태그 키/값 조건 (예: `tag env equals production`, `tag team exists`) |
+| Permission set | 조건이 일치할 때 부여할 권한 세트 |
+
+> **참고:** 태그 기반 규칙은 Pulumi Cloud UI 및 API에서 "tag rules" 또는 "tag-based access control rules"로 표시된다. ABAC(Attribute-Based Access Control)는 업계 일반 용어이다.
+
+### 역할 할당
+
+역할은 조직 액세스 토큰, 사용자, 팀에 할당할 수 있다. 유효 권한은 사용자의 조직 역할과 소속 팀에 할당된 모든 역할의 합집합이다.
+
+| 대상 | 설명 |
+|---|---|
+| 조직 액세스 토큰 | 하나의 역할(default 또는 커스텀)을 할당. 해당 역할의 권한으로 제한 |
+| 사용자 | 각 멤버는 하나의 조직 역할(Admin, Member, Billing Manager, 또는 커스텀 역할)을 가짐. Settings > Access Management에서 **Assign custom roles to users** 활성화 시 개별 멤버에게 커스텀 역할 할당 가능 |
+| 팀 | 여러 역할(default 또는 커스텀)을 할당 가능. 팀 멤버는 자신의 역할 + 팀 역할의 합산 권한 획득 |
+
+### 스택, ESC 환경 및 Insights 계정 권한
+
+| 권한 | 스택 | ESC 환경 | Insights 계정 |
+|---|---|---|---|
+| `None` | 접근 불가 | - | - |
+| `Read` | 스택 상태 조회 | 환경 정의 조회 (시크릿 복호화 불가) | Insights 계정 조회 |
+| `Write` | 스택 업데이트 | 환경 업데이트 | - |
+| `Admin` | 전체 관리 | 환경 생성/수정/삭제 | 전체 관리 |
+| `open` | - | 시크릿 복호화 및 동적 자격 증명 조회 | - |
+| `opener` | - | 시크릿 복호화 및 동적 자격 증명 조회 | - |
+
+**ESC 환경 권한 값(API/CLI):**
+
+| 값 | 콘솔 레이블 | 설명 |
 |---|---|---|
-| `None` | 접근 불가 | - |
-| `Read` | 스택 상태 조회 | 환경 정의 조회 (시크릿 복호화 불가) |
-| `Write` | 스택 업데이트 | 환경 업데이트 |
-| `Admin` | 전체 관리 | 환경 생성/수정/삭제 |
-| `open` | - | 시크릿 복호화 및 동적 자격 증명 조회 |
-| `opener` | - | 시크릿 복호화 및 동적 자격 증명 조회 |
+| `read` | Environment reader | 환경 정의 조회. 시크릿 복호화 및 동적 자격 증명 조회 불가 |
+| `open` | Environment opener | 시크릿 복호화 및 동적 자격 증명 조회 가능 |
+| `write` | Environment editor | 환경 열기 및 업데이트 가능 |
+| `admin` | Environment admin | 환경 열기, 업데이트, 삭제 가능 |
 
 ---
 
@@ -96,6 +194,8 @@ Enterprise/Business Critical 에디션에서는 커스텀 역할을 생성하여
 ### 개요
 
 OIDC Issuers를 사용하면 외부 서비스가 하드코딩된 자격 증명 없이 Pulumi Cloud 액세스 토큰을 안전하게 획득할 수 있다. 장기 수명의 Pulumi 액세스 토큰을 CI 시스템에 시크릿으로 저장하는 대신, 외부 서비스를 신뢰할 수 있는 OIDC Issuer로 등록하여 단기 수명 토큰을 교환받는다.
+
+> **방향성:** OIDC Issuers는 외부 서비스의 인바운드 토큰을 Pulumi 토큰으로 변환하는 방식을 구성한다. Pulumi Cloud에서 다른 서비스로 토큰을 발급하는 데는 사용되지 않는다.
 
 ### 토큰 교환 흐름
 
@@ -112,9 +212,17 @@ OIDC Issuers를 사용하면 외부 서비스가 하드코딩된 자격 증명 �
 | Enterprise | `personal`, `organization`, `team` |
 | Business Critical | `personal`, `organization`, `team`, `deployment-runner` |
 
-### OIDC Issuer 등록
+### OIDC Issuer 등록 및 관리
 
-**Settings > Access Management > OIDC Issuers**에서 등록한다.
+OIDC Issuer는 세 가지 방식으로 관리할 수 있다:
+
+| 관리 방식 | 설명 |
+|---|---|
+| Pulumi Cloud UI | Settings > Access Management > OIDC Issuers에서 구성 |
+| REST API | OIDC Issuers REST API 참조 |
+| Pulumi Service Provider | `OidcIssuer` 리소스를 사용하여 코드로 관리 |
+
+**UI 등록 필드:**
 
 | 필드 | 설명 |
 |---|---|
@@ -134,22 +242,63 @@ OIDC Issuers를 사용하면 외부 서비스가 하드코딩된 자격 증명 �
 | Subject (`sub`) | 토큰 주체 검증 (예: `repo:<organization>/<repo>:*`) |
 | Decision | `Allow`로 설정해야 토큰 교환 허용 |
 
-### CLI를 통한 OIDC 로그인
+**클레임 값 와일드카드 지원:**
+
+| 패턴 | 의미 |
+|---|---|
+| `*` | 0개 이상의 문자 일치 |
+| `?` | 0개 또는 1개의 문자 일치 |
+| `.` | 정확히 1개의 문자 일치 |
+
+예: `runner-*`는 `runner-`로 시작하는 모든 파드 이름과 일치.
+
+**중첩 클레임 경로:** JSON 토큰 페이로드의 중첩된 객체를 타겟팅하려면 클레임 경로를 정의한다. 예: `"kubernetes.io".pod.name`
+
+**Thumbprint 구성(선택):** 기본적으로 Pulumi Cloud는 등록 시점의 인증서 지문을 저장한다. 프로바이더가 여러 인증서를 사용하거나 인증서 교체를 지원해야 하는 경우 수동으로 구성한다.
 
 ```bash
-# TypeScript (GitHub Actions 예시)
-pulumi login --oidc-token <token> --oidc-org <org-name>
+# 인증서 지문 계산
+openssl s_client -servername example.com -showcerts -connect example.com:443
+# 첫 번째 인증서를 certificate.crt로 저장 후
+openssl x509 -in certificate.crt -fingerprint -sha256 -noout > sha256
+# 콜론 제거 후 Thumbprints 필드에 입력
 ```
 
-```python
-# Python - OIDC 토큰 파일 경로 사용
-# pulumi login --oidc-token file:///path/to/token --oidc-org <org-name>
+### CLI를 통한 OIDC 로그인
+
+Pulumi CLI는 `pulumi login`을 통해 OIDC 토큰 교환을 기본 지원한다. 대부분의 사용 사례에 권장되는 방식이다.
+
+```bash
+# 기본 OIDC 로그인
+pulumi login --oidc-token <token> --oidc-org <org-name>
+
+# 파일 경로에서 토큰 읽기
+pulumi login --oidc-token file:///path/to/token --oidc-org <org-name>
+
+# 추가 옵션: 팀, 사용자, 만료 시간 지정
+pulumi login --oidc-token <token> --oidc-org <org-name> \
+    --oidc-team <team-name> \
+    --oidc-expiration <seconds>
 ```
 
 > **주의:** `OIDC token exchange failed` 오류 발생 시 백엔드 URL을 명시적으로 포함해야 한다:
 > `pulumi login https://api.pulumi.com --oidc-token <token> --oidc-org <org-name>`
 
 ### REST API를 통한 토큰 교환
+
+고급 시나리오에서 직접 토큰 교환을 제어해야 하는 경우 OAuth 2.0 토큰 엔드포인트를 호출한다. `application/json`과 `application/x-www-form-urlencoded` 모두 지원한다.
+
+**파라미터:**
+
+| 파라미터 | 설명 |
+|---|---|
+| `audience` | `urn:pulumi:org:{ORG_NAME}` |
+| `grant_type` | `urn:ietf:params:oauth:grant-type:token-exchange` |
+| `subject_token_type` | `urn:ietf:params:oauth:token-type:id_token` |
+| `requested_token_type` | 조직 토큰: `urn:pulumi:token-type:access_token:organization`, 팀 토큰: `urn:pulumi:token-type:access_token:team`, 개인 토큰: `urn:pulumi:token-type:access_token:personal` |
+| `scope` | 팀 또는 개인 토큰 요청 시 필요. 형식: `team:{TEAM_NAME}` 또는 `user:{USER_LOGIN}` |
+| `expiration` | 토큰 만료 시간(초). 기본값: 2시간 |
+| `subject_token` | OIDC 프로바이더가 발급한 id_token |
 
 ```bash
 curl -X POST \
@@ -160,6 +309,18 @@ curl -X POST \
     -d 'requested_token_type=urn:pulumi:token-type:access_token:organization' \
     -d 'subject_token=<YOUR_ID_TOKEN>' \
     https://api.pulumi.com/api/oauth/token
+```
+
+**응답 예시:**
+
+```json
+{
+    "access_token": "...",
+    "issued_token_type": "urn:pulumi:token-type:access_token:organization",
+    "token_type": "token",
+    "expires_in": 7200,
+    "scope": ""
+}
 ```
 
 ### 프로덕션 보안 배포 접근 방식
@@ -214,7 +375,7 @@ jobs:
           team: <YOUR_TEAM>
 
       - name: Deploy Infrastructure
-        uses: pulumi/actions@v7
+        uses: pulumi/actions@v6
         with:
           command: up
           stack-name: <YOUR_ORG>/<YOUR_STACK>
@@ -249,7 +410,9 @@ Pulumi는 GitHub Actions 외에도 다음과 같은 주요 CI/CD 플랫폼과 �
 | GitHub Actions | `/docs/administration/access-identity/oidc-issuers/github/` |
 | GitLab CI | `/docs/administration/access-identity/oidc-issuers/gitlab/` |
 | Amazon EKS | `/docs/administration/access-identity/oidc-issuers/kubernetes-eks/` |
-| Google GKE | `/docs/administration/access-identity/oidc-issuers/kubernetes-gke/` |
+| Google Kubernetes Engine | `/docs/administration/access-identity/oidc-issuers/kubernetes-gke/` |
+
+> **참고:** 위에 나열된 프로바이더 외에도 OIDC id_token을 발급할 수 있는 모든 서드파티 서비스를 OIDC Issuer로 등록할 수 있다.
 
 ---
 
@@ -368,16 +531,26 @@ Encryption Context는 IAM 정책 조건 및 CloudTrail 로그에 표시된다.
 
 ### Customer Managed Keys (CMK)
 
-> **참고:** CMK는 Enterprise 및 Business Critical 에디션에서 사용 가능. 현재 Pulumi ESC 데이터 암호화에만 지원되며, AWS KMS만 지원.
+> **참고:** CMK는 Enterprise 및 Business Critical 에디션에서 사용 가능. 현재 Pulumi ESC 데이터 암호화에만 지원되며, AWS KMS만 지원. 추가 KMS 프로바이더 및 다른 Pulumi 제품으로의 확장을 진행 중이다.
 
-CMK를 사용하면 Pulumi Cloud의 데이터 암호화에 자체 KMS 키를 사용할 수 있다.
+CMK를 사용하면 Pulumi Cloud의 데이터 암호화에 자체 KMS 키를 사용할 수 있다. CMK는 데이터 키를 암호화하며, 암호화된 데이터 키가 Pulumi Cloud의 실제 데이터를 암호화한다. 조직 관리자만 CMK를 관리할 수 있다.
+
+**CMK 페이지 확인:** Settings > Organization > Customer Managed Keys 탭에서 각 키의 Name, Type, Default 여부를 확인할 수 있다.
+
+#### AWS KMS 키 추가
+
+1. AWS IAM에 역할을 설정하고 AWS KMS에 키를 생성
+2. Pulumi Cloud의 Customer Managed Keys 설정 페이지에서 **Add Customer Managed Key** 클릭
+3. 고유한 키 이름 입력
+4. Role ARN 입력 (AWS KMS 키에 접근 권한이 있는 IAM 역할)
+5. Key ARN 입력 (별칭 ARN도 지원)
 
 | 작업 | 설명 |
 |---|---|
-| 키 추가 | 첫 CMK 추가 시 기존 데이터 키가 자동으로 새 CMK로 재암호화됨 |
-| 기본 키 설정 | 모든 신규 데이터 키가 이 키로 암호화됨 |
-| 키 비활성화 | 새 데이터 키 생성에 사용 불가. 기존 데이터 키는 재암호화 키 필요 |
-| 전체 비활성화 | 모든 CMK 비활성화 후 Pulumi 관리 키로 재암호화 |
+| 키 추가 | 첫 CMK 추가 시 기존 데이터 키가 자동으로 새 CMK로 재암호화됨. 암호화된 데이터 자체는 변경되지 않음 |
+| 기본 키 설정 | 모든 신규 데이터 키가 이 키로 암호화됨. 이미 기본 키이거나 재암호화 진행 중인 키는 설정 불가 |
+| 키 비활성화 | 새 데이터 키 생성에 사용 불가. 기존 데이터 키는 재암호화 키를 지정해야 함. 기본 키 또는 재암호화 진행 중인 키는 비활성화 불가 |
+| 전체 비활성화 | 모든 CMK 비활성화 후 Pulumi 관리 키로 재암호화. 설정 페이지 우측 상단 휠 버튼에서 실행 |
 
 ---
 
@@ -407,7 +580,7 @@ CMK를 사용하면 Pulumi Cloud의 데이터 암호화에 자체 KMS 키를 사
 | 방식 | 설명 |
 |---|---|
 | 콘솔 다운로드 | Settings > Audit Logs > Download |
-| REST API | `/docs/reference/service-rest-api#audit-logs` 참조. 간헐적 사용에만 적합 |
+| REST API | `/docs/reference/service-rest-api#audit-logs` 참조. 빈도가 높은 사용에는 부적합하며, 자동 내보내기 사용 권장 |
 
 ### 지원 포맷
 
@@ -421,17 +594,69 @@ CMK를 사용하면 Pulumi Cloud의 데이터 암호화에 자체 KMS 키를 사
 
 | 이벤트 | 설명 |
 |---|---|
-| `User Login` / `User Login Failed` | 사용자 로그인 성공/실패 |
-| `Member Added` / `Member Removed` / `Member Role Changed` | 조직 멤버 변경 |
-| `Stack Created` / `Stack Deleted` / `Stack Update Started/Completed/Canceled` | 스택 수명주기 |
+| `User Login` | 사용자 로그인 성공 |
+| `User Login Failed` | 사용자 로그인 실패 |
+| `User Added New Identity to Their Account` | 사용자가 Pulumi 계정에 새 아이덴티티 연결 |
+| `Member Added` | 조직에 멤버 추가 |
+| `Member Removed` | 조직에서 멤버 제거 |
+| `Member Role Changed` | 멤버 역할 변경 |
+| `Organization Settings Changed` | 조직 설정 변경 |
+| `Stack Created` | 스택 생성 |
+| `Stack Created From Template` | 템플릿으로 스택 생성 |
+| `Stack Deleted` | 스택 삭제 |
+| `Stack Renamed` | 스택 이름 변경 |
+| `Stack Exported` | 스택 내보내기 |
+| `Stack Imported` | 스택 가져오기 |
+| `Stack Transferred to Organization` | 스택을 다른 조직으로 이전 |
+| `Stack Update Started` | 스택 업데이트 시작 |
+| `Stack Update Completed` | 스택 업데이트 완료 |
+| `Stack Update Canceled` | 스택 업데이트 취소 |
+| `Stack Collaborator Added` | 스택 협업자 추가 |
+| `Stack Collaborator Permissions Changed` | 스택 협업자 권한 변경 |
+| `Stack Collaborator Removed` | 스택 협업자 제거 |
+| `Stack Provider Open` | 환경 내 스택 프로바이더 열기 |
 | `Secret Decrypted` | 시크릿 값 복호화 |
-| `Environment Created` / `Environment Open` / `Environment Decrypted` | ESC 환경 작업 |
-| `Customer Managed Key Added` / `Set Default` / `Disabled` | CMK 변경 |
+| `Team Created` | 팀 생성 |
+| `Team Updated` | 팀 업데이트 |
+| `Team Deleted` | 팀 삭제 |
+| `Policy Pack Created` | 정책 팩 생성 |
+| `Policy Pack Deleted` | 정책 팩 삭제 |
+| `Policy Pack Enabled` | 정책 팩 활성화 |
+| `Policy Pack Disabled` | 정책 팩 비활성화 |
+| `Policy Group Created` | 정책 그룹 생성 |
+| `Policy Group Deleted` | 정책 그룹 삭제 |
+| `Policy Group Updated` | 정책 그룹 업데이트 |
+| `Environment Created` | ESC 환경 생성 |
+| `Environment Updated` | ESC 환경 업데이트 |
+| `Environment Deleted` | ESC 환경 삭제 |
+| `Environment Open` | ESC 환경 열기 |
+| `Environment Read` | 열린 환경 읽기 |
+| `Environment Read Open` | 환경 열기 및 읽기 |
+| `Environment Unauthorized Open` | 권한 없는 환경 열기 시도 |
+| `Environment Decrypted` | ESC 환경 복호화 |
+| `Environment Clone` | ESC 환경 복제 |
+| `Environment Restored` | ESC 환경 복원 |
+| `Environment Rotated` | ESC 환경 시크릿 교체 |
+| `Environment Tag Created` | 환경 태그 생성 |
+| `Environment Tag Updated` | 환경 태그 업데이트 |
+| `Environment Tag Deleted` | 환경 태그 삭제 |
+| `Environment Version Retracted` | 환경 버전 철회 |
+| `Environment Version Tag Open` | 특정 버전 태그에서 환경 열기 |
+| `Environment Version Tag Created` | 환경 버전 태그 생성 |
+| `Environment Version Tag Read` | 환경 버전 태그 읽기 |
+| `Environment Version Tag Update` | 환경 버전 태그 업데이트 |
+| `Environment Version Tag Delete` | 환경 버전 태그 삭제 |
+| `Environment Schedule Created` | 환경 스케줄 생성 |
+| `Environment Schedule Updated` | 환경 스케줄 업데이트 |
+| `Environment Schedule Deleted` | 환경 스케줄 삭제 |
+| `Customer Managed Key Added` | CMK 추가 |
+| `Customer Managed Key Set Default` | CMK 기본 키 설정 |
+| `Customer Managed Key Disabled` | CMK 비활성화 |
+| `Customer Managed Key Disabled All` | 모든 CMK 비활성화 |
 | `SAML Configuration Updated` | SAML 설정 변경 |
-| `Auth Failure Organization Role` / `Auth Failure Stack Permission` | 권한 부족 인증 실패 |
-| `Team Created` / `Team Updated` / `Team Deleted` | 팀 관리 |
-| `Policy Pack Created` / `Enabled` / `Disabled` | 정책 팩 관리 |
-| `Stack Collaborator Added` / `Permissions Changed` / `Removed` | 스택 협업자 변경 |
+| `Auth Failure Organization Role` | 조직 역할 권한 부족으로 인한 인증 실패 |
+| `Auth Failure Stack Permission` | 스택 권한 부족으로 인한 인증 실패 |
+| `Auth Failure SCIM Access Token` | SCIM 액세스 토큰 인증 실패 |
 
 ---
 
@@ -441,7 +666,9 @@ CMK를 사용하면 Pulumi Cloud의 데이터 암호화에 자체 KMS 키를 사
 
 > **참고:** SAML 지원은 Enterprise 및 Business Critical 에디션 필요.
 
-Pulumi Cloud는 SAML 2.0 Identity Provider와 연동할 수 있다.
+Pulumi Cloud는 SAML 2.0 Identity Provider와 연동할 수 있다. SAML 기반 조직의 멤버는 Single Sign-On을 통해 로그인할 수 있다.
+
+**셀프 호스팅 Pulumi Cloud 사용 시:** 먼저 셀프 호스팅 인프라를 SAML SSO에 맞게 구성(API 서비스 키 및 환경 변수)한 후 IdP 설정을 완료해야 한다.
 
 | 지원 IdP | 문서 경로 |
 |---|---|
