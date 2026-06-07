@@ -1,8 +1,10 @@
 # Pencil Dev 스크립팅과 셰이더
 
-> 원문: https://docs.pencil.dev/core-concepts/code-on-canvas
+> **Script 노드 섹션 원문:** https://docs.pencil.dev/core-concepts/code-on-canvas
 >
-> Pencil MCP 서버 Scripting/Shader 지침 (get_editor_state로 조회)
+> **Shader 섹션 출처:** Pencil MCP 서버 Shader 지침 (get_editor_state로 조회). 공식 Code on Canvas 페이지에는 셰이더 관련 내용이 없습니다.
+>
+> **참고:** 공식 문서 예시 코드는 `@schema 2.11`을 사용하지만, API Reference에 따르면 현재 스키마 버전은 `2.13`입니다.
 
 Pencil은 JavaScript 스크립트 노드로 동적 콘텐츠를 생성하고, WebGL 셰이더로 복잡한 그래픽 효과를 만들 수 있습니다.
 
@@ -43,12 +45,13 @@ interface Script extends Entity, Size {
 
 ```javascript
 /**
- * @schema 2.11                       // ← 필수: 현재 버전
+ * @schema 2.11                       // ← 필수: 최신 스키마 버전은 2.13 (예시는 2.11 사용)
  * @input rows: number = 3            // 입력 선언
  * @input gap: number = 4
  * @input color: color = #3B82F6
  * @input label: string = "Hello"
  * @input filled: boolean = true
+ * @input cornerRadius: boolean = true
  * @input layout: enum("grid", "stack", "scatter") = "grid"
  * @input target: ref
  */
@@ -66,6 +69,7 @@ for (let r = 0; r < rows; r++) {
     width: pencil.width,
     height: cellH * Math.random(),
     fill: pencil.input.color,
+    cornerRadius: pencil.input.cornerRadius,
   });
 }
 
@@ -76,7 +80,7 @@ return nodes;  // 노드 배열을 반환
 
 | 요소 | 설명 |
 | --- | --- |
-| `@schema 2.11` | 파일 첫 줄에 필수. 누락 시 에러. 현재 스키마 버전은 `2.11` |
+| `@schema 2.13` | 파일 첫 줄에 필수. 누락 시 에러. 현재 스키마 버전은 `2.13` |
 | `pencil` 객체 | `pencil.width`, `pencil.height`, `pencil.input.<name>` |
 | `return` | 노드 객체 배열을 반환해야 함 |
 
@@ -125,6 +129,8 @@ return nodes;  // 노드 배열을 반환
 | --- | --- |
 | **기성 스크립트 사용** | [highagency/pencil-scripts](https://github.com/highagency/pencil-scripts)에서 Pencil 팀이 관리하는 예제 스크립트(차트, 그리드, 패턴 등)를 다운로드하여 `.pen` 파일 옆에 배치 |
 | **AI 에이전트 활용** | 에이전트 패널을 열고 원하는 내용을 설명하면, `.js` 파일을 생성하고 선택된 스크립트 노드에 연결 |
+
+> **AI 프롬프트 예시:** "Create a script that renders a horizontal bar chart with 5 bars. Add inputs for the bar color, gap between bars, and an array of values."
 
 ### 캔버스에서 조정
 
@@ -195,6 +201,8 @@ Update(scriptNode, {
 ---
 
 ## Shader (셰이더)
+
+> **출처:** Pencil MCP 서버 Shader 지침 (공식 Code on Canvas 페이지에는 별도 섹션 없음, MCP 스키마 기반)
 
 ### 개요
 
