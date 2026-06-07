@@ -67,7 +67,8 @@ Automation API는 Pulumi와 동일하게 여러 언어를 지원하며, 크로�
 
 | 언어 | 상태 |
 |------|------|
-| TypeScript/JavaScript | Stable |
+| TypeScript | Stable |
+| JavaScript | Stable |
 | Python | Stable |
 | Go | Stable |
 | .NET (C#) | Stable |
@@ -796,6 +797,8 @@ public class App {
     }
 }
 ```
+
+> 로컬 패키지 작업에 대한 자세한 내용은 [Local Packages guide](https://www.pulumi.com/docs/iac/guides/building-extending/packages/local-packages/)를 참조하라.
 
 ---
 
