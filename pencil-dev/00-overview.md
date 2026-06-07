@@ -136,6 +136,6 @@ Pencil 에코시스템
 | [설치 및 설정](./01-installation.md) | VS Code, Cursor, 데스크톱, Claude Code CLI 설치 |
 | [AI 통합](./02-ai-integration.md) | MCP 서버, Claude Code, Cursor, Codex 연동 |
 | [.pen 파일 기본](./03-pen-files.md) | 파일 포맷, 구조, 버전 이해 |
-| [노드 타입 참조](./04-node-types.md) | Frame, Text, Shape, Path, Icon, Script, Ref 등 |
+| [노드 타입 참조](./04-node-types.md) | Frame, Text, Rectangle, Ellipse, Polygon, Path, Icon, Script, Ref 등 |
 | [캔버스와 레이아웃](./05-canvas-layout.md) | Flexbox, sizing, positioning |
 | [코드 생성](./11-code-generation.md) | Design ↔ Code, React, Tailwind |

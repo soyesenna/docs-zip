@@ -62,6 +62,8 @@ MCP는 AI 어시스턴트가 디자인 파일과 상호작용할 수 있도록 �
 
 Antigravity IDE 또는 VSCode에서 Pencil 확장과 함께 Claude Code 패널을 사용할 수 있습니다. Pencil이 실행 중이면 Claude Code 패널이 MCP를 통해 자동으로 Pencil 도구에 접근합니다.
 
+> **Variables and Design Kits Tutorial** — [Vimeo 영상 보기](https://player.vimeo.com/video/1158682767)
+
 ### 기본 워크플로
 
 1. AI 프롬프트 패널 열기: `Cmd/Ctrl + K`
@@ -120,6 +122,8 @@ Antigravity IDE 또는 VSCode에서 Pencil 확장과 함께 Claude Code 패널�
 ### Cursor에서 Pencil 확장 사용
 
 Cursor에서 Pencil 확장을 설치하고 활성화하면 MCP를 통해 자동으로 Pencil 도구에 접근합니다.
+
+> **Using Pencil Extension in Cursor** — [Vimeo 영상 보기](https://player.vimeo.com/video/1158019699)
 
 ### Cursor 전용 기능
 
@@ -211,17 +215,7 @@ AI 어시스턴트가 Pencil MCP 서버에 연결하면 다음 도구에 접근�
 
 ### 자동화된 디자인 생성
 
-AI에게 전체 화면을 설명하면 batch_design API를 통해 자동 생성:
-
-```
-"Create a dashboard with:
- - Sidebar navigation with 5 items
- - Main content area with 3 metric cards
- - Recent activity table with 5 rows
- - Use the Design System guide"
-```
-
-**스타일 가이드 적용:**
+**Style guides:** Ask AI to follow specific design systems:
 
 ```
 "Create a dashboard using Material Design principles"
@@ -229,7 +223,7 @@ AI에게 전체 화면을 설명하면 batch_design API를 통해 자동 생성:
 "Build components following our design system in design-system.pen"
 ```
 
-**배치 작업:**
+**Batch operations:**
 
 ```
 "Create 5 variations of this button component"
@@ -376,46 +370,3 @@ git add design.pen src/pages/landing.tsx
 git commit -m "Add landing page design and implementation"
 ```
 
----
-
-## 핵심 제약사항
-
-AI 어시스턴트를 통해 Pencil을 사용할 때 반드시 알아야 할 제약사항:
-
-### CSS/HTML과의 차이
-
-| 제약 | 설명 |
-| --- | --- |
-| 커스텀 포맷 | Pencil은 자체 포맷 사용. CSS/HTML 속성이나 동작을 사용/생각하지 마세요 |
-| 퍼센트 미지원 | `width: "100%"`, `height: "50%"` 등 사용 불가 |
-| margin 미지원 | margin 대신 부모 frame의 padding이나 gap 사용 |
-| alignItems 제한 | `baseline`, `stretch` 미지원. `start`, `center`, `end`만 사용 |
-| layout/padding | `frame` 타입에서만 설정 가능. 다른 노드에는 설정 불가 |
-| 스키마 준수 | 스키마에 없는 속성은 지원되지 않으며 에러 발생 |
-
-### 필수 규칙
-
-| 규칙 | 설명 |
-| --- | --- |
-| Text fill 필수 | 텍스트 노드는 기본적으로 fill이 없어 보이지 않음. 반드시 fill 설정 |
-| placeholder 관리 | 새로 생성/수정 중인 루트 프레임은 `placeholder: true` 유지, 완료 후 즉시 `false` |
-| 컴포넌트 참조 | `ref` 노드로 컴포넌트를 재사용. 파일 간 참조 불가 — 복사해서 사용 |
-| 노드 ID | `reusable` 노드의 ID는 자동 생성. 수동 설정 불가 |
-| batch_design 분할 | 큰 변경은 여러 batch_design 호출로 분할. 에러 시 전체 롤백됨 |
-
-### batch_design API 참조
-
-batch_design은 JavaScript 스니펫으로 디자인을 프로그래밍 방식으로 수정하는 핵심 API입니다:
-
-| 함수 | 설명 | 반환 |
-| --- | --- | --- |
-| `Insert(parent, data)` | 새 노드 삽입 | 노드 ID |
-| `Copy(path, parent, data)` | 노드 복사 | 새 ID |
-| `Update(path, data)` | 속성 업데이트 | void |
-| `Replace(path, data)` | 노드 교체 | 새 ID |
-| `Move(path, parent, idx?)` | 위치 이동 | void |
-| `Delete(path)` | 삭제 | void |
-| `Generate(nodeId, type, prompt)` | 이미지 생성 | void |
-| `FindEmptySpace({w,h,...})` | 빈 영역 찾기 | `{x,y}` |
-
-> 상세한 API 문서는 [batch_design API](./10-batch-design-api.md)를 참조하세요.
