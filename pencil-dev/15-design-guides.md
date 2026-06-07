@@ -1,10 +1,10 @@
 # Pencil Dev 디자인 가이드와 스타일
 
-> 원문: Pencil MCP 서버 가이드 8종 (Web App, Mobile App, Landing Page, Slides, Table, Tailwind, Code, Design System), https://docs.pencil.dev/troubleshooting
+> 원문: Pencil MCP 서버 get_guidelines 도구 — 가이드 8종 (Web App, Mobile App, Landing Page, Slides, Table, Tailwind, Code, Design System) 및 스타일 프리셋 26종
 >
 > 문제 해결 섹션 원문: https://docs.pencil.dev/troubleshooting (Last updated: June 1, 2026)
 
-Pencil은 다양한 프로젝트 유형에 맞는 내장 디자인 가이드와 27개의 스타일 프리셋을 제공합니다.
+Pencil은 다양한 프로젝트 유형에 맞는 내장 디자인 가이드와 26개의 스타일 프리셋을 제공합니다.
 
 ---
 
@@ -38,7 +38,7 @@ Pencil은 다양한 프로젝트 유형에 맞는 내장 디자인 가이드와 
 | 3 | 이해 가능성 | 라벨은 명확, 액션은 인식 가능, 아이콘은 텍스트를 대체하지 않음 |
 | 4 | 점진적 공개 | 복잡성을 점진적으로 드러냄. 고급 기능은 문맥적 |
 | 5 | 인식 > 회상 | 관련 액션을 필요할 때 표시. 사용자가 이전 상태를 기억하게 하지 않음 |
-| 6 | 시스템 상태 가시성 | Loading, Empty, Error, Success 상태를 항상 표시 |
+| 6 | 시스템 상태 가시성 | Loading, Empty, Error, Success, Permission or restriction state(해당 시) 상태를 항상 표시 |
 
 ### 구조 원칙
 
@@ -133,13 +133,26 @@ Screen (vertical layout, fit_content(844) height)
 
 | ID | 용도 | 구조 |
 | --- | --- | --- |
-| L01 | Cover | 중앙: 제목(48-64) + 부제(28-32) |
-| L03 | Section Break | 중앙: 라벨(24) + 제목(48-56) |
-| L05 | Concept+Visual | 2col: 텍스트 | 이미지 |
-| L07 | 3 Pillars | 3col: 시각+라벨+설명 |
-| L09 | Single KPI | 중앙: 라벨 + 숫자(120-200) |
-| L13 | Process | 행: 3-5단계 (아이콘+라벨+설명) |
-| L20 | Closing | 중앙: 헤드라인 + 부제 + 연락처 |
+| L01 | Cover | 중앙: 제목(48-64, Bold) + 부제(28-32) + 메타(20-24) |
+| L02 | BoldCover | 좌측 블록: 제목(56-72, 최대 2줄) + 부제(28) + 메타, 로고 우측 하단 |
+| L03 | Section Break | 중앙: 라벨(24, Muted) + 제목(48-56) |
+| L04 | KeyStatement | 중앙: 문장(36-48, 최대 2줄) + 출처(24, 선택) |
+| L05 | Concept+Visual | 2col(50/50): 좌측 텍스트(제목 36-40 + 본문 24-28) \| 우측 이미지 |
+| L06 | Concept+Visual Mirror | 2col(50/50): 좌측 이미지 \| 우측 텍스트 (L05 미러) |
+| L07 | 3 Pillars | 3col: 시각 + 라벨(28) + 설명(20, 최대 2줄) |
+| L08 | Compare2 | 2col: 각각 제목(28-32) + 포인트(24, 2-4개) |
+| L09 | Single KPI | 중앙: 라벨(24, Muted) + 숫자(120-200) + 컨텍스트(24-28) |
+| L10 | TwoKPIs | 2col: 각각 숫자(80-120) + 라벨(24) |
+| L11 | ThreeKPIs | 3col: 각각 숫자(64-80) + 라벨(24) |
+| L12 | Quote | 중앙: 인용문(28-36, 최대 3줄) + 출처(20-24) |
+| L13 | Process | 행: 3-5단계 (아이콘/숫자 + 라벨(28) + 설명(20, 1줄)) |
+| L14 | HeroImage | 전면 이미지: 오버레이 제목(40-56) + 부제(24-28) |
+| L15 | Matrix4 | 2x2 그리드: 각각 제목(28) + 설명(20) |
+| L16 | IconRow | 행(3-4개): 아이콘 + 라벨(28) + 설명(20, 1-2줄) |
+| L17 | Data+Insight | 스택: 차트(약 60% 높이) + 인사이트(24-28, Bold) |
+| L18 | BeforeAfter | 2col + 화살표: 좌측 Before(Muted) \| 우측 After(Strong) |
+| L19 | List | 스택: 제목(40) + 항목(28, 3-5개) |
+| L20 | Closing | 중앙: 헤드라인(48-56) + 부제(24-28) + 연락처(24) |
 
 ---
 
@@ -166,7 +179,7 @@ Table (frame, vertical)
 
 ## 스타일 프리셋
 
-Pencil은 27개의 스타일 프리셋을 제공합니다:
+Pencil은 26개의 스타일 프리셋을 제공합니다:
 
 | 스타일 | 분위기 |
 | --- | --- |
@@ -199,9 +212,41 @@ Pencil은 27개의 스타일 프리셋을 제공합니다:
 
 ### 스타일 로드
 
+스타일을 로드하려면 `get_guidelines`에 7개의 필수 매개변수를 모두 전달해야 합니다:
+
 ```javascript
-get_guidelines({ category: "style", name: "Soft Bento" })
+get_guidelines({
+  category: "style",
+  name: "Soft Bento",
+  params: {
+    colorPalette: "Warm Linen",
+    roundness: "Basic Roundness",
+    elevation: "Soft Lift",
+    headings: "Inter",
+    body: "Inter",
+    captions: "Geist",
+    data: "Geist Mono"
+  }
+})
 ```
+
+### 스타일 매개변수 옵션
+
+#### colorPalette (26종)
+
+Alpine Terracotta, Amber Night, Bold Tangerine, Carbon Frost, Deep Space Neon, Electric Cobalt, Fern Journal, Forest Sage, Heritage Warmth, Lavender Cream, Lavender Mist, Minimal Ink, Onyx Peach, Parchment Gold, Prismatic White, Rose Charcoal, Solar Warmth, Spring Meadow, Tangerine Orbit, Terminal Green, Twilight Garden, Violet Bloom, Violet Void, Warm Concrete, Warm Linen, Warm Parchment
+
+#### roundness (1종)
+
+Basic Roundness
+
+#### elevation (4종)
+
+Gentle Lift, Sharp Depth, Soft Cloud, Soft Lift
+
+#### 폰트 — headings, body, captions, data (각각 8종 선택)
+
+Anton, Funnel Sans, Geist, Geist Mono, IBM Plex Mono, Inter, Newsreader, Playfair Display
 
 > 스타일은 변수를 저장하지 않고 참조 값만 제공합니다.
 
