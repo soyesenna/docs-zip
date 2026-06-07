@@ -1,8 +1,8 @@
 # Pulumi Cloud 관리
 
-> 원문: [Pulumi Cloud](https://www.pulumi.com/docs/iac/concepts/pulumi-cloud/) | [Pulumi Cloud vs. OSS](https://www.pulumi.com/docs/iac/concepts/pulumi-cloud/) | [Administration](https://www.pulumi.com/docs/administration/) | [Organizations](https://www.pulumi.com/docs/administration/organizations-teams/organizations/) | [RBAC](https://www.pulumi.com/docs/administration/access-identity/rbac/) | [Roles](https://www.pulumi.com/docs/administration/access-identity/rbac/roles/) | [Teams](https://www.pulumi.com/docs/administration/access-identity/rbac/teams/) | [Permission Sets](https://www.pulumi.com/docs/administration/access-identity/rbac/permission-sets/) | [Scopes](https://www.pulumi.com/docs/administration/access-identity/rbac/scopes/) | [Access Tokens](https://www.pulumi.com/docs/administration/access-identity/access-tokens/) | [OIDC Issuers](https://www.pulumi.com/docs/administration/access-identity/oidc-issuers/) | [Audit Logs](https://www.pulumi.com/docs/administration/security-compliance/audit-logs/) | [Customer Managed Keys](https://www.pulumi.com/docs/administration/security-compliance/customer-managed-keys/) | [Self-Hosting](https://www.pulumi.com/docs/administration/self-hosting/) | [Setting Up for Success](https://www.pulumi.com/docs/administration/onboarding-guide/) | [Infrastructure AI](https://www.pulumi.com/docs/ai/) | [Tasks](https://www.pulumi.com/docs/ai/tasks/) | [Previews](https://www.pulumi.com/docs/ai/running-previews/) | [Automations](https://www.pulumi.com/docs/ai/automations/)
+> 원문: [Pulumi Cloud](https://www.pulumi.com/docs/iac/concepts/pulumi-cloud/) | [Pulumi Cloud vs. OSS](https://www.pulumi.com/docs/iac/guides/basics/pulumi-cloud-vs-oss/) | [Administration](https://www.pulumi.com/docs/administration/) | [Organizations](https://www.pulumi.com/docs/administration/organizations-teams/organizations/) | [RBAC](https://www.pulumi.com/docs/administration/access-identity/rbac/) | [Roles](https://www.pulumi.com/docs/administration/access-identity/rbac/roles/) | [Teams](https://www.pulumi.com/docs/administration/access-identity/rbac/teams/) | [Permission Sets](https://www.pulumi.com/docs/administration/access-identity/rbac/permission-sets/) | [Scopes](https://www.pulumi.com/docs/administration/access-identity/rbac/scopes/) | [Access Tokens](https://www.pulumi.com/docs/administration/access-identity/access-tokens/) | [OIDC Issuers](https://www.pulumi.com/docs/administration/access-identity/oidc-issuers/) | [OIDC EKS](https://www.pulumi.com/docs/administration/access-identity/oidc-issuers/kubernetes-eks/) | [OIDC GKE](https://www.pulumi.com/docs/administration/access-identity/oidc-issuers/kubernetes-gke/) | [Audit Logs](https://www.pulumi.com/docs/administration/security-compliance/audit-logs/) | [Customer Managed Keys](https://www.pulumi.com/docs/administration/security-compliance/customer-managed-keys/) | [Self-Hosting](https://www.pulumi.com/docs/administration/self-hosting/) | [Setting Up for Success](https://www.pulumi.com/docs/administration/onboarding-guide/) | [Infrastructure AI](https://www.pulumi.com/docs/ai/) | [Tasks](https://www.pulumi.com/docs/ai/tasks/) | [Previews](https://www.pulumi.com/docs/ai/running-previews/) | [Automations](https://www.pulumi.com/docs/ai/automations/) | [`pulumi neo` CLI](https://www.pulumi.com/docs/iac/cli/commands/pulumi_neo/)
 
-Pulumi Cloud는 Pulumi CLI의 기본 상태 백엔드이자, 팀이 대규모로 Pulumi를 운영하는 데 필요한 기능을 제공하는 관리형 플랫폼이다. 액세스 제어, 재사용 가능한 구성 및 시크릿, 정책 강제, 클라우드 리소스 인벤토리, 예약 드리프트 감지, 관리형 배포, **Pulumi Neo**(AI 에이전트), **Ephemeral Environments**(Review Stacks, TTL Stacks) 등의 기능을 제공한다. Pulumi Cloud는 호스팅 SaaS와 셀프 호스팅 에디션으로 제공되며, 개인(Individual) 티어는 무료다. Pulumi Cloud와 오픈소스 Pulumi의 기능별 상세 비교는 [Pulumi Cloud vs. OSS](https://www.pulumi.com/docs/iac/concepts/pulumi-cloud/)를 참조하라.
+Pulumi Cloud는 Pulumi CLI의 기본 상태 백엔드이자, 팀이 대규모로 Pulumi를 운영하는 데 필요한 기능을 제공하는 관리형 플랫폼이다. 액세스 제어, 재사용 가능한 구성 및 시크릿, 정책 강제, 클라우드 리소스 인벤토리, 예약 드리프트 감지, 관리형 배포, **Pulumi Neo**(AI 에이전트), **Ephemeral Environments**(Review Stacks, TTL Stacks) 등의 기능을 제공한다. Pulumi Cloud는 호스팅 SaaS와 셀프 호스팅 에디션으로 제공되며, 개인(Individual) 티어는 무료다. Pulumi Cloud와 오픈소스 Pulumi의 기능별 상세 비교는 [Pulumi Cloud vs. OSS](https://www.pulumi.com/docs/iac/guides/basics/pulumi-cloud-vs-oss/)를 참조하라.
 
 ### Pulumi Cloud 주요 기능
 
@@ -17,13 +17,34 @@ Pulumi Cloud는 Pulumi CLI의 기본 상태 백엔드이자, 팀이 대규모로
 | [Pulumi Neo](https://www.pulumi.com/docs/ai/) | AI 에이전트. 배포 디버깅, IaC 작성, 환경 질문 응답 지원 |
 | [Ephemeral Environments](https://www.pulumi.com/docs/deployments/deployments/review-stacks/) | Review Stacks(PR 기반 단기 환경) 및 TTL Stacks(수명 제한 스택) |
 
+### Pulumi Cloud vs. OSS 비교
+
+> 원문: [Pulumi Cloud vs. OSS](https://www.pulumi.com/docs/iac/guides/basics/pulumi-cloud-vs-oss/)
+
+| 기능 | 오픈소스 Pulumi | Pulumi Cloud |
+|------|----------------|--------------|
+| 상태 백엔드 | DIY 오브젝트 스토리지, PostgreSQL, 로컬 파일시스템 | 관리형 트랜잭션 상태 백엔드. Terraform 상태도 저장 가능 |
+| 배포 기록 | 백엔드별 체크포인트 기록 | 조직 전체 배포 기록 |
+| 액세스 제어 | 직접 관리 (예: 클라우드 IAM) | 빌트인 RBAC, SAML/SSO 통합 |
+| 시크릿 암호화 | 패스프레이즈 또는 자체 관리 KMS | 기본 관리 암호화. 별도 암호화 서비스 사용도 가능 |
+| 시크릿/구성 관리 | 스택별 구성 파일만 | 스택별 구성 + 중앙 관리 재사용 가능 Pulumi ESC 환경 |
+| 정책 코드화 | 디스크의 정책 팩을 CLI 인수로 전달 | 중앙 관리 강제 적용 + 사전 구축 및 커스텀 정책 팩 |
+| 클라우드 리소스 인벤토리 | 미포함 | Pulumi Insights가 Pulumi 관리 외 리소스도 탐색 |
+| 드리프트 감지 | `pulumi refresh` 수동 실행 | 예약 드리프트 감지 및 자동 수정 |
+| AI 지원 | Pulumi CLI 및 편집기 통합 | Pulumi Neo AI 에이전트가 플랫폼 전반에 통합 |
+| 임시 환경 | 미포함 | Review Stacks 및 TTL Stacks |
+| 관리형 배포 | 자체 자동화 구성 | Pulumi Deployments 관리 서비스 |
+| REST API 및 웹훅 | 미포함 | 문서화된 REST API 및 웹훅 |
+| 컴플라이언스 | 해당 없음 | 연간 SOC 2 Type II 감사; 내보내기 가능한 감사 추적 |
+| 지원 | 커뮤니티 지원; 상업 지원 가능 | 커뮤니티 지원; 엔터프라이즈 고객용 지원 플랜 |
+
 ---
 
 ## 조직(Organizations)
 
 > 원문: [Organizations](https://www.pulumi.com/docs/administration/organizations-teams/organizations/)
 
-조직은 Pulumi Cloud의 최상위 계정 단위로, 관련 프로젝트·스택·사용자를 그룹화하는 협업 공간이다. 스택의 정규화된 이름은 `<organization>/<project>/<stack>` 형식을 따른다. 조직 이름은 스택 정규화 이름의 첫 번째 세그먼트다. Pulumi Cloud에 가입하면 사용자 이름과 동일한 이름의 **개인 조직**(personal organization)이 자동으로 생성된다. 추가로 팀용 조직을 생성하거나 기존 조직에 초대받을 수 있으며, 여러 조직의 멤버로 동시에 속할 수 있다. 조직 간 전환은 Pulumi Cloud 콘솔 상단 탐색 메뉴의 조직 메뉴 또는 `pulumi org` CLI 명령으로 수행한다.
+조직은 Pulumi Cloud의 최상위 계정 단위로, 관련 프로젝트·스택·사용자를 그룹화하는 협업 공간이다. 조직은 팀, RBAC, 결제, 공유 Pulumi ESC 환경이 모두 속하는 기본 단위다. 스택의 정규화된 이름은 `<organization>//<stack>` 형식을 따른다. 조직 이름은 스택 정규화 이름의 첫 번째 세그먼트다. Pulumi Cloud에 가입하면 사용자 이름과 동일한 이름의 **개인 조직**(personal organization)이 자동으로 생성된다. 추가로 팀용 조직을 생성하거나 기존 조직에 초대받을 수 있으며, 여러 조직의 멤버로 동시에 속할 수 있다. 조직 간 전환은 Pulumi Cloud 콘솔 상단 탐색 메뉴의 조직 메뉴 또는 `pulumi org` CLI 명령으로 수행한다.
 
 ### 조직 페이지 구성
 
@@ -330,20 +351,20 @@ Permission Set은 특정 Entity type에 속해야 하며, 동일한 Entity type�
 
 **환경 Permission Sets:**
 
-| Permission Set | 설명 |
-|----------------|------|
-| `Environment Read` | 읽기 전용 |
-| `Environment Open` | 시크릿 복호화 및 동적 자격 증명 획득 |
-| `Environment Write` | 환경 수정 |
-| `Environment Admin` | 환경 전체 제어 |
+| Permission Set | 설명 | 포함 Scopes |
+|----------------|------|-------------|
+| `Environment Read` | 읽기 전용 | `environment:read`, `environment:rotate_history`, `environment_version:read`, `environment_schedule:read`, `environment_tag:read` |
+| `Environment Open` | 시크릿 복호화 및 동적 자격 증명 획득 | Environment Read + `environment:open`, `environment:clone`, `environment_version:open`, `environment_version:read` |
+| `Environment Write` | 환경 수정 | Environment Open + `environment:write`, `environment:rotate`, `environment_version:create/update/delete/retract`, `environment_tag:create/update/delete`, `environment_schedule:create/update/pause/resume/delete`, `environment_webhook:read/create/update/delete`, `change_gate:create/update/delete` |
+| `Environment Admin` | 환경 전체 제어 | Environment Write + `environment:delete` |
 
 **Insights 계정 Permission Sets:**
 
-| Permission Set | 설명 |
-|----------------|------|
-| `Account Read` | 읽기 전용 |
-| `Account Write` | Insights 계정 수정 |
-| `Account Admin` | Insights 계정 전체 제어 |
+| Permission Set | 설명 | 포함 Scopes |
+|----------------|------|-------------|
+| `Account Read` | 읽기 전용 | `insights_account:read`, `insights_account_scan:read`, `insights_account_access:read` |
+| `Account Write` | Insights 계정 수정 | Account Read + `insights_account:update`, `insights_account:scan`, `insights_account_scan:update/cancel/pause/resume` |
+| `Account Admin` | Insights 계정 전체 제어 | Account Write + `insights_account:delete`, `insights_account_access:update` |
 
 ### Custom Permission Sets (Enterprise / Business Critical)
 
@@ -360,18 +381,46 @@ Custom Permission Sets는 조직 관리자만 생성할 수 있다.
 
 ### 주요 Scopes (조직 수준)
 
+**스택 관련 Scopes:**
+
+| Scope | 설명 | 기본 부여 Permission Set |
+|-------|------|--------------------------|
+| `stack:read` | 스택 구성 및 설정 조회 | `Stack Read` |
+| `stack:write` | 스택 구성 및 설정 수정 | `Stack Write` |
+| `stack:delete` | 스택 삭제 | `Stack Admin` |
+| `stack:import` | 스택으로 리소스 가져오기 | `Stack Write` |
+| `stack:export` | 스택 데이터 내보내기 | `Stack Read` |
+| `stack:rename` | 스택 이름 변경 | `Stack Admin` |
+| `stack:transfer` | 스택 소유권 이전 | `Stack Admin` |
+| `stack:cancel_update` | 진행 중인 스택 업데이트 취소 | `Stack Write` |
+| `stack:encrypt` / `stack:decrypt` | 스택 데이터 암호화/복호화 | `Stack Read` |
+| `stack_deployment:create` | 스택 배포 생성 | `Stack Write` |
+| `stack_deployment_settings:read/write` | 배포 설정 조회/수정 | `Stack Read` / `Stack Write` |
+| `stack_schedule:create/update/delete` | 배포 스케줄 관리 | `Stack Write` |
+| `stack_tags:update` | 스택 태그 수정 | `Stack Write` |
+| `stack_webhook:create/update/delete` | 스택 웹훅 관리 | `Stack Write` |
+
+**조직 설정 Scopes:**
+
 | Scope | 설명 | 기본 부여 역할 |
 |-------|------|----------------|
 | `stack:create` | 스택 생성 | 조직 전체 설정으로 제어 |
-| `stack:delete` | 스택 삭제 | 조직 전체 설정으로 제어 |
-| `team:create` | 팀 생성 | 조직 전체 설정으로 제어 |
+| `team:create` / `team:delete` / `team:update` | 팀 생성/삭제/수정 | `Admin` |
+| `environment:create` | 환경 생성 | `Member`, `Admin` |
+| `environment:restore_deleted` | 삭제된 환경 복원 | `Admin` |
+| `insights_account:create` | Insights 계정 생성 | `Admin` |
 | `audit_logs:read` | 감사 로그 조회 | `Admin` |
 | `audit_logs:export` | 감사 로그 내보내기 | `Admin` |
-| `org_member:add` | 조직 멤버 추가 | `Admin` |
-| `org_member:delete` | 조직 멤버 제거 | `Admin` |
-| `environment:create` | 환경 생성 | `Member`, `Admin` |
-| `policy_pack:create` | 정책 팩 생성 | `Admin` |
-| `oidc_issuers:create` | OIDC 발급자 등록 | `Admin` |
+| `org_member:add/delete/update` | 조직 멤버 관리 | `Admin` |
+| `org_member:set_admin` | 관리자 권한 부여/회수 | `Admin` |
+| `invites:create/read` | 조직 초대 관리 | `Admin` |
+| `policy_pack:create/delete/update` | 정책 팩 관리 | `Admin` |
+| `policy_groups:create/delete/update` | 정책 그룹 관리 | `Admin` |
+| `oidc_issuers:create/delete/update` | OIDC 발급자 관리 | `Admin` |
+| `deployments:pause/resume` | 조직 전체 배포 일시정지/재개 | `Admin` |
+| `deployments:read_usage` | 배포 사용량 조회 | `Member`, `Admin`, `Billing Manager` |
+| `agent_pool:create/delete/update` | 에이전트 풀 관리 | `Admin` |
+| `change_gate:create/update/delete` | 변경 승인 규칙(Change Gates) 관리 | `Admin` |
 
 ### Scopes vs. 조직 전체 설정
 
@@ -494,13 +543,13 @@ Team Token은 특정 팀의 리소스와 권한으로 제한된 머신 토큰이
 
 두 유형 모두 계속 작동하며, admin/standard 구분은 현재 RBAC 시스템의 Built-in Admin/Member 역할에 직접 매핑된다. 새 자동화에는 Custom Role을 할당하여 최소 권한 원칙을 따르는 것을 권장한다.
 
-CI/CD 워크플로우(GitHub Actions, GitLab CI, Bitbucket Pipelines 등)에서 OIDC(OpenID Connect)를 통해 Pulumi Cloud에 인증할 수 있다. OIDC 인증은 장수명 시크릿(access token)을 저장하지 않고도 임시 자격 증명으로 Pulumi Cloud에 접근할 수 있는 보안 메커니즘이다.
+CI/CD 워크플로우(GitHub Actions, GitLab CI, Bitbucket Pipelines, AWS EKS, Google GKE 등)에서 OIDC(OpenID Connect)를 통해 Pulumi Cloud에 인증할 수 있다. OIDC 인증은 장수명 시크릿(access token)을 저장하지 않고도 임시 자격 증명으로 Pulumi Cloud에 접근할 수 있는 보안 메커니즘이다.
 
 **OIDC 토큰 교환 흐름:**
 
-1. CI/CD 공급자가 OIDC 토큰(JWT)을 발급
-2. Pulumi Cloud가 사전에 등록된 OIDC Issuer 구성의 authorization policy와 토큰의 subject claim을 매칭
-3. 매칭 성공 시 Pulumi access token으로 교환
+1. 외부 워크로드가 호스트 서비스로부터 OIDC id_token을 획득
+2. 워크로드가 id_token을 Pulumi Cloud에 제출하여 단기 Pulumi access token으로 교환
+3. 워크로드가 Pulumi access token으로 Pulumi 작업 실행
 
 **OIDC 토큰 타입:**
 
@@ -594,19 +643,19 @@ OIDC Issuers는 CI/CD 파이프라인에서 장수명 시크릿 없이 Pulumi Cl
 
 | 필드 | 설명 |
 |------|------|
-| **Name** | 발급자의 라벨 (고유 이름) |
+| **Name** | 발급자의 라벨 (조직 내 고유 이름). 감사 로그 및 정책 관리에서 식별에 사용 |
 | **URL** | 발급자 URL. Pulumi Cloud는 이 URL에 `/.well-known/openid-configuration`을 추가하여 OpenID 구성 메타데이터를 가져온다 |
 | **Max expiration** | 이 신뢰 관계를 통해 발급되는 Pulumi access token의 최대 지속 시간. 기본값 25시간 |
 | **Thumbprints** (선택) | 발급자가 OpenID 구성을 서비스하는 데 사용하는 TLS 인증서의 SHA-256 지문. 기본적으로 등록 시점의 인증서 지문이 저장됨. 여러 인증서를 사용하거나 인증서 순환이 필요한 경우 수동 구성 |
 
-**지원 OIDC 공급자:**
+**지원 OIDC 공급자 및 공급자별 설정 가이드:**
 
 | 공급자 | 발급자 URL | 설명 |
 |--------|-----------|------|
-| GitHub Actions | `https://token.actions.githubusercontent.com` | GitHub OIDC 공급자 |
-| GitLab CI | `https://gitlab.com` | GitLab OIDC 공급자 |
-| AWS EKS | EKS 클러스터 OIDC 발급자 URL | Amazon EKS 파드 인증 |
-| Google GKE | GKE 클러스터 OIDC 발급자 URL | Google GKE 워크로드 인증 |
+| [GitHub Actions](https://www.pulumi.com/docs/administration/access-identity/oidc-issuers/github/) | `https://token.actions.githubusercontent.com` | GitHub OIDC 공급자. `pulumi/auth-actions` 액션 사용 |
+| [GitLab CI](https://www.pulumi.com/docs/administration/access-identity/oidc-issuers/gitlab/) | `https://gitlab.com` | GitLab OIDC 공급자 |
+| [Amazon EKS](https://www.pulumi.com/docs/administration/access-identity/oidc-issuers/kubernetes-eks/) | EKS 클러스터 OIDC 발급자 URL | EKS 파드 서비스 계정 기반 인증. `kubernetes.io` 네임스페이스 클레임 사용 |
+| [Google GKE](https://www.pulumi.com/docs/administration/access-identity/oidc-issuers/kubernetes-gke/) | GKE 클러스터 OIDC 발급자 URL | GKE 워크로드 아이덴티티 기반 인증 |
 | Custom | 사용자 정의 | 기타 OIDC 호환 공급자 |
 
 ### 에디션별 토큰 타입
@@ -619,6 +668,16 @@ OIDC 토큰 타입의 에디션별 가용성은 다음과 같다:
 - **Business Critical**: personal, organization, team, deployment-runner
 
 Authorization policy와 토큰 요청 시, 해당 에디션에서 사용 가능한 토큰 타입을 선택해야 한다.
+
+### OIDC Issuer 관리 방법
+
+| 방법 | 설명 |
+|------|------|
+| **Pulumi Cloud UI** | Settings > Access Management > OIDC Issuers에서 구성 |
+| **REST API** | [OIDC Issuers REST API reference](https://www.pulumi.com/docs/reference/cloud-rest-api/oidc-issuers/) 사용 |
+| **Pulumi Service Provider** | `OidcIssuer` 리소스로 코드로 관리 ([레지스트리](https://www.pulumi.com/registry/packages/pulumiservice/api-docs/oidcissuer/) 참조) |
+
+새 OIDC Issuer를 등록하면 Pulumi Cloud는 기본적으로 모든 토큰 교환을 거부하는 기본 authorization policy를 프로비저닝한다. 토큰 교환 전에 명시적인 **Allow** 정책을 추가해야 한다.
 
 ### Authorization Policy
 
@@ -650,20 +709,25 @@ subject claim 매칭 예시:
 - `repo:my-org/my-repo:ref:refs/heads/main` — main 브랜치에서만 허용
 - `repo:my-org/my-repo:environment:production` — production 환경에서만 허용
 
-**Nested claims 지원:** 점으로 중첩된 claim 경로를 정의할 수 있다. 예를 들어 다음과 같은 토큰 페이로드가 있을 때:
+**Nested claims 지원:** 점으로 중첩된 claim 경로를 정의할 수 있다. EKS/GKE 등 Kubernetes OIDC 발급자에서 `kubernetes.io` 네임스페이스의 클레임을 타겟팅할 때 특히 유용하다. 예를 들어 다음과 같은 토큰 페이로드가 있을 때:
 
 ```json
 {
   "kubernetes.io": {
+    "namespace": "production",
     "pod": {
       "name": "runner-ddfaa34e-dfrjh",
       "uid": "b99b58df-cce5-405a-a33d-49a4cf8cf7bd"
+    },
+    "serviceaccount": {
+      "name": "pulumi-sa",
+      "uid": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
     }
   }
 }
 ```
 
-claim 경로 `"kubernetes.io".pod.name`으로 pod 이름을 타겟팅할 수 있다. 점이 포함된 객체 키는 따옴표로 감싼다.
+claim 경로 `"kubernetes.io".pod.name`으로 pod 이름을, `"kubernetes.io".namespace`로 네임스페이스를, `"kubernetes.io".serviceaccount.name`으로 서비스 계정 이름을 타겟팅할 수 있다. 점이 포함된 객체 키는 따옴표로 감싼다.
 
 **Wildcard 지원:** Claim 값과 team scope에 다음 와일드카드를 사용할 수 있다:
 
@@ -787,11 +851,31 @@ curl -X POST \
 
 ### 지원 감사 로그 형식
 
-| 형식 | 설명 |
+**JSON 형식:**
+
+| 필드 | 설명 |
 |------|------|
-| JSON | `timestamp`, `sourceIP`, `event`, `description`, `user` 필드 구성 |
-| CSV | 콤마로 구분된 텍스트 형식. `Timestamp`, `Name`, `Login`, `Event`, `Description`, `SourceIP`, `RequireOrgAdmin`, `RequireStackAdmin`, `AuthenticationFailure` 필드 포함 |
-| CEF (Common Event Format) | SIEM 시스템에서 널리 지원하는 표준 감사 및 로깅 이벤트 형식 |
+| `timestamp` | 이벤트가 기록된 UNIX 타임스탬프 |
+| `sourceIP` | 요청을 발생시킨 클라이언트 IP 주소 |
+| `event` | 이벤트 이름 |
+| `description` | 발생한 이벤트의 상세 설명 |
+| `user` | 이벤트를 호출한 사용자 정보(login, name, avatar URL) |
+
+**CSV 형식:**
+
+| 필드 | 설명 |
+|------|------|
+| `Timestamp` | 이벤트가 기록된 UNIX 타임스탬프 |
+| `Name` | 이벤트를 호출한 사용자 이름 |
+| `Login` | 사용자 로그인명 |
+| `Event` | 이벤트 이름 |
+| `Description` | 이벤트 상세 설명 |
+| `SourceIP` | 요청을 발생시킨 클라이언트 IP |
+| `RequireOrgAdmin` | 조직 관리자 권한 필요 여부 (`true`/`false`) |
+| `RequireStackAdmin` | 스택 관리자 권한 필요 여부 (`true`/`false`) |
+| `AuthenticationFailure` | 인증 실패로 인한 이벤트 여부 (`true`/`false`) |
+
+**CEF (Common Event Format):** SIEM 시스템에서 널리 지원하는 표준 감사 및 로깅 이벤트 형식. CEF 표준 사전 정의 키(`dvchost`, `rt`, `src`, `suser`)와 Pulumi 커스텀 키(`orgID`, `userID`, `requireOrgAdmin`, `requireStackAdmin`, `authenticationFailure`)를 포함한다.
 
 ### 주요 감사 로그 이벤트
 
@@ -800,31 +884,66 @@ curl -X POST \
 | Auth Failure Organization Role | 사용자가 필요한 조직 역할 없이 작업을 시도함 |
 | Auth Failure SCIM Access Token | SCIM 지원 요청에 잘못된 인증 토큰이 사용됨 |
 | Auth Failure Stack Permission | 사용자가 필요한 스택 권한 없이 작업을 시도함 |
-| Member Added / Removed | 조직 멤버 추가/제거 |
+| Member Added | 조직 멤버 추가 |
+| Member Removed | 조직 멤버 제거 |
 | Member Role Changed | 멤버 역할 변경 |
 | Organization Settings Changed | 조직 설정 변경 |
-| Stack Created / Deleted / Renamed | 스택 생성/삭제/이름 변경 |
+| Stack Created | 스택 생성 |
+| Stack Deleted | 스택 삭제 |
+| Stack Renamed | 스택 이름 변경 |
 | Stack Created From Template | 템플릿으로부터 스택 생성 |
-| Stack Update Started / Completed / Canceled | 스택 업데이트 시작/완료/취소 |
-| Stack Exported / Imported | 스택 내보내기/가져오기 |
+| Stack Update Started | 스택 업데이트 시작 |
+| Stack Update Completed | 스택 업데이트 완료 |
+| Stack Update Canceled | 스택 업데이트 취소 |
+| Stack Exported | 스택 내보내기 |
+| Stack Imported | 스택 가져오기 |
 | Stack Transferred to Organization | 스택 조직 간 이전 |
-| Team Created / Deleted / Updated | 팀 생성/삭제/업데이트 |
+| Team Created | 팀 생성 |
+| Team Deleted | 팀 삭제 |
+| Team Updated | 팀 업데이트 |
 | Secret Decrypted | 시크릿 복호화 |
-| Stack Collaborator Added / Removed / Permissions Changed | 스택 협업자 추가/제거/권한 변경 |
-| Policy Pack Created / Deleted / Enabled / Disabled | 정책 팩 생성/삭제/활성화/비활성화 |
-| Policy Group Created / Deleted / Updated | 정책 그룹 생성/삭제/업데이트 |
+| Stack Collaborator Added | 스택 협업자 추가 |
+| Stack Collaborator Removed | 스택 협업자 제거 |
+| Stack Collaborator Permissions Changed | 스택 협업자 권한 변경 |
+| Policy Pack Created | 정책 팩 생성 |
+| Policy Pack Deleted | 정책 팩 삭제 |
+| Policy Pack Enabled | 정책 팩 활성화 |
+| Policy Pack Disabled | 정책 팩 비활성화 |
+| Policy Group Created | 정책 그룹 생성 |
+| Policy Group Deleted | 정책 그룹 삭제 |
+| Policy Group Updated | 정책 그룹 업데이트 |
 | SAML Configuration Updated | SAML 구성 업데이트 |
-| User Login / User Login Failed | 사용자 로그인/로그인 실패 |
+| User Login | 사용자 로그인 성공 |
+| User Login Failed | 사용자 로그인 실패 |
 | User Added New Identity to Their Account | 사용자가 새 identity를 계정에 연결 |
-| Environment Created / Updated / Deleted / Open | 환경(Pulumi ESC) 관련 이벤트 |
-| Environment Read / Read Open / Unauthorized Open | 환경 읽기/열기 및 읽기/권한 없는 열기 시도 |
-| Environment Tag Created / Updated / Deleted | 환경 태그 관련 이벤트 |
-| Environment Version Retracted / Tag Open / Tag Created / Tag Read / Tag Update / Tag Delete | 환경 버전 태그 관련 이벤트 |
-| Environment Decrypted / Clone / Restored | 환경 복호화/복제/복원 |
-| Environment Schedule Created / Updated / Deleted | 환경 스케줄 관련 이벤트 |
+| Environment Created | 환경 생성 |
+| Environment Updated | 환경 업데이트 |
+| Environment Deleted | 환경 삭제 |
+| Environment Open | 환경 열기 |
+| Environment Read | 환경 읽기 |
+| Environment Read Open | 환경 열기 및 읽기 |
+| Environment Unauthorized Open | 권한 없는 환경 열기 시도 |
+| Environment Tag Created | 환경 태그 생성 |
+| Environment Tag Updated | 환경 태그 수정 |
+| Environment Tag Deleted | 환경 태그 삭제 |
+| Environment Version Retracted | 환경 버전 철회 |
+| Environment Version Tag Open | 환경 버전 태그 열기 |
+| Environment Version Tag Created | 환경 버전 태그 생성 |
+| Environment Version Tag Read | 환경 버전 태그 읽기 |
+| Environment Version Tag Update | 환경 버전 태그 수정 |
+| Environment Version Tag Delete | 환경 버전 태그 삭제 |
+| Environment Decrypted | 환경 복호화 |
+| Environment Clone | 환경 복제 |
+| Environment Restored | 환경 복원 |
+| Environment Schedule Created | 환경 스케줄 생성 |
+| Environment Schedule Updated | 환경 스케줄 수정 |
+| Environment Schedule Deleted | 환경 스케줄 삭제 |
 | Environment Rotated | 환경 시크릿 순환 |
 | Stack Provider Open | 환경 내 스택 공급자 열기 |
-| Customer Managed Key Added / Set Default / Disabled / Disabled All | 고객 관리 키 관련 이벤트 |
+| Customer Managed Key Added | 고객 관리 키 추가 |
+| Customer Managed Key Set Default | 고객 관리 키 기본 설정 |
+| Customer Managed Key Disabled | 고객 관리 키 비활성화 |
+| Customer Managed Key Disabled All | 모든 고객 관리 키 비활성화 |
 
 ---
 
@@ -1011,7 +1130,10 @@ Pulumi **Business Critical** 에디션은 조직 인프라 내에서 Pulumi Clou
 | Review Stacks | Stack > Deployment Settings | PR 기반 임시 환경 자동 생성/삭제 |
 | TTL Stacks | Stack > Settings > Schedules | 수명 제한 스택 자동 제거 |
 | Neo (AI) | Settings > Neo Settings > General | Pulumi Neo AI 에이전트 활성화/비활성화 |
+| Neo CLI | 터미널에서 `pulumi neo` 실행 | 대화형/비대화형 Neo 세션. 로컬 툴 실행 모드 |
 | Neo Tasks | Neo > Agent Tasks | AI 작업(Tasks), Automations, PR 관리 |
+| Neo Context | Task 시작 시 스택/리포지토리 설정 | 작업 범위 지정. 공유 및 기록 관리 |
+| Neo Previews | Task 중 Preview 실행 요청 | PR 생성 전 인프라 변경 검증. ESC 환경 지원 |
 | 조직 삭제 | Settings > Delete Organization | 조직 영구 삭제 (Admin 전용). 사전에 스택 이전 필요 |
 
 ---
@@ -1049,9 +1171,40 @@ variables:
 
 ## Pulumi Neo (Infrastructure AI)
 
-> 원문: [Infrastructure AI](https://www.pulumi.com/docs/ai/) | [Get Started](https://www.pulumi.com/docs/ai/get-started/) | [Tasks](https://www.pulumi.com/docs/ai/tasks/) | [Pull Requests](https://www.pulumi.com/docs/ai/pull-requests/) | [Automations](https://www.pulumi.com/docs/ai/automations/) | [Integrations](https://www.pulumi.com/docs/ai/integrations/)
+> 원문: [Infrastructure AI](https://www.pulumi.com/docs/ai/) | [Get Started](https://www.pulumi.com/docs/ai/get-started/) | [Tasks](https://www.pulumi.com/docs/ai/tasks/) | [Pull Requests](https://www.pulumi.com/docs/ai/pull-requests/) | [Automations](https://www.pulumi.com/docs/ai/automations/) | [Integrations](https://www.pulumi.com/docs/ai/integrations/) | [`pulumi neo` CLI](https://www.pulumi.com/docs/iac/cli/commands/pulumi_neo/)
 
-**Pulumi Neo**는 자연어 기반의 AI 인프라 자동화 에이전트다. 배포 디버깅, IaC 작성, 환경 질문 응답 등 플랫폼 엔지니어링 작업을 지원한다. Neo는 현재 **Public Preview** 상태이며 무료로 사용할 수 있다. `pulumi neo` CLI 명령으로 터미널에서 대화형 Neo 세션을 시작할 수도 있다.
+**Pulumi Neo**는 자연어 기반의 AI 인프라 자동화 에이전트다. 배포 디버깅, IaC 작성, 환경 질문 응답 등 플랫폼 엔지니어링 작업을 지원한다. Neo는 현재 **Public Preview** 상태이며 무료로 사용할 수 있다.
+
+### `pulumi neo` CLI 세션
+
+> 원문: [`pulumi neo`](https://www.pulumi.com/docs/iac/cli/commands/pulumi_neo/)
+
+`pulumi neo` CLI 명령으로 터미널에서 대화형 Neo 세션을 시작할 수 있다. CLI 모드에서는 파일시스템 및 셸 툴 호출이 클라우드 에이전트 컨테이너 대신 **로컬 머신**의 작업 디렉토리에서 실행된다.
+
+```bash
+# 대화형 Neo 세션 시작
+pulumi neo
+
+# 프롬프트와 함께 바로 시작
+pulumi neo "VPC 구성을 검토해줘"
+
+# 특정 스택 컨텍스트로 시작
+pulumi neo --stack my-org/my-project/dev "리소스 사용량을 분석해줘"
+
+# 비대화형 모드: 결과를 stdout에 출력하고 종료 (다른 AI 에이전트/스크립트용)
+pulumi neo -p "현재 스택의 출력 값을 나열해줘"
+```
+
+**주요 플래그:**
+
+| 플래그 | 설명 |
+|--------|------|
+| `--approval-mode` | 툴 호출 승인 모드: `manual`(모든 호출 시 확인), `balanced`(저위험 자동 승인), `auto`(모두 자동 실행). 기본값 `manual` |
+| `--permission-mode` | 권한 모드: `default`(역할 기반 전체 권한), `read-only`(상태 변경 차단). 기본값 `default` |
+| `--cwd` | 로컬 툴 실행 작업 디렉토리. 기본값은 현재 디렉토리 |
+| `--org` | Neo 태스크를 소유할 조직. 기본값은 사용자의 기본 조직 |
+| `-s`, `--stack` | Neo 태스크에 연결할 스택 이름 |
+| `-p`, `--print` | 비대화형 모드. 단일 프롬프트 실행 후 결과를 stdout에 출력하고 종료 |
 
 ### 활성화 및 비활성화
 
