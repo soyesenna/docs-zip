@@ -1,8 +1,8 @@
 # Pulumi Cloud 관리
 
-> 원문: [Pulumi Cloud](https://www.pulumi.com/docs/iac/concepts/pulumi-cloud/) | [Administration](https://www.pulumi.com/docs/administration/) | [Organizations & Teams](https://www.pulumi.com/docs/administration/organizations-teams/) | [Access & Identity](https://www.pulumi.com/docs/administration/access-identity/) | [Security & Compliance](https://www.pulumi.com/docs/administration/security-compliance/) | [Self-Hosting](https://www.pulumi.com/docs/administration/self-hosting/) | [Onboarding Guide](https://www.pulumi.com/docs/administration/onboarding-guide/) | [Infrastructure AI (Pulumi Neo)](https://www.pulumi.com/docs/ai/)
+> 원문: [Pulumi Cloud](https://www.pulumi.com/docs/iac/concepts/pulumi-cloud/) | [Pulumi Cloud vs. OSS](https://www.pulumi.com/docs/iac/concepts/pulumi-cloud/) | [Administration](https://www.pulumi.com/docs/administration/) | [Organizations](https://www.pulumi.com/docs/administration/organizations-teams/organizations/) | [RBAC](https://www.pulumi.com/docs/administration/access-identity/rbac/) | [Roles](https://www.pulumi.com/docs/administration/access-identity/rbac/roles/) | [Teams](https://www.pulumi.com/docs/administration/access-identity/rbac/teams/) | [Permission Sets](https://www.pulumi.com/docs/administration/access-identity/rbac/permission-sets/) | [Scopes](https://www.pulumi.com/docs/administration/access-identity/rbac/scopes/) | [Access Tokens](https://www.pulumi.com/docs/administration/access-identity/access-tokens/) | [OIDC Issuers](https://www.pulumi.com/docs/administration/access-identity/oidc-issuers/) | [Audit Logs](https://www.pulumi.com/docs/administration/security-compliance/audit-logs/) | [Customer Managed Keys](https://www.pulumi.com/docs/administration/security-compliance/customer-managed-keys/) | [Self-Hosting](https://www.pulumi.com/docs/administration/self-hosting/) | [Setting Up for Success](https://www.pulumi.com/docs/administration/onboarding-guide/) | [Infrastructure AI](https://www.pulumi.com/docs/ai/) | [Tasks](https://www.pulumi.com/docs/ai/tasks/) | [Previews](https://www.pulumi.com/docs/ai/running-previews/) | [Automations](https://www.pulumi.com/docs/ai/automations/)
 
-Pulumi Cloud는 Pulumi CLI의 기본 상태 백엔드이자, 팀이 대규모로 Pulumi를 운영하는 데 필요한 기능을 제공하는 관리형 플랫폼이다. 액세스 제어, 재사용 가능한 구성 및 시크릿, 정책 강제, 클라우드 리소스 인벤토리, 예약 드리프트 감지, 관리형 배포, **Pulumi Neo**(AI 에이전트), **Ephemeral Environments**(Review Stacks, TTL Stacks) 등의 기능을 제공한다. Pulumi Cloud는 호스팅 SaaS와 셀프 호스팅 에디션으로 제공되며, 개인(Individual) 티어는 무료다.
+Pulumi Cloud는 Pulumi CLI의 기본 상태 백엔드이자, 팀이 대규모로 Pulumi를 운영하는 데 필요한 기능을 제공하는 관리형 플랫폼이다. 액세스 제어, 재사용 가능한 구성 및 시크릿, 정책 강제, 클라우드 리소스 인벤토리, 예약 드리프트 감지, 관리형 배포, **Pulumi Neo**(AI 에이전트), **Ephemeral Environments**(Review Stacks, TTL Stacks) 등의 기능을 제공한다. Pulumi Cloud는 호스팅 SaaS와 셀프 호스팅 에디션으로 제공되며, 개인(Individual) 티어는 무료다. Pulumi Cloud와 오픈소스 Pulumi의 기능별 상세 비교는 [Pulumi Cloud vs. OSS](https://www.pulumi.com/docs/iac/concepts/pulumi-cloud/)를 참조하라.
 
 ### Pulumi Cloud 주요 기능
 
@@ -23,7 +23,7 @@ Pulumi Cloud는 Pulumi CLI의 기본 상태 백엔드이자, 팀이 대규모로
 
 > 원문: [Organizations](https://www.pulumi.com/docs/administration/organizations-teams/organizations/)
 
-조직은 Pulumi Cloud의 최상위 계정 단위로, 관련 프로젝트·스택·사용자를 그룹화하는 협업 공간이다. 스택의 정규화된 이름은 `<organization>/<project>/<stack>` 형식을 따른다. Pulumi Cloud 콘솔에서는 `<organization>//<stack>`(프로젝트 구분자로 슬래시 두 개) 형식으로 표시된다.
+조직은 Pulumi Cloud의 최상위 계정 단위로, 관련 프로젝트·스택·사용자를 그룹화하는 협업 공간이다. 스택의 정규화된 이름은 `<organization>/<project>/<stack>` 형식을 따른다. 조직 이름은 스택 정규화 이름의 첫 번째 세그먼트다. Pulumi Cloud에 가입하면 사용자 이름과 동일한 이름의 **개인 조직**(personal organization)이 자동으로 생성된다. 추가로 팀용 조직을 생성하거나 기존 조직에 초대받을 수 있으며, 여러 조직의 멤버로 동시에 속할 수 있다. 조직 간 전환은 Pulumi Cloud 콘솔 상단 탐색 메뉴의 조직 메뉴 또는 `pulumi org` CLI 명령으로 수행한다.
 
 ### 조직 페이지 구성
 
@@ -70,6 +70,49 @@ Pulumi 조직은 다음 identity provider 중 하나로 운영할 수 있다:
 
 Identity provider 변경은 **Settings > Access Management > Other** 탭에서 수행한다. 변경 전 모든 멤버가 새 identity provider를 개인 계정에 연결해야 하며, 그렇지 않으면 조직 접근이 차단된다.
 
+### Identity Provider 변경 절차
+
+1. **Settings > Access Management**로 이동
+2. **Other** 탭 선택
+3. **Membership Requirements** 섹션에서 **Change requirements** 선택
+4. 새 identity provider 선택
+
+### Identity Provider 연결 해제(Disconnect)
+
+Identity provider를 연결 해제하려면 **다른 identity provider를 먼저 선택**해야 한다. SAML SSO 설정을 제거하려는 경우도 마찬가지로 새 identity provider를 선택해야 한다. 조직 멤버는 조직 identity provider를 변경하기 전에 먼저 새 identity provider를 개인 계정에 추가해야 하며, 그렇지 않으면 조직 접근이 차단된다.
+
+1. **Settings > Access Management**로 이동
+2. **Other** 탭 선택
+3. **Membership Requirements** 섹션에서 **Change requirements** 선택
+4. 새 identity provider 선택
+
+### 스택 이전(Transferring Stacks)
+
+스택 관리자는 개인 계정과 조직 간, 또는 조직 간에 개별 스택을 이전할 수 있다. 조직 관리자는 스택을 일괄 이전할 수 있다. 스택 이전에는 두 가지 권한이 필요하다: 현재 소유자로부터 스택을 이전할 권한과 대상 조직에서 스택을 생성할 권한. 둘 모두 조직의 액세스 제어를 통해 구성된다.
+
+**개별 스택 이전:**
+
+1. 스택으로 이동 후 **Settings** 선택
+2. **Transfer stack** 선택
+3. 대상 개인 계정 또는 조직 이름 입력 후 **Transfer** 선택
+
+**일괄 스택 이전 (조직 관리자):**
+
+1. **Stacks** 페이지로 이동
+2. **Create project** 옆 점 세 개 메뉴 선택
+3. 드롭다운에서 **Transfer stacks** 선택
+4. 드롭다운에서 **Transfer destination** 선택
+5. 이전할 스택 선택 (최대 15개) 후 **Transfer stacks** 선택
+
+### 삭제된 스택 복원(Restoring Deleted Stacks)
+
+삭제된 스택 복원은 **Enterprise** 및 **Business Critical** 에디션에서만 사용할 수 있다. 복원하면 이전에 삭제된 스택과 해당 업데이트 기록이 함께 복구된다. 조직 내에서 가장 최근에 삭제된 25개 스택을 조직 관리자가 복원할 수 있다.
+
+1. **Stacks** 페이지로 이동
+2. **Create project** 옆 점 세 개 메뉴 선택
+3. 드롭다운에서 **Restore deleted stacks** 선택
+4. 복원할 스택의 점 세 개 메뉴에서 **Restore stack** 선택
+
 ---
 
 ## 팀(Teams)
@@ -114,6 +157,8 @@ Team Entity Access Grants를 사용하면 팀 관리자가 조직 수준 역할 
 
 **REST API로 환경 권한 관리:**
 
+세 가지 작업(추가, 수정, 제거) 모두 동일한 `PATCH` 엔드포인트를 사용한다:
+
 ```bash
 # 환경 권한 추가
 curl -s -X PATCH \
@@ -122,17 +167,48 @@ curl -s -X PATCH \
   -H "Content-Type: application/json" \
   -d '{
     "addEnvironmentPermission": {
-      "projectName": "<PROJECT_NAME>",
-      "envName": "<ENV_NAME>",
+      "projectName": "{projectName}",
+      "envName": "{envName}",
       "permission": "read"
     }
   }'
 ```
 
+```bash
+# 기존 환경 권한 수정 (editEnvironmentPermission)
+curl -s -X PATCH \
+  "https://api.pulumi.com/api/orgs/{orgName}/teams/{teamName}" \
+  -H "Authorization: token $PULUMI_ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "editEnvironmentPermission": {
+      "projectName": "{projectName}",
+      "envName": "{envName}",
+      "permission": "write"
+    }
+  }'
+```
+
+```bash
+# 환경 권한 제거 (removeEnvironment)
+curl -s -X PATCH \
+  "https://api.pulumi.com/api/orgs/{orgName}/teams/{teamName}" \
+  -H "Authorization: token $PULUMI_ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "removeEnvironment": {
+      "projectName": "{projectName}",
+      "envName": "{envName}"
+    }
+  }'
+```
+
+성공 시 `204 No Content`를 반환한다. `projectName` 필드는 환경이 속한 ESC 프로젝트를 가리킨다 (예: 명시적 프로젝트를 지정하지 않은 경우 `default`).
+
 ```python
-# pulumi cloud api 명령으로 동일 작업
+# pulumi cloud api 명령으로 동일 작업 (권한 추가 예시)
 # pulumi cloud api PATCH /orgs/{orgName}/teams/{teamName}
-#   --body '{"addEnvironmentPermission":{"projectName":"<PROJECT_NAME>","envName":"<ENV_NAME>","permission":"read"}}'
+#   --body '{"addEnvironmentPermission":{"projectName":"{projectName}","envName":"{envName}","permission":"read"}}'
 ```
 
 ---
@@ -151,6 +227,24 @@ Pulumi Cloud의 RBAC는 조직 리소스에 대한 액세스를 유연하고 안
 | **Permission Sets** | 관련 Scopes의 묶음. 일반적으로 함께 사용되는 권한을 그룹화 |
 | **Roles** | Permission Sets를 리소스에 적용하고 주체(Principal)에 할당하는 컬렉션 |
 | **Teams** | 역할을 할당받을 수 있는 사용자 그룹 |
+
+### Principals (주체)
+
+역할은 Pulumi Cloud의 세 가지 종류의 주체(Principal)에 할당할 수 있다:
+
+| Principal | 설명 |
+|-----------|------|
+| **Users** | 조직 멤버는 기본 조직 역할(Admin, Member, Billing Manager, custom role)을 가진다. 조직에서 custom roles가 활성화되고 "Assign custom roles to users"가 켜진 경우, 관리자가 개별 멤버에게 custom role을 할당할 수 있다 |
+| **Teams** | 팀에 하나 이상의 역할을 할당할 수 있다. 팀 멤버는 팀의 역할과 자신의 사용자 역할의 합집합 권한을 받는다. Custom roles 활성화 시 사용 가능 |
+| **Organization access tokens** | 머신 토큰에 조직 전체 권한을 정의하는 하나의 역할을 할당할 수 있다 |
+
+### Where roles apply (역할 적용 위치)
+
+| 적용 위치 | 설명 |
+|-----------|------|
+| **User role** | 각 멤버는 하나의 기본 조직 역할(Admin, Member, Billing Manager, custom role)을 가진다. "Assign custom roles to users"가 활성화된 경우 관리자가 사용자별로 재정의 가능 |
+| **Organization default role** | 조직에서 custom roles가 활성화된 경우, Member 조직 역할을 가진 멤버에게 적용할 기본 역할을 설정할 수 있다. 명시적으로 custom role이 할당되지 않은 Member 사용자가 이 기본 역할을 상속받는다 |
+| **Team roles** | 팀에 여러 역할을 할당할 수 있다. 팀 멤버는 해당 역할들과 자신의 사용자 역할의 합집합 권한을 획득한다 |
 
 ### 권한 누적 구조
 
@@ -179,7 +273,52 @@ Custom roles는 Direct Entity Access, Global Entity Access, Tag-based(ABAC) 규�
 | **Global Entity Access** | 특정 유형의 **모든** 엔티티에 Permission Set 부여 (향후 생성되는 엔티티 포함) |
 | **Tag-based (ABAC)** | 리소스 태그가 정의된 조건과 일치할 때 Permission Set 부여 (예: `team=platform` 태그가 있는 모든 스택) |
 
+#### Custom Role 생성 절차
+
+Custom role 생성은 조직 관리자만 수행할 수 있다.
+
+1. **Settings > Roles** 페이지 방문
+2. **Create custom role** 클릭
+3. 고유한 이름과 (선택) 설명 입력
+4. Entity access 규칙(Direct/Global/Tag-based)과 조직 액세스 수준을 조합하여 구성
+5. **Create role** 클릭
+
+개별 사용자에게 custom role을 할당하려면 **Settings > Access Management**에서 **Assign custom roles to users** 설정이 활성화되어야 한다.
+
+#### Tag-based 규칙(ABAC) 상세
+
+Tag-based 규칙은 다음 요소로 구성된다:
+
+- **Entity type** — Stack, Environment, Insights account
+- **Tag conditions** — 리소스 태그에 대한 하나 이상의 조건 (예: 태그 `env` equals `production`, 태그 `team` exists)
+- **Permission set** — 조건이 일치할 때 부여할 Permission set
+
+접근 평가 시 Pulumi Cloud는 사용자의 역할(및 소속 팀의 역할)을 확인하고, 각 tag 규칙에 대해 리소스의 태그를 조건과 비교한다. 일치하면 해당 Permission set이 리소스에 적용된다. 대규모 조직에서 리소스를 개별 나열하지 않고 태그로 일괄 접근 권한을 부여할 때 유용하다.
+
+#### Role Assignment (역할 할당)
+
+역할은 조직 액세스 토큰, 사용자, 팀에 할당할 수 있다. 유효 권한은 사용자의 조직 역할과 소속 팀에 할당된 모든 역할의 **합집합**이다.
+
+| Principal | 할당 방식 |
+|-----------|-----------|
+| **Organization access tokens** | 생성 시 하나의 역할(default 또는 custom)을 할당 |
+| **Users** | "Assign custom roles to users"가 활성화된 경우 관리자가 개별 멤버에게 custom role 할당 가능 |
+| **Teams** | 여러 역할 할당 가능. 팀 멤버는 자신의 사용자 역할 + 팀 역할의 합집합 권한 획득 |
+
 ### 기본 Permission Sets
+
+**Permission Sets의 Entity Types:**
+
+Permission Set은 특정 Entity type에 속해야 하며, 동일한 Entity type의 Scope만 포함할 수 있다.
+
+| Entity type | 설명 | 포함 범위 |
+|-------------|------|-----------|
+| **Stacks** | 스택 관련 모든 작업 | 스택 업데이트, 구성, 배포 설정, 태그/어노테이션, 웹훅, 스케줄 |
+| **Environments** | 환경 관련 모든 작업 | 환경 구성, 시크릿, 스케줄, 웹훅, 버전 |
+| **Insights accounts** | Insights 계정 관련 작업 | 계정, 정책 평가, 스캔 구성, 결과/리포트 |
+| **Organization settings** | 조직 수준 작업 | 조직 설정, 멤버 관리, 결제/사용량, 감사 로그, 통합 구성 |
+
+> **Organization settings Permission Sets vs. 조직 전체 토글:** Organization settings Entity type은 역할을 통해 부여하는 RBAC scope(예: `stack:create`, `team:create`)를 다룬다. 이는 **Settings > Access Management**의 조직 전체 ON/OFF 토글(예: "Members can create stacks")과 별개다. 조직 전체 설정은 활성화 시 모든 멤버에게 무조건 부여되며 역할과 무관하다.
 
 **스택 Permission Sets:**
 
@@ -206,6 +345,19 @@ Custom roles는 Direct Entity Access, Global Entity Access, Tag-based(ABAC) 규�
 | `Account Write` | Insights 계정 수정 |
 | `Account Admin` | Insights 계정 전체 제어 |
 
+### Custom Permission Sets (Enterprise / Business Critical)
+
+Custom Permission Sets는 조직 관리자만 생성할 수 있다.
+
+**생성 절차:**
+
+1. **Settings > Access Management**로 이동 후 **Permission Sets** 탭 선택
+2. 해당 Entity type 그룹 내에서 **Create custom permission set** 클릭
+3. 고유한 이름 입력 (권장: 설명도 함께 입력)
+4. 포함할 Scopes 선택
+5. **Create permission set** 클릭
+6. 생성된 Custom Permission Set를 조직 내 역할에 할당 가능
+
 ### 주요 Scopes (조직 수준)
 
 | Scope | 설명 | 기본 부여 역할 |
@@ -220,6 +372,10 @@ Custom roles는 Direct Entity Access, Global Entity Access, Tag-based(ABAC) 규�
 | `environment:create` | 환경 생성 | `Member`, `Admin` |
 | `policy_pack:create` | 정책 팩 생성 | `Admin` |
 | `oidc_issuers:create` | OIDC 발급자 등록 | `Admin` |
+
+### Scopes vs. 조직 전체 설정
+
+Scopes는 **Settings > Access Management**에 있는 조직 전체 설정(예: "Members can create stacks", "Members can delete stacks", "Members can create teams")과 별개의 시스템이다. 조직 전체 설정이 **활성화**되면 해당 기능이 모든 멤버에게 무조건 부여되며 역할과 무관하다. **비활성화**되면 해당 Scope가 역할에 명시적으로 포함된 멤버만 해당 기능을 사용할 수 있다. Scopes는 `object:action` 명명 패턴을 따르며 (예: `stack:read`, `environment:write`, `team:create`), 항상 특정 Entity type과 연관되어 동일 Entity type의 Permission Set 내에서만 사용할 수 있다.
 
 ---
 
@@ -274,7 +430,7 @@ SCIM FAQ는 [SCIM FAQ](https://www.pulumi.com/docs/administration/access-identit
 
 > 원문: [Access Tokens](https://www.pulumi.com/docs/administration/access-identity/access-tokens/)
 
-Access Tokens는 CLI를 통한 Pulumi Cloud 로그인 또는 REST API를 사용한 자동화에 사용된다.
+Access Tokens는 CLI를 통한 Pulumi Cloud 로그인 또는 REST API를 사용한 자동화에 사용된다. `pulumi login`에 사용한 토큰은 `pulumi api` 명령에도 사용되며, 이 명령은 `Authorization` 헤더를 직접 설정하지 않고도 CLI에서 REST API 엔드포인트를 직접 호출할 수 있다.
 
 ### 토큰 유형
 
@@ -290,6 +446,15 @@ Access Tokens는 CLI를 통한 Pulumi Cloud 로그인 또는 REST API를 사용�
 - 토큰 만료 설정을 권장하여 토큰 순환 장려
 - Organization/Team Token은 CI/CD 파이프라인 등 비대화형 자동화에만 사용
 - Organization Token에 custom role을 할당하여 최소 권한 원칙 적용
+- Access token은 조직의 액세스 관리 설정이 모든 멤버의 스택 생성을 허용하거나, 토큰에 할당된 역할에 `stack:create` scope가 포함된 경우 스택을 생성할 수 있다. Admin organization token은 항상 이 기능을 갖는다. 스택 생성자는 자동으로 소유자가 되어 삭제 권한을 포함한 모든 스택 권한을 갖는다
+
+### 토큰 권한 작동 방식
+
+**Personal Token 권한:** Personal access token은 생성한 사용자와 동일한 권한을 가진다. 사용자가 속한 모든 Pulumi Cloud 조직의 멤버십, 팀 멤버십, 역할 할당이 모두 포함된다.
+
+**Organization Token 권한:** Organization token은 조직 자체로 인증한다. 고정된 권한 집합이 아니라 **생성 시 할당된 RBAC 역할**에서 권한을 파생한다. 역할을 할당하지 않으면 조직의 기본 멤버 역할을 받는다. Personal token과 달리 단일 조직으로 제한되며, 팀원 가입/퇴사에 영향을 받지 않는다.
+
+**Team Token 권한:** Team token은 특정 팀의 권한으로 인증한다. 유효 권한은 **각 요청 평가 시점에 팀에 할당된 역할**에 의해 결정된다. 팀의 역할 할당이 변경되면 토큰의 권한도 즉시 반영된다. Team token은 장기 실행 자동화에서 접근 요구사항이 변할 수 있는 경우에 적합하다.
 
 ### Personal Token 생성
 
@@ -307,7 +472,27 @@ Organization Token은 조직 자체로 인증하는 머신 토큰이다. CI/CD �
 - 토큰 이름은 삭제 후에도 영구 예약되어 감사 로그 무결성 보존
 - 삭제 시 즉시 접근 권한 회수
 
-### OIDC 발급 토큰
+### Team Token
+
+Team Token은 특정 팀의 리소스와 권한으로 제한된 머신 토큰이다. CI/CD 파이프라인 등 특정 팀이 관리하는 인프라에만 접근해야 하는 자동화 프로세스에 적합하다. 개별 팀 멤버의 Personal token을 사용할 필요가 없다.
+
+- 조직 관리자와 팀 관리자가 생성/삭제 가능. **Teams > 팀 선택 > Access Tokens**에서 관리
+- 토큰의 유효 권한은 팀에 할당된 역할의 합집합이며, 요청 시점에 평가된다
+- 팀의 역할 할당이 변경되면 토큰 권한도 자동 반영. 토큰 재생성 불필요
+- 감사 로그에 토큰 이름으로 기록되어 개인 사용자 노출 없이 추적 가능
+- 토큰 이름은 삭제 후에도 영구 예약되어 감사 로그 무결성 보존
+- 삭제 시 즉시 접근 권한 회수
+
+### Legacy Organization Token Types
+
+역할 할당이 도입되기 전, Organization Token은 두 가지 고정 권한 수준 중 하나로 생성되었다:
+
+| Legacy 유형 | 설명 | 현재 대응 |
+|-------------|------|-----------|
+| **Standard** | 멤버 수준 권한. 읽기/쓰기 가능하지만 멤버 관리, 조직 설정, 관리자 작업 불가 | Built-in Member 역할 할당에 해당 |
+| **Admin** | 전체 관리자 수준 권한. 다른 Organization Token 생성/삭제 제외 모든 작업 가능 | Built-in Admin 역할 할당에 해당 |
+
+두 유형 모두 계속 작동하며, admin/standard 구분은 현재 RBAC 시스템의 Built-in Admin/Member 역할에 직접 매핑된다. 새 자동화에는 Custom Role을 할당하여 최소 권한 원칙을 따르는 것을 권장한다.
 
 CI/CD 워크플로우(GitHub Actions, GitLab CI, Bitbucket Pipelines 등)에서 OIDC(OpenID Connect)를 통해 Pulumi Cloud에 인증할 수 있다. OIDC 인증은 장수명 시크릿(access token)을 저장하지 않고도 임시 자격 증명으로 Pulumi Cloud에 접근할 수 있는 보안 메커니즘이다.
 
@@ -381,11 +566,26 @@ curl -s -X PATCH \
 
 > 원문: [OIDC Issuers](https://www.pulumi.com/docs/administration/access-identity/oidc-issuers/)
 
-OIDC Issuers는 CI/CD 파이프라인에서 장수명 시크릿 없이 Pulumi Cloud에 인증하기 위한 OpenID Connect 발급자를 등록하고 관리하는 기능이다. OIDC Issuer를 등록하면 GitHub Actions, GitLab CI, Bitbucket Pipelines 등의 워크플로우가 임시 자격 증명으로 Pulumi Cloud에 안전하게 접근할 수 있다.
+OIDC Issuers는 CI/CD 파이프라인에서 장수명 시크릿 없이 Pulumi Cloud에 인증하기 위한 OpenID Connect 발급자를 등록하고 관리하는 기능이다. OIDC Issuer를 등록하면 GitHub Actions, GitLab CI, AWS EKS, Google GKE, Bitbucket Pipelines 등의 워크플로우가 임시 자격 증명으로 Pulumi Cloud에 안전하게 접근할 수 있다. OIDC Issuer는 외부 서비스에서 Pulumi Cloud로의 **인바운드** 토큰 수락을 구성하는 것이며, Pulumi Cloud에서 다른 서비스로 토큰을 발급하는 데 사용되지 않는다.
+
+### OIDC Issuer 관리 방법
+
+| 방법 | 설명 |
+|------|------|
+| **Pulumi Cloud UI** | Settings > Access Management > OIDC Issuers에서 구성 |
+| **REST API** | [OIDC Issuers REST API reference](https://www.pulumi.com/docs/reference/service-rest-api/) 사용 |
+| **Pulumi Service Provider** | `OidcIssuer` 리소스로 코드로 관리 |
 
 ### OIDC Issuer 등록
 
-조직 관리자는 **Settings > Access Management > OIDC Issuers**에서 발급자를 등록할 수 있다. 등록 시 authorization policy를 정의하여 어떤 워크플로우 조건에서 토큰 교환을 허용할지 제어한다.
+조직 관리자는 **Settings > Access Management > OIDC Issuers**에서 **Register issuer**를 선택하여 발급자를 등록할 수 있다. 등록 시 다음 필드를 제공한다:
+
+| 필드 | 설명 |
+|------|------|
+| **Name** | 발급자의 라벨 (고유 이름) |
+| **URL** | 발급자 URL. Pulumi Cloud는 이 URL에 `/.well-known/openid-configuration`을 추가하여 OpenID 구성 메타데이터를 가져온다 |
+| **Max expiration** | 이 신뢰 관계를 통해 발급되는 Pulumi access token의 최대 지속 시간. 기본값 25시간 |
+| **Thumbprints** (선택) | 발급자가 OpenID 구성을 서비스하는 데 사용하는 TLS 인증서의 SHA-256 지문. 기본적으로 등록 시점의 인증서 지문이 저장됨. 여러 인증서를 사용하거나 인증서 순환이 필요한 경우 수동 구성 |
 
 **지원 OIDC 공급자:**
 
@@ -393,6 +593,8 @@ OIDC Issuers는 CI/CD 파이프라인에서 장수명 시크릿 없이 Pulumi Cl
 |--------|-----------|------|
 | GitHub Actions | `https://token.actions.githubusercontent.com` | GitHub OIDC 공급자 |
 | GitLab CI | `https://gitlab.com` | GitLab OIDC 공급자 |
+| AWS EKS | EKS 클러스터 OIDC 발급자 URL | Amazon EKS 파드 인증 |
+| Google GKE | GKE 클러스터 OIDC 발급자 URL | Google GKE 워크로드 인증 |
 | Bitbucket Pipelines | `https://api.bitbucket.org/2.0/workspaces/{workspace}/pipelines-config/identity/oidc` | Bitbucket OIDC 공급자 |
 | Custom | 사용자 정의 | 기타 OIDC 호환 공급자 |
 
@@ -436,6 +638,31 @@ subject claim 매칭 예시:
 - `repo:my-org/my-repo:*` — 특정 리포지토리의 모든 워크플로우 허용
 - `repo:my-org/my-repo:ref:refs/heads/main` — main 브랜치에서만 허용
 - `repo:my-org/my-repo:environment:production` — production 환경에서만 허용
+
+**Nested claims 지원:** 점으로 중첩된 claim 경로를 정의할 수 있다. 예를 들어 다음과 같은 토큰 페이로드가 있을 때:
+
+```json
+{
+  "kubernetes.io": {
+    "pod": {
+      "name": "runner-ddfaa34e-dfrjh",
+      "uid": "b99b58df-cce5-405a-a33d-49a4cf8cf7bd"
+    }
+  }
+}
+```
+
+claim 경로 `"kubernetes.io".pod.name`으로 pod 이름을 타겟팅할 수 있다. 점이 포함된 객체 키는 따옴표로 감싼다.
+
+**Wildcard 지원:** Claim 값과 team scope에 다음 와일드카드를 사용할 수 있다:
+
+| 패턴 | 의미 |
+|------|------|
+| `*` | 0개 이상의 문자 매칭 |
+| `?` | 0개 또는 1개의 문자 매칭 |
+| `.` | 정확히 1개의 문자 매칭 |
+
+예: `runner-*`는 `runner-`로 시작하는 모든 pod 이름과 매칭된다.
 
 ### 썸프린트(Thumbprint)
 
@@ -559,9 +786,14 @@ curl -X POST \
 
 | 이벤트 | 설명 |
 |--------|------|
+| Auth Failure Organization Role | 사용자가 필요한 조직 역할 없이 작업을 시도함 |
+| Auth Failure SCIM Access Token | SCIM 지원 요청에 잘못된 인증 토큰이 사용됨 |
+| Auth Failure Stack Permission | 사용자가 필요한 스택 권한 없이 작업을 시도함 |
 | Member Added / Removed | 조직 멤버 추가/제거 |
 | Member Role Changed | 멤버 역할 변경 |
+| Organization Settings Changed | 조직 설정 변경 |
 | Stack Created / Deleted / Renamed | 스택 생성/삭제/이름 변경 |
+| Stack Created From Template | 템플릿으로부터 스택 생성 |
 | Stack Update Started / Completed / Canceled | 스택 업데이트 시작/완료/취소 |
 | Stack Exported / Imported | 스택 내보내기/가져오기 |
 | Stack Transferred to Organization | 스택 조직 간 이전 |
@@ -569,10 +801,19 @@ curl -X POST \
 | Secret Decrypted | 시크릿 복호화 |
 | Stack Collaborator Added / Removed / Permissions Changed | 스택 협업자 추가/제거/권한 변경 |
 | Policy Pack Created / Deleted / Enabled / Disabled | 정책 팩 생성/삭제/활성화/비활성화 |
+| Policy Group Created / Deleted / Updated | 정책 그룹 생성/삭제/업데이트 |
 | SAML Configuration Updated | SAML 구성 업데이트 |
 | User Login / User Login Failed | 사용자 로그인/로그인 실패 |
+| User Added New Identity to Their Account | 사용자가 새 identity를 계정에 연결 |
 | Environment Created / Updated / Deleted / Open | 환경(Pulumi ESC) 관련 이벤트 |
-| Customer Managed Key Added / Set Default / Disabled | 고객 관리 키 관련 이벤트 |
+| Environment Read / Read Open / Unauthorized Open | 환경 읽기/열기 및 읽기/권한 없는 열기 시도 |
+| Environment Tag Created / Updated / Deleted | 환경 태그 관련 이벤트 |
+| Environment Version Retracted / Tag Open / Tag Created / Tag Read / Tag Update / Tag Delete | 환경 버전 태그 관련 이벤트 |
+| Environment Decrypted / Clone / Restored | 환경 복호화/복제/복원 |
+| Environment Schedule Created / Updated / Deleted | 환경 스케줄 관련 이벤트 |
+| Environment Rotated | 환경 시크릿 순환 |
+| Stack Provider Open | 환경 내 스택 공급자 열기 |
+| Customer Managed Key Added / Set Default / Disabled / Disabled All | 고객 관리 키 관련 이벤트 |
 
 ---
 
@@ -598,6 +839,15 @@ CMK는 외부 Key Management System(KMS)을 통해 데이터 키를 암호화하
 2. **Add Customer Managed Key**: AWS IAM Role ARN 및 KMS Key ARN 입력 (Alias ARN도 지원)
 3. **Disable**: 기존 데이터 키 재암호화용 키를 선택 후 비활성화. 기본 키는 비활성화 불가
 4. **Disable all**: 모든 CMK를 비활성화하고 Pulumi 관리 키로 재암호화
+
+### AWS KMS 설정 단계
+
+1. AWS IAM에 역할을 생성하고 AWS KMS에 키를 생성한다. 자세한 설정 방법은 [AWS KMS 설정 가이드](https://www.pulumi.com/docs/administration/security-compliance/customer-managed-keys/aws-kms/)를 참조하라
+2. Pulumi Cloud의 **Customer Managed Keys** 설정 페이지로 이동
+3. **Add Customer Managed Key** 클릭
+4. 키의 고유 이름 입력
+5. AWS KMS 키에 접근 권한이 있는 **Role ARN** 입력
+6. AWS KMS 키의 **Key ARN** 입력 (Alias ARN도 지원)
 
 **CMK 페이지에 표시되는 정보:**
 
@@ -775,6 +1025,10 @@ organization := ctx.Organization()
 var organization = Deployment.Instance.OrganizationName;
 ```
 
+```java
+var organization = ctx.organizationName();
+```
+
 ```yaml
 variables:
   organization: ${pulumi.organization}
@@ -786,7 +1040,7 @@ variables:
 
 > 원문: [Infrastructure AI](https://www.pulumi.com/docs/ai/) | [Get Started](https://www.pulumi.com/docs/ai/get-started/) | [Tasks](https://www.pulumi.com/docs/ai/tasks/) | [Pull Requests](https://www.pulumi.com/docs/ai/pull-requests/) | [Automations](https://www.pulumi.com/docs/ai/automations/) | [Integrations](https://www.pulumi.com/docs/ai/integrations/)
 
-**Pulumi Neo**는 자연어 기반의 AI 인프라 자동화 에이전트다. 배포 디버깅, IaC 작성, 환경 질문 응답 등 플랫폼 엔지니어링 작업을 지원한다. Neo는 현재 **Public Preview** 상태이며 무료로 사용할 수 있다.
+**Pulumi Neo**는 자연어 기반의 AI 인프라 자동화 에이전트다. 배포 디버깅, IaC 작성, 환경 질문 응답 등 플랫폼 엔지니어링 작업을 지원한다. Neo는 현재 **Public Preview** 상태이며 무료로 사용할 수 있다. `pulumi neo` CLI 명령으로 터미널에서 대화형 Neo 세션을 시작할 수도 있다.
 
 ### 활성화 및 비활성화
 
@@ -839,22 +1093,62 @@ Task modes는 실행 중 Neo의 자율성 수준을 제어한다. 작업 중 언
 
 Plan Mode와 Task modes는 독립적이다. 예를 들어 Plan Mode + Auto Mode 조합으로 사전에 접근법을 철저히 검토한 후 Neo가 자율 실행하도록 할 수 있다.
 
+### Context, Sharing, History
+
+**Entity context 설정:** Task 시작 시 스택과 리포지토리 컨텍스트를 설정할 수 있어, Neo가 작업 범위를 정확히 파악할 수 있다.
+
+**소유권 및 공유:** 각 Task는 생성한 사용자에게 속한다. 기본적으로 비공개이지만, 조직 내 다른 사람과 읽기 전용 링크를 생성하여 공유할 수 있다. 공유된 Task는 대화 전체(Neo의 추론, 수행한 작업, 결과)를 볼 수 있다.
+
+공유 시 보안 경계가 유지된다:
+- 뷰어는 대화를 볼 수 있지만 작업을 트리거할 수 없다
+- 공유 Task 내의 스택/리소스 링크는 뷰어의 기존 RBAC 권한을 그대로 적용한다
+- 원래 Task 소유자가 전체 제어권을 유지한다
+
+**중단 및 재개:** 브라우저를 닫거나 다른 페이지로 이동해도 Task는 계속 실행된다. Neo가 작업을 완료하거나 승인이 필요한 상황에 도달할 때까지 작동한다. 돌아오면 부재 중 진행 상황을 보여준다.
+
+**Task 기록:** Neo Task는 Pulumi Cloud의 Agent Tasks 페이지에 저장되어 언제든 전체 기록에 접근할 수 있다. 단, 에이전트가 1시간 이상 유휴 상태인 경우 Task 캐시가 손실될 수 있다.
+
 ### Pull Requests
 
 Neo가 제안하는 모든 변경은 PR을 통해 이루어진다. PR에는 변경 제목, 문제 설명, 수정 리소스 목록, Preview 출력 요약, Neo Task 링크가 포함된다.
 
 **VCS 통합 필요:** Neo가 코드를 읽고 PR을 생성하려면 [버전 제어 통합](https://www.pulumi.com/docs/integrations/version-control/)이 필요하다. GitHub, Azure DevOps, GitLab을 지원한다.
 
+### Previews
+
+> 원문: [Running Previews](https://www.pulumi.com/docs/ai/running-previews/)
+
+Neo는 Pulumi Cloud에서 직접 `pulumi preview`를 실행하여 제안된 인프라 변경을 PR 생성 전에 검증할 수 있다. 이를 통해 예상치 못한 리소스 변경이나 정책 위반을 사전에 발견할 수 있다.
+
+**사전 요구 사항:**
+- 적용 가능한 클라우드 공급자 자격 증명 (AWS, Azure, GCP)
+- Pulumi 프로그램에 필요한 추가 구성
+- 자격 증명은 **Stack config** 또는 **ESC 환경**(권장)을 통해 제공. ESC는 OIDC 통합이 가능한 가장 유연한 방식
+
+**Preview 워크플로우:**
+1. Neo가 Task 해결책에 도달하면 preview 실행을 요청
+2. 사용자가 승인 또는 거부
+3. Preview 실행 후 Neo가 PR 열기를 제안
+4. 사용자가 승인하거나 변경 요청 가능
+
+**Preview 출력:** 수정될 리소스 수, 각 리소스의 구체적 변경 사항, 오류/경고, 정책 위반 사항(스택에 Pulumi IaC 정책이 연결된 경우)이 표시된다.
+
 ### Automations (자동화)
 
-Automations는 Neo Task를 반복 작업으로 전환한다. 프롬프트를 정의하고 주기를 설정하면, Neo가 해당 간격으로 Task를 실행한다. 변경이 발생하면 PR을 연다.
+Automations는 Neo Task를 반복 작업으로 전환한다. 프롬프트를 정의하고 주기를 설정하면, Neo가 해당 간격으로 Task를 실행한다. 변경이 발생하면 PR을 연다. PR은 조직의 일반 리뷰 프로세스를 거치므로 branch protection 규칙과 필수 리뷰어가 여전히 적용된다.
 
 | 기본 설정 | 설명 |
 |-----------|------|
 | 승인 모드 | **Auto** (각 단계에서 사람 승인 대기 없음) |
 | 권한 모드 | **Read-only** (직접 인프라 쓰기 불가, PR으로만 제안) |
 
+**설정 적용 우선순위:** (1) 자동화별 설정 > (2) 조직 수준 기본값 > (3) Auto 승인 + Read-only 권한 (기본 폴백)
+
 **자동화 생성:** Neo Tasks > Automations 탭 > New automation. 템플릿(provider freshness check, encryption audit, backup audit, activity digest) 또는 빈 캔버스에서 시작. 이름, 프롬프트, 빈도(hourly, daily, weekdays, weekly)를 설정한다.
+
+**권한:** 예약된 Task는 **예약한 사용자의 RBAC 권한**으로 실행되며, 실행 시점에 평가된다. 사용자의 권한이 예약과 실행 사이에 변경된 경우 새 권한이 적용된다.
+
+**통합 상속:** Automations는 Neo의 컨텍스트 모델을 상속한다. 조직 및 프로젝트 수준의 Custom Instructions가 예약 Task에도 적용된다. MCP 통합은 구성한 사용자의 자격 증명을 사용하고, CLI 통합은 설정 시 구성된 자격 증명을 사용한다.
 
 ### Integrations (통합)
 
@@ -877,7 +1171,7 @@ Automations는 Neo Task를 반복 작업으로 전환한다. 프롬프트를 정
 
 ## Onboarding Guide (조직 온보딩 가이드)
 
-> 원문: [Onboarding Guide](https://www.pulumi.com/docs/administration/onboarding-guide/) | [Choose Subscription](https://www.pulumi.com/docs/administration/onboarding-guide/choose-subscription/) | [Ways of Working](https://www.pulumi.com/docs/administration/onboarding-guide/ways-of-working/)
+> 원문: [Onboarding Guide](https://www.pulumi.com/docs/administration/onboarding-guide/) | [Choose Subscription](https://www.pulumi.com/docs/administration/onboarding-guide/choose-subscription/) | [Ways of Working](https://www.pulumi.com/docs/administration/onboarding-guide/ways-of-working/) | [Setting Up for Success](https://www.pulumi.com/docs/administration/onboarding-guide/)
 
 조직에 Pulumi를 도입하기 위한 종합 가이드다. 설정부터 권장 사용 패턴과 실천 방법까지 다룬다.
 
