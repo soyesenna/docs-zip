@@ -106,7 +106,7 @@ Identity provider를 연결 해제하려면 **다른 identity provider를 먼저
 
 ### 삭제된 스택 복원(Restoring Deleted Stacks)
 
-삭제된 스택 복원은 **Enterprise** 및 **Business Critical** 에디션에서만 사용할 수 있다. 복원하면 이전에 삭제된 스택과 해당 업데이트 기록이 함께 복구된다. 조직 내에서 가장 최근에 삭제된 25개 스택을 조직 관리자가 복원할 수 있다.
+삭제된 스택 복원은 **Pulumi Cloud** 기능이다. DIY 백엔드를 사용하는 경우 이 방식으로 복원할 수 없다. 복원하면 이전에 삭제된 스택과 해당 업데이트 기록이 함께 복구된다. 조직 내에서 가장 최근에 삭제된 25개 스택을 조직 관리자가 복원할 수 있다.
 
 1. **Stacks** 페이지로 이동
 2. **Create project** 옆 점 세 개 메뉴 선택
@@ -511,7 +511,19 @@ CI/CD 워크플로우(GitHub Actions, GitLab CI, Bitbucket Pipelines 등)에서 
 | **Team** | 팀 권한으로 인증 | Enterprise, Business Critical |
 | **Deployment Runner** | 배포 실행을 위한 전용 토큰 | Business Critical |
 
-에디션별 사용 가능 토큰 타입: **Individual** = personal만, **Team** = personal + organization, **Enterprise** = personal + organization + team, **Business Critical** = personal + organization + team + deployment-runner. 권한은 `scope: admin` 같은 필드로 요청하는 것이 아니라, authorization policy의 subject claim 매칭과 토큰 타입에 할당된 RBAC 역할로 결정된다. 자세한 구성 방법은 아래 OIDC Issuers 섹션을 참조하라.
+에디션별 사용 가능 토큰 타입: **Individual** = personal만, **Team** = personal + organization, **Enterprise** = personal + organization + team, **Business Critical** = personal + organization + team + deployment-runner.
+
+**OIDC 토큰의 관리자 권한:** OIDC 발급 액세스 토큰은 기본적으로 관리자 권한을 받지 않는다. 스택 생성이나 삭제와 같이 상승된 권한이 필요한 작업을 수행하려면, OIDC 토큰 교환 시 명시적으로 `admin` scope를 요청해야 한다. 예시:
+
+```json
+{
+  "provider": "github",
+  "audience": "pulumi",
+  "scope": "admin"
+}
+```
+
+이 `scope` 필드는 OIDC 토큰 교환 시 관리자 권한을 요청하는 데 사용된다. 한편 REST API 직접 호출 시 `scope` 파라미터는 `team:{TEAM_NAME}` 또는 `user:{USER_LOGIN}` 형식으로 대상 팀/사용자를 지정하는 용도로 사용되며, authorization policy의 subject claim 매칭과 토큰 타입에 할당된 RBAC 역할로 권한이 결정된다. 자세한 구성 방법은 아래 OIDC Issuers 섹션을 참조하라.
 
 ---
 
@@ -595,7 +607,6 @@ OIDC Issuers는 CI/CD 파이프라인에서 장수명 시크릿 없이 Pulumi Cl
 | GitLab CI | `https://gitlab.com` | GitLab OIDC 공급자 |
 | AWS EKS | EKS 클러스터 OIDC 발급자 URL | Amazon EKS 파드 인증 |
 | Google GKE | GKE 클러스터 OIDC 발급자 URL | Google GKE 워크로드 인증 |
-| Bitbucket Pipelines | `https://api.bitbucket.org/2.0/workspaces/{workspace}/pipelines-config/identity/oidc` | Bitbucket OIDC 공급자 |
 | Custom | 사용자 정의 | 기타 OIDC 호환 공급자 |
 
 ### 에디션별 토큰 타입
@@ -1050,7 +1061,7 @@ Neo에 접근하려면 Pulumi Cloud 콘솔의 왼쪽 탐색 메뉴에서 **Neo**
 
 ### Neo 권한 모델
 
-Neo는 대화하는 사용자의 [RBAC 권한](https://www.pulumi.com/docs/pulumi-cloud/access-management/rbac/) 범위 내에서 작동하며, 사용자가 수행할 수 없는 작업은 Neo도 수행할 수 없다. 권한 에스컬레이션 위험이나 특별한 관리자 접근이 필요하지 않다.
+Neo는 대화하는 사용자의 [RBAC 권한](https://www.pulumi.com/docs/administration/access-identity/rbac/) 범위 내에서 작동하며, 사용자가 수행할 수 없는 작업은 Neo도 수행할 수 없다. 권한 에스컬레이션 위험이나 특별한 관리자 접근이 필요하지 않다.
 
 | 권한 수준 | 설명 |
 |-----------|------|
