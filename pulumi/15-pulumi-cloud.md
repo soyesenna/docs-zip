@@ -321,12 +321,12 @@ CI/CD 워크플로우(GitHub Actions, GitLab CI, Bitbucket Pipelines 등)에서 
 
 | 토큰 타입 | 설명 | 사용 가능 에디션 |
 |-----------|------|-----------------|
-| **Personal** | 특정 사용자의 권한으로 인증 | 모든 에디션 |
-| **Organization** | 조직 자체로 인증, RBAC 역할 할당 가능 | Enterprise, Business Critical |
+| **Personal** | 특정 사용자의 권한으로 인증 | Individual: personal만 |
+| **Organization** | 조직 자체로 인증, RBAC 역할 할당 가능 | Team 이상 (Team: personal + organization) |
 | **Team** | 팀 권한으로 인증 | Enterprise, Business Critical |
 | **Deployment Runner** | 배포 실행을 위한 전용 토큰 | Business Critical |
 
-권한은 `scope: admin` 같은 필드로 요청하는 것이 아니라, authorization policy의 subject claim 매칭과 토큰 타입에 할당된 RBAC 역할로 결정된다. 자세한 구성 방법은 아래 OIDC Issuers 섹션을 참조하라.
+에디션별 사용 가능 토큰 타입: **Individual** = personal만, **Team** = personal + organization, **Enterprise** = personal + organization + team, **Business Critical** = personal + organization + team + deployment-runner. 권한은 `scope: admin` 같은 필드로 요청하는 것이 아니라, authorization policy의 subject claim 매칭과 토큰 타입에 할당된 RBAC 역할로 결정된다. 자세한 구성 방법은 아래 OIDC Issuers 섹션을 참조하라.
 
 ---
 
@@ -398,12 +398,14 @@ OIDC Issuers는 CI/CD 파이프라인에서 장수명 시크릿 없이 Pulumi Cl
 
 ### 에디션별 토큰 타입
 
-| 토큰 타입 | 설명 | 사용 가능 에디션 |
-|-----------|------|-----------------|
-| **Personal** | 특정 사용자 권한으로 인증 | 모든 에디션 |
-| **Organization** | 조직 자체로 인증, RBAC 역할 할당 | Enterprise, Business Critical |
-| **Team** | 팀 권한으로 인증 | Enterprise, Business Critical |
-| **Deployment Runner** | 배포 실행 전용 | Business Critical |
+OIDC 토큰 타입의 에디션별 가용성은 다음과 같다:
+
+- **Individual**: personal
+- **Team**: personal, organization
+- **Enterprise**: personal, organization, team
+- **Business Critical**: personal, organization, team, deployment-runner
+
+Authorization policy와 토큰 요청 시, 해당 에디션에서 사용 가능한 토큰 타입을 선택해야 한다.
 
 ### Authorization Policy
 
@@ -421,11 +423,13 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v4
-      - name: Pulumi 로그인 (OIDC)
+      - name: OIDC 토큰 발급
+        id: pulumi-oidc
+        uses: pulumi/auth-actions@v1
+      - name: Pulumi CLI 설치
         uses: pulumi/action-install-pulumi-cli@v2
-      - run: pulumi login --cloud-url https://api.pulumi.com
-        env:
-          PULUMI_ACCESS_TOKEN: ${{ steps.pulumi-oidc.outputs.PULUMI_ACCESS_TOKEN }}
+      - name: Pulumi 로그인 (OIDC)
+        run: pulumi login --oidc-token ${{ steps.pulumi-oidc.outputs.PULUMI_ACCESS_TOKEN }} --oidc-org <org-name>
 ```
 
 subject claim 매칭 예시:
@@ -435,28 +439,81 @@ subject claim 매칭 예시:
 
 ### 썸프린트(Thumbprint)
 
-OIDC Issuer 등록 시 공급자의 인증서 썸프린트를 제공해야 할 수 있다. 썸프린트는 OIDC 공급자의 TLS 인증서 지문(SHA-1)으로, 토큰의 출처를 검증하는 데 사용된다.
+OIDC Issuer 등록 시 공급자의 인증서 썸프린트를 제공해야 할 수 있다. 썸프린트는 OIDC 공급자의 TLS 인증서 지문(**SHA-256**)으로, 토큰의 출처를 검증하는 데 사용된다. 기본적으로 Pulumi Cloud는 등록 시 사용된 인증서의 썸프린트를 저장한다. 공급자가 여러 인증서를 사용하거나 인증서 순환이 필요한 경우 수동으로 구성한다.
+
+**썸프린트 계산 방법:**
+
+```bash
+# 1. 발급자의 인증서 가져오기 (example.com을 발급자 호스트명으로 교체)
+openssl s_client -servername example.com -showcerts -connect example.com:443
+
+# 2. 출력에서 첫 번째 인증서를 certificate.crt 파일로 저장
+
+# 3. SHA-256 썸프린트 계산
+openssl x509 -in certificate.crt -fingerprint -sha256 -noout
+# > sha256 Fingerprint=2B:60:30:08:8E:8D:08:FC:D6:1B:8B:89:70:19:F2:D9:9F:4B:9A:0F:7B:46:5B:06:5C:2B:90:E1:C5:3B:C0:7D
+
+# 4. 콜론 제거
+# 2B6030088E8D08FCD61B8B897019F2D99F4B9A0F7B465B065C2B90E1C53BC07D
+```
+
+여러 인증서를 사용하는 공급자의 경우 각 인증서에 대해 썸프린트를 추가해야 한다.
 
 ### CLI 및 REST API를 통한 토큰 교환
 
 **CLI를 통한 OIDC 인증:**
 
+Pulumi CLI는 `pulumi login` 명령으로 OIDC 토큰 교환을 기본 지원한다. 대부분의 사용 사례에서 권장되는 방식이다.
+
 ```bash
-# Pulumi CLI에서 OIDC 인증 사용
-pulumi login --oidc <issuer-url>
+# Pulumi CLI에서 OIDC 인증 사용 (권장)
+pulumi login --oidc-token <token> --oidc-org <org-name>
+```
+
+`--oidc-token` 플래그는 원시 토큰 문자열 또는 `file://` 접두사가 있는 파일 경로를 허용한다. 추가로 `--oidc-team`, `--oidc-user`, `--oidc-expiration` 플래그를 사용할 수 있다. 셀프 호스팅 백엔드를 사용하는 경우 백엔드 URL을 명시적으로 지정해야 한다:
+
+```bash
+pulumi login https://api.pulumi.com --oidc-token <token> --oidc-org <org-name>
 ```
 
 **REST API를 통한 토큰 교환:**
 
+고급 시나리오에서 토큰 교환 과정을 직접 제어해야 하는 경우, OAuth 2.0 token-exchange 그랜트 타입으로 토큰 엔드포인트를 호출한다. 엔드포인트는 `application/json`과 `application/x-www-form-urlencoded` 콘텐츠 타입을 모두 지원한다.
+
+**파라미터:**
+
+| 파라미터 | 설명 |
+|----------|------|
+| `audience` | `urn:pulumi:org:{ORG_NAME}` |
+| `grant_type` | `urn:ietf:params:oauth:grant-type:token-exchange` |
+| `subject_token_type` | `urn:ietf:params:oauth:token-type:id_token` |
+| `requested_token_type` | Organization: `urn:pulumi:token-type:access_token:organization`, Team: `urn:pulumi:token-type:access_token:team`, Personal: `urn:pulumi:token-type:access_token:personal` |
+| `scope` | Team 또는 Personal 토큰 요청 시 대상 지정. `team:{TEAM_NAME}` 또는 `user:{USER_LOGIN}` 형식 |
+| `expiration` | 토큰 만료 시간(초). 기본값 2시간 |
+| `subject_token` | OIDC 공급자가 발급한 id_token |
+
 ```bash
-# OIDC 토큰을 Pulumi access token으로 교환
-curl -s -X POST \
-  "https://api.pulumi.com/api/orgs/{orgName}/oidc/token" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "accessToken": "<oidc-jwt-token>",
-    "issuer": "<issuer-url>"
-  }'
+# OIDC 토큰을 Pulumi access token으로 교환 (OAuth 2.0 token-exchange)
+curl -X POST \
+  -H 'Content-Type: application/x-www-form-urlencoded' \
+  -d 'audience=urn:pulumi:org:{ORG_NAME}' \
+  -d 'grant_type=urn:ietf:params:oauth:grant-type:token-exchange' \
+  -d 'subject_token_type=urn:ietf:params:oauth:token-type:id_token' \
+  -d 'requested_token_type=urn:pulumi:token-type:access_token:organization' \
+  -d 'subject_token=<oidc-id-token>' \
+  https://api.pulumi.com/api/oauth/token
+```
+
+응답 예시:
+
+```json
+{
+  "access_token": "...",
+  "issued_token_type": "urn:pulumi:token-type:access_token:organization",
+  "token_type": "token",
+  "expires_in": 7200,
+  "scope": ""
+}
 ```
 
 ---
