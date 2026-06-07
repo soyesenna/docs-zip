@@ -90,13 +90,26 @@ WebGL 1.0 프래그먼트 셰이더로 복잡한 그래픽 효과:
 | 속성 | 설명 |
 | --- | --- |
 | `url` | WebGL 1.0 (`#version 100`) 프래그먼트 셰이더 파일 |
-| `uniforms` | 유니폼 오버라이드 값. `@resolution`/`@time`은 제외 |
+| `uniforms` | 유니폼 오버라이드 값. `@resolution`/`@time`/`@mouse`는 제외 |
+
+#### uniforms 허용 값
+
+| 값 형태 | GLSL 대응 타입 | 설명 |
+| --- | --- | --- |
+| `number` | `float`, `int` | 단일 숫자 |
+| `boolean` | `bool` | `true` 또는 `false` |
+| `"#RRGGBB"` 또는 `"#RRGGBBAA"` | `vec3`/`vec4` (`@color` 주석 시) | 16진수 색상 문자열 |
+| `[x, y]` | `vec2`, `ivec2` | 2개 숫자 배열 |
+| `[x, y, z]` | `vec3`, `ivec3` | 3개 숫자 배열 |
+| `[x, y, z, w]` | `vec4`, `ivec4` | 4개 숫자 배열 |
+| `"$name"` | 변수 참조 | 숫자 유니폼 → number 변수, 색상 유니폼 → color 변수 |
 
 ### 5. Mesh Gradient Fill
 
 베지어 보간된 컬러 그리드:
 
 ```javascript
+// 단순 좌표 배열 형태
 { fill: {
   type: "mesh_gradient",
   columns: 3,
@@ -106,6 +119,44 @@ WebGL 1.0 프래그먼트 셰이더로 복잡한 그래픽 효과:
   opacity: 1.0
 }}
 ```
+
+`points`의 각 요소는 단순 `[x, y]` 좌표 배열 또는 bezier handle 객체 형태를 지원합니다:
+
+```javascript
+// Bezier handle 객체 형태
+{ fill: {
+  type: "mesh_gradient",
+  columns: 2,
+  rows: 2,
+  colors: ["#FF0000", "#00FF00", "#0000FF", "#FFFF00"],
+  points: [
+    // 좌상단 — handle 생략 시 자동 생성
+    { position: [0, 0] },
+    // 우상단 — rightHandle만 지정
+    { position: [1, 0], rightHandle: [0.1, 0] },
+    // 좌하단 — topHandle, leftHandle 지정
+    { position: [0, 1], topHandle: [0, -0.1], leftHandle: [-0.1, 0] },
+    // 우하단 — 모든 handle 지정
+    { position: [1, 1], leftHandle: [-0.1, 0], rightHandle: [0.1, 0], topHandle: [0, -0.1], bottomHandle: [0, 0.1] }
+  ],
+  opacity: 1.0
+}}
+```
+
+| points 요소 형태 | 설명 |
+| --- | --- |
+| `[number, number]` | 정규화된 좌표. handle은 자동 생성 |
+| `{ position, ...handles }` | position 필수. handle 생략 시 자동 생성 |
+
+| handle 속성 | 타입 | 설명 |
+| --- | --- | --- |
+| `position` | `[number, number]` | 정규화된 위치 (필수) |
+| `leftHandle` | `[number, number]` | 좌측 handle (상대 오프셋). 생략 시 자동 |
+| `rightHandle` | `[number, number]` | 우측 handle (상대 오프셋). 생략 시 자동 |
+| `topHandle` | `[number, number]` | 상단 handle (상대 오프셋). 생략 시 자동 |
+| `bottomHandle` | `[number, number]` | 하단 handle (상대 오프셋). 생략 시 자동 |
+
+> 가장자리 points는 기본 위치에 유지하는 것이 좋습니다.
 
 ---
 
