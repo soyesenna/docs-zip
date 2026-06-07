@@ -102,7 +102,7 @@ resources:
 | `backend` | 선택 | 프로젝트의 백엔드 설정 |
 | `options` | 선택 | 추가 프로젝트 옵션 |
 | `template` | 선택 | `pulumi new`로 새 스택 생성 시 사용할 템플릿 구성 |
-| `plugins` | 선택 | 플러그인 선택 재정의(플러그인 개발용) |
+| `plugins` | 선택 | 플러그인 선택 재정의(플러그인 개발용). `providers`, `analyzers`, `languages` 하위 속성 포함 |
 | `requiredPulumiVersion` | 선택 | 필요한 Pulumi CLI 버전 범위 |
 
 ### `runtime` 옵션
@@ -212,11 +212,420 @@ plugins:
   providers:
     - name: aws
       path: ../../bin
+  analyzers:
+    - name: my-policy
+      path: ../../plugins/my-policy
   languages:
     - name: yaml
       path: ../../../pulumi-yaml/bin
       version: 1.2.3
 requiredPulumiVersion: ">=3.0.0"
+```
+
+### `plugins` 옵션 상세
+
+로컬 플러그인 바이너리에 연결할 때 사용합니다. 플러그인 개발용으로 의도되었습니다.
+
+| 속성 | 필수 | 설명 |
+|------|------|------|
+| `providers` | 선택 | 프로바이더 플러그인 목록 |
+| `analyzers` | 선택 | 정책(policy) 플러그인 목록 |
+| `languages` | 선택 | 언어 플러그인 목록 |
+
+`providers`, `analyzers`, `languages`의 각 항목은 다음 속성을 가집니다.
+
+| 속성 | 필수 | 설명 |
+|------|------|------|
+| `name` | **필수** | 플러그인 이름 |
+| `path` | **필수** | 플러그인 폴더 경로 |
+| `version` | 선택 | 플러그인 버전. 미설정 시 엔진이 요청하는 모든 버전과 매칭 |
+
+### Deprecated 속성
+
+| 속성 | 필수 | 설명 |
+|------|------|------|
+| `config` | 선택 | `Pulumi.yaml` 위치 기준 상대 경로의 구성 디렉터리. `stackConfigDir`으로 대체됨 |
+
+---
+
+## Project-relative paths
+
+Pulumi 프로그램에서 로컬 파일시스템 리소스를 참조할 때 경로는 항상 작업 디렉터리(working directory) 기준 상대 경로입니다. 다음 예시에서 `awsx.ecr.Image` 리소스는 작업 디렉터리의 `app` 하위 폴더에 있는 `Dockerfile`을 참조합니다.
+
+```typescript
+// TypeScript
+import * as pulumi from "@pulumi/pulumi";
+import * as awsx from "@pulumi/awsx";
+
+const repository = new awsx.ecr.Repository("repository", {
+    forceDelete: true,
+});
+
+const image = new awsx.ecr.Image("image", {
+    repositoryUrl: repository.url,
+    context: "./app",
+    platform: "linux/amd64",
+});
+
+export const url = repository.url;
+```
+
+```python
+# Python
+import pulumi
+import pulumi_awsx as awsx
+
+repository = awsx.ecr.Repository("repository", force_delete=True)
+
+image = awsx.ecr.Image(
+    "image",
+    repository_url=repository.url,
+    context="./app",
+    platform="linux/amd64",
+)
+
+pulumi.export("url", repository.url)
+```
+
+```go
+// Go
+package main
+
+import (
+	"github.com/pulumi/pulumi-awsx/sdk/v3/go/awsx/ecr"
+	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
+)
+
+func main() {
+	pulumi.Run(func(ctx *pulumi.Context) error {
+		repository, err := ecr.NewRepository(ctx, "repository", &ecr.RepositoryArgs{
+			ForceDelete: pulumi.Bool(true),
+		})
+		if err != nil {
+			return err
+		}
+
+		_, err = ecr.NewImage(ctx, "image", &ecr.ImageArgs{
+			RepositoryUrl: repository.Url,
+			Context:       pulumi.String("./app"),
+			Platform:      pulumi.String("linux/amd64"),
+		})
+		if err != nil {
+			return err
+		}
+
+		ctx.Export("url", repository.Url)
+		return nil
+	})
+}
+```
+
+```csharp
+// .NET
+using System.Collections.Generic;
+using Pulumi;
+using Awsx = Pulumi.Awsx;
+
+return await Deployment.RunAsync(() =>
+{
+    var repository = new Awsx.Ecr.Repository("repository", new()
+    {
+        ForceDelete = true,
+    });
+
+    var image = new Awsx.Ecr.Image("image", new()
+    {
+        RepositoryUrl = repository.Url,
+        Context = "./app",
+        Platform = "linux/amd64",
+    });
+
+    return new Dictionary<string, object?>
+    {
+        ["url"] = repository.Url,
+    };
+});
+```
+
+```java
+// Java
+package myproject;
+
+import com.pulumi.Context;
+import com.pulumi.Pulumi;
+import com.pulumi.awsx.ecr.Repository;
+import com.pulumi.awsx.ecr.RepositoryArgs;
+import com.pulumi.awsx.ecr.Image;
+import com.pulumi.awsx.ecr.ImageArgs;
+
+public class App {
+    public static void main(String[] args) {
+        Pulumi.run(App::stack);
+    }
+
+    public static void stack(Context ctx) {
+        var repository = new Repository("repository", RepositoryArgs.builder()
+            .forceDelete(true)
+            .build());
+
+        var image = new Image("image", ImageArgs.builder()
+            .repositoryUrl(repository.url())
+            .context("./app")
+            .platform("linux/amd64")
+            .build());
+
+        ctx.export("url", repository.url());
+    }
+}
+```
+
+```yaml
+# YAML
+name: awsx-ecr-image-yaml
+runtime: yaml
+
+resources:
+  repository:
+    type: awsx:ecr:Repository
+    properties:
+      forceDelete: true
+
+image:
+  type: awsx:ecr:Image
+  properties:
+    repositoryUrl: ${repository.url}
+    context: "./app"
+    platform: "linux/amd64"
+
+outputs:
+  url: ${repository.url}
+```
+
+---
+
+## Root-relative paths
+
+`Pulumi.yaml` 파일이 위치한 디렉터리(프로젝트 루트)를 가져올 수 있습니다. 프로젝트에 `main` 옵션이 설정된 경우 작업 디렉터리와 프로젝트 루트가 다를 수 있습니다.
+
+| 언어 | 함수 |
+|------|------|
+| TypeScript | `pulumi.getRootDirectory()` |
+| Python | `pulumi.get_root_directory()` |
+| Go | `ctx.RootDirectory()` |
+| .NET | `Pulumi.Deployment.Instance.RootDirectory` |
+| Java | `Deployment.getInstance().getRootDirectory()` |
+
+반환값은 절대 경로입니다. 리소스 속성에서 사용할 때는 작업 디렉터리 기준 상대 경로로 변환해야 서로 다른 머신에서도 diff가 발생하지 않습니다.
+
+```typescript
+// TypeScript
+import * as awsx from "@pulumi/awsx";
+import * as pulumi from "@pulumi/pulumi";
+import { join, relative } from "path";
+
+const root = pulumi.getRootDirectory();
+const cwd = process.cwd();
+const appPath = join(root, "app");
+const relativePath = relative(cwd, appPath);
+
+const repository = new awsx.ecr.Repository("repository", {
+    forceDelete: true,
+});
+
+const image = new awsx.ecr.Image("image", {
+    repositoryUrl: repository.url,
+    context: relativePath,
+    platform: "linux/amd64",
+});
+
+export const url = repository.url;
+```
+
+```python
+# Python
+import pulumi
+import pulumi_awsx as awsx
+import os
+
+root = pulumi.get_root_directory()
+cwd = os.getcwd()
+app_path = os.path.join(root, "app")
+relative_path = os.path.relpath(app_path, cwd)
+
+repository = awsx.ecr.Repository("repository", force_delete=True)
+
+image = awsx.ecr.Image(
+    "image",
+    repository_url=repository.url,
+    context=relative_path,
+    platform="linux/amd64",
+)
+
+pulumi.export("url", repository.url)
+```
+
+```go
+// Go
+package main
+
+import (
+	"os"
+	"path/filepath"
+
+	"github.com/pulumi/pulumi-awsx/sdk/v3/go/awsx/ecr"
+	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
+)
+
+func main() {
+	pulumi.Run(func(ctx *pulumi.Context) error {
+		root := ctx.RootDirectory()
+		cwd, err := os.Getwd()
+		if err != nil {
+			return err
+		}
+		path := filepath.Join(root, "app")
+		path, err = filepath.Rel(cwd, path)
+		if err != nil {
+			return err
+		}
+
+		repository, err := ecr.NewRepository(ctx, "repository", &ecr.RepositoryArgs{
+			ForceDelete: pulumi.Bool(true),
+		})
+		if err != nil {
+			return err
+		}
+
+		_, err = ecr.NewImage(ctx, "image", &ecr.ImageArgs{
+			RepositoryUrl: repository.Url,
+			Context:       pulumi.String(path),
+			Platform:      pulumi.String("linux/amd64"),
+		})
+		if err != nil {
+			return err
+		}
+
+		ctx.Export("url", repository.Url)
+		return nil
+	})
+}
+```
+
+```csharp
+// .NET
+using System.Collections.Generic;
+using System.IO;
+using Pulumi;
+using Awsx = Pulumi.Awsx;
+
+return await Deployment.RunAsync(() =>
+{
+    var root = Pulumi.Deployment.Instance.RootDirectory;
+    var cwd = Directory.GetCurrentDirectory();
+    var appPath = Path.Combine(root, "app");
+    var relativePath = Path.GetRelativePath(cwd, appPath);
+
+    var repository = new Awsx.Ecr.Repository("repository", new()
+    {
+        ForceDelete = true,
+    });
+
+    var image = new Awsx.Ecr.Image("image", new()
+    {
+        RepositoryUrl = repository.Url,
+        Context = relativePath,
+        Platform = "linux/amd64",
+    });
+
+    return new Dictionary<string, object?>
+    {
+        ["url"] = repository.Url,
+    };
+});
+```
+
+```java
+// Java
+package myproject;
+
+import com.pulumi.Context;
+import com.pulumi.Pulumi;
+import com.pulumi.deployment.Deployment;
+import com.pulumi.awsx.ecr.Repository;
+import com.pulumi.awsx.ecr.RepositoryArgs;
+import com.pulumi.awsx.ecr.Image;
+import com.pulumi.awsx.ecr.ImageArgs;
+import java.nio.file.Paths;
+
+public class App {
+    public static void main(String[] args) {
+        Pulumi.run(App::stack);
+    }
+
+    public static void stack(Context ctx) {
+        var root = Deployment.getInstance().getRootDirectory();
+        var cwd = System.getProperty("user.dir");
+        var appPath = Paths.get(cwd).relativize(Paths.get(root, "app")).toString();
+
+        var repository = new Repository("repository", RepositoryArgs.builder()
+            .forceDelete(true)
+            .build());
+
+        var image = new Image("image", ImageArgs.builder()
+            .repositoryUrl(repository.url())
+            .context(appPath)
+            .platform("linux/amd64")
+            .build());
+
+        ctx.export("url", repository.url());
+    }
+}
+```
+
+---
+
+## 현재 프로젝트 이름 프로그래밍 방식 조회
+
+프로그램 내에서 현재 배포 중인 프로젝트 이름을 가져올 수 있습니다. 리소스 이름 지정이나 태깅에 유용합니다.
+
+| 언어 | 함수 |
+|------|------|
+| TypeScript | `pulumi.getProject()` |
+| Python | `pulumi.get_project()` |
+| Go | `ctx.Project()` |
+| .NET | `Deployment.Instance.ProjectName` |
+| Java | `ctx.projectName()` |
+| YAML | `${pulumi.project}` (내장 변수) |
+
+```typescript
+// TypeScript
+const project = pulumi.getProject();
+```
+
+```python
+# Python
+project = pulumi.get_project()
+```
+
+```go
+// Go
+project := ctx.Project()
+```
+
+```csharp
+// .NET
+var project = Deployment.Instance.ProjectName;
+```
+
+```java
+// Java
+var project = ctx.projectName();
+```
+
+```yaml
+# YAML
+variables:
+  project: ${pulumi.project}
 ```
 
 ---
@@ -259,6 +668,8 @@ requiredPulumiVersion: ">=3.0.0"
 | `orgName/projectName/stackName` | 조직 `orgName`의 프로젝트 `projectName`에 속한 스택. `projectName`은 `Pulumi.yaml`의 name과 일치해야 함 |
 
 > **참고:** DIY 백엔드를 사용하는 경우 `orgName`은 항상 상수 값 `organization`이어야 합니다.
+
+> **참고:** Pulumi CLI v3.61.0 이전 버전으로 초기화된 백엔드는 첫 번째 형식(`stackName`)만 지원합니다. 다른 형식을 지원하도록 업그레이드하려면 `pulumi state upgrade` 명령을 사용하세요. 자세한 내용은 [State > Scoping](https://www.pulumi.com/docs/concepts/state/#scoping)을 참조하세요.
 
 동일한 스택을 여러 형식으로 참조할 수 있습니다. 현재 조직이 `my-org`이고 현재 프로젝트가 `my-project`인 경우 다음은 모두 동일합니다.
 
@@ -318,6 +729,18 @@ $ pulumi stack rename myorg/myproject/production
 
 > **주의:** 스택 이름 변경 시 프로그램에서 반환되는 스택 이름 값이 변경됩니다(예: TypeScript `pulumi.getStack()`, Python `pulumi.get_stack()`). 이 값으로 리소스 이름을 지정한 경우, 다음 `pulumi up`에서 리소스 교체가 시도됩니다.
 
+### 업데이트 계획 생성(Generate an update plan)
+
+> **경고:** Update plans는 현재 **experimental preview** 상태입니다. 환경 변수 `PULUMI_EXPERIMENTAL=true`를 설정해야 `--help`에 관련 옵션이 표시됩니다.
+
+현재 선택된 스택의 업데이트를 미리보고 계획을 저장하려면 `pulumi preview --save-plan`을 사용합니다. 활성 스택의 최신 구성 값을 사용합니다.
+
+```bash
+$ pulumi preview --save-plan=plan.json
+```
+
+> **참고:** 프로그램 코드에서 `pulumi.runtime.isDryRun()`으로 `preview`와 `update` 실행을 구분할 수 있습니다.
+
 ### 스택 갱신(Update)
 
 ```bash
@@ -328,6 +751,32 @@ $ pulumi up
 
 ```bash
 $ pulumi up --plan=plan.json
+```
+
+### 스택 리소스 조회(View stack resources)
+
+인수 없이 `pulumi stack`을 실행하면 현재 선택된 스택의 메타데이터, 리소스, 출력 속성을 확인할 수 있습니다.
+
+```bash
+$ pulumi stack
+Current stack is jane-dev:
+    Last updated 1 week ago (2018-03-02 10:26:09.850357 -0800 PST)
+    Pulumi version v0.11.0
+    Plugin nodejs [language] version 0.11.0
+    Plugin aws [resource] version 0.11.0
+
+Current stack resources (3):
+    TYPE                                             NAME
+    pulumi:pulumi:Stack                              webserver-jane-dev
+    aws:ec2/securityGroup:SecurityGroup              web-secgrp
+    aws:ec2/instance:Instance                        web-server-www
+
+Current stack outputs (2):
+    OUTPUT                                           VALUE
+    publicDns                                        ec2-18-218-85-197.us-east-2.compute.amazonaws.com
+    publicIp                                         18.218.85.197
+
+Use `pulumi stack select` to change stack; `pulumi stack ls` lists known ones
 ```
 
 ### 스택 내보내기/가져오기(Export/Import)
@@ -353,6 +802,8 @@ $ pulumi destroy
 ```
 
 이 명령은 마지막 배포 시 사용된 구성이 아닌 최신 구성 값을 사용합니다.
+
+> **참고:** 의존성, 권한, 리소스 잠금 등의 이유로 `pulumi destroy`가 리소스 삭제에 실패할 수 있습니다. 자세한 해결 방법은 [문제 해결 가이드](https://www.pulumi.com/docs/iac/operations/troubleshooting/)를 참조하세요.
 
 ### 스택 삭제(Delete)
 
@@ -425,6 +876,47 @@ export const url = resource.url;
 pulumi.export("url", resource.url)
 ```
 
+```go
+// Go
+ctx.Export("url", resource.Url)
+```
+
+```csharp
+// .NET
+public class MyStack : Stack
+{
+    public MyStack()
+    {
+        // ...
+        this.Url = resource.Url;
+    }
+
+    // 'url'은 출력 이름. 기본값은 속성 이름 'Url'.
+    [Output("url")] public Output<string> Url { get; set; }
+}
+```
+
+```java
+// Java
+public class App {
+    public static void main(String[] args) {
+        Pulumi.run(App::stack);
+    }
+
+    public static void stack(Context ctx) {
+        ctx.export("url", resource.url());
+    }
+}
+```
+
+```yaml
+# YAML
+outputs:
+  url: ${resource.url}
+```
+
+> **참고:** 실제 리소스를 직접 내보내면 JSON 직렬화됩니다. 리소스가 클 수 있으므로, 필요한 속성(예: ID, 이름)만 직접 내보내는 것이 좋습니다.
+
 ### 출력 조회
 
 ```bash
@@ -471,9 +963,108 @@ $ pulumi stack tag rm environment
 
 ---
 
+## Stack README (Pulumi.README.md)
+
+Pulumi Cloud는 각 스택의 **README** 탭에 `readme`라는 이름의 스택 출력값을 렌더링합니다. README에는 링크, 임베드된 문서, 다른 스택 출력값을 참조하는 템플릿 값을 포함할 수 있습니다.
+
+스택에 README를 추가하려면 `readme`라는 이름의 스택 출력값을 내보냅니다. 가장 일반적인 방법은 프로젝트에 체크인된 템플릿 파일(예: `Pulumi.README.md`)을 읽어오는 것입니다.
+
+```typescript
+// TypeScript
+import { readFileSync } from "fs";
+// 스택 출력 이름은 반드시 "readme"여야 합니다.
+export const readme = readFileSync("./Pulumi.README.md").toString();
+```
+
+```python
+# Python
+import pulumi
+with open('./Pulumi.README.md') as f:
+    pulumi.export('readme', f.read())
+```
+
+```go
+// Go
+func main() {
+  pulumi.Run(func(ctx *pulumi.Context) error {
+    readmeBytes, err := os.ReadFile("./Pulumi.README.md")
+    if err != nil {
+      return fmt.Errorf("failed to read readme: %w", err)
+    }
+    ctx.Export("readme", pulumi.String(string(readmeBytes)))
+    return nil
+  })
+}
+```
+
+```csharp
+// .NET
+using Pulumi;
+class MyStack : Stack
+{
+    public MyStack()
+    {
+        this.Readme = Output.Create(System.IO.File.ReadAllText("./Pulumi.README.md"));
+    }
+    [Output]
+    public Output<string> Readme { get; set; }
+}
+```
+
+```java
+// Java
+package stackreadme;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import com.pulumi.Pulumi;
+import com.pulumi.core.Output;
+public class App {
+    public static void main(String[] args) {
+        Pulumi.run(ctx -> {
+            try {
+                var readme = Files.readString(Paths.get("./Pulumi.README.md"));
+                ctx.export("readme", Output.of(readme));
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        });
+    }
+}
+```
+
+템플릿 파일에서 `${...}` 플레이스홀더를 사용하면 다른 스택 출력값(또는 리소스 속성)을 참조할 수 있으며, Pulumi Cloud가 렌더링 시 자동으로 해석합니다.
+
+```markdown
+# Pulumi Cloud README
+
+[Sign in to AWS to view stack resources!](https://top-secret-url.com)
+
+## On Call Operations
+
+### Monitor
+
+1. [Cloudwatch Metrics](https://us-west-2.console.aws.amazon.com/cloudwatch/home?region=us-west-2#dashboards:name=${outputs.dashboardName}): Monitor holistic metrics tracking overall service health
+1. [RDS Performance Metrics](https://us-west-2.console.aws.amazon.com/rds/home?region=us-west-2#performance-insights-v20206:/resourceId/${database.databaseCluster.id}/resourceName/${outputs.rdsClusterWriterInstance}): Monitor RDS performance
+1. [Cloudwatch Logs](https://us-west-2.console.aws.amazon.com/cloudwatch/home?region=us-west-2#logStream:group=${outputs.cloudwatchLogGroup}): Search across service logs
+```
+
+`pulumi up` 실행 후 렌더링된 README가 Pulumi Cloud UI의 스택 **README** 탭에 표시됩니다.
+
+---
+
 ## 현재 스택 이름 프로그래밍 방식 조회
 
 프로그램 내에서 현재 스택 이름을 가져올 수 있습니다. 리소스 이름 지정, 태깅, 리소스 접근에 유용합니다.
+
+| 언어 | 함수 |
+|------|------|
+| TypeScript | `pulumi.getStack()` |
+| Python | `pulumi.get_stack()` |
+| Go | `ctx.Stack()` |
+| .NET | `Deployment.Instance.StackName` |
+| Java | `ctx.stackName()` |
+| YAML | `${pulumi.stack}` (내장 변수) |
 
 ```typescript
 // TypeScript
@@ -483,6 +1074,27 @@ let stack = pulumi.getStack();
 ```python
 # Python
 stack = pulumi.get_stack()
+```
+
+```go
+// Go
+stack := ctx.Stack()
+```
+
+```csharp
+// .NET
+var stack = Deployment.Instance.StackName;
+```
+
+```java
+// Java
+var stack = ctx.stackName();
+```
+
+```yaml
+# YAML
+variables:
+  stack: ${pulumi.stack}
 ```
 
 ---
@@ -506,6 +1118,39 @@ from pulumi import StackReference
 
 other = StackReference("acmecorp/infra/other")
 other_output = other.get_output("x")
+```
+
+```go
+// Go
+other, err := pulumi.NewStackReference(ctx, "acmecorp/infra/other", nil)
+if err != nil {
+    return err
+}
+otherOutput := other.GetOutput(pulumi.String("x"))
+```
+
+```csharp
+// .NET
+var other = new StackReference("acmecorp/infra/other");
+var otherOutput = other.GetOutput("x");
+```
+
+```java
+// Java
+var other = new StackReference("acmecorp/infra/other");
+var otherOutput = other.getOutput(Output.of("x"));
+```
+
+```yaml
+# YAML
+resources:
+  my-stack-reference:
+    type: pulumi:pulumi:StackReference
+    properties:
+      name: acmecorp/infra/other
+
+variables:
+  stack_output: ${my-stack-reference.outputs["x"]}
 ```
 
 스택 참조 이름은 `<organization>/<project>/<stack>` 형식의 정규화된 이름이어야 합니다.
@@ -549,6 +1194,102 @@ env = get_stack()
 infra = StackReference(f"mycompany/infra/{env}")
 provider = Provider("k8s", kubeconfig=infra.get_output("kubeConfig"))
 service = core.v1.Service(..., ResourceOptions(provider=provider))
+```
+
+```go
+// Go - services 프로젝트
+package main
+
+import (
+	"fmt"
+
+	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
+)
+
+func main() {
+	pulumi.Run(func(ctx *pulumi.Context) error {
+		slug := fmt.Sprintf("mycompany/infra/%v", ctx.Stack())
+		stackRef, err := pulumi.NewStackReference(ctx, slug, nil)
+		if err != nil {
+			return err
+		}
+
+		kubeConfig := stackRef.GetOutput(pulumi.String("kubeConfig"))
+		// ... provider 및 서비스 리소스 생성
+		return nil
+	})
+}
+```
+
+```csharp
+// .NET - services 프로젝트
+using Pulumi;
+using Pulumi.Kubernetes.Core.V1;
+
+class AppStack : Stack
+{
+    public AppStack()
+    {
+        var cluster = new StackReference($"mycompany/infra/{Deployment.Instance.StackName}");
+        var kubeConfig = cluster.RequireOutput("KubeConfig").Apply(v => v.ToString());
+        var provider = new Provider("k8s", new ProviderArgs { KubeConfig = kubeConfig });
+        var options = new ComponentResourceOptions { Provider = provider };
+        var service = new Service(..., ..., options);
+    }
+}
+```
+
+```java
+// Java - services 프로젝트
+package myproject;
+
+import com.pulumi.Context;
+import com.pulumi.Pulumi;
+import com.pulumi.core.Output;
+import com.pulumi.kubernetes.Provider;
+import com.pulumi.kubernetes.ProviderArgs;
+import com.pulumi.kubernetes.core_v1.Service;
+import com.pulumi.kubernetes.core_v1.ServiceArgs;
+import com.pulumi.resources.ComponentResourceOptions;
+import com.pulumi.resources.StackReference;
+
+public class App {
+    public static void main(String[] args) {
+        Pulumi.run(App::stack);
+    }
+
+    public static void stack(Context ctx) {
+        var cluster = new StackReference(String.format("mycompany/infra/%s", ctx.stackName()));
+        var kubeconfig = cluster.requireOutput(Output.of("KubeConfig")).applyValue(String::valueOf);
+        var provider = new Provider("k8s", ProviderArgs.builder().kubeconfig(kubeconfig).build());
+        var options = ComponentResourceOptions.builder()
+            .provider(provider)
+            .build();
+        var service = new Service("app-service", ServiceArgs.builder()
+            // ...
+            .build(), options);
+    }
+}
+```
+
+```yaml
+# YAML - services 프로젝트
+variables:
+  kubeConfig: ${my-stack-reference.outputs["KubeConfig"]}
+resources:
+  my-stack-reference:
+    type: pulumi:pulumi:StackReference
+    properties:
+      name: mycompany/infra/${pulumi.stack}
+  provider:
+    type: pulumi:providers:kubernetes
+    properties:
+      kubeConfig: kubeConfig
+  service:
+    type: some:resource:type
+    properties: ...
+    options:
+      provider: ${provider}
 ```
 
 ---
