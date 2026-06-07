@@ -1,8 +1,21 @@
 # Pulumi Cloud 관리
 
-> 원문: [Pulumi Cloud](https://www.pulumi.com/docs/iac/concepts/pulumi-cloud/) | [Organizations & Teams](https://www.pulumi.com/docs/administration/organizations-teams/) | [Access & Identity](https://www.pulumi.com/docs/administration/access-identity/) | [Self-Hosting](https://www.pulumi.com/docs/administration/self-hosting/)
+> 원문: [Pulumi Cloud](https://www.pulumi.com/docs/iac/concepts/pulumi-cloud/) | [Administration](https://www.pulumi.com/docs/administration/) | [Organizations & Teams](https://www.pulumi.com/docs/administration/organizations-teams/) | [Access & Identity](https://www.pulumi.com/docs/administration/access-identity/) | [Security & Compliance](https://www.pulumi.com/docs/administration/security-compliance/) | [Self-Hosting](https://www.pulumi.com/docs/administration/self-hosting/) | [Onboarding Guide](https://www.pulumi.com/docs/administration/onboarding-guide/) | [Infrastructure AI (Pulumi Neo)](https://www.pulumi.com/docs/ai/)
 
-Pulumi Cloud는 Pulumi CLI의 기본 상태 백엔드이자, 팀이 대규모로 Pulumi를 운영하는 데 필요한 기능을 제공하는 관리형 플랫폼이다. 액세스 제어, 재사용 가능한 구성 및 시크릿, 정책 강제, 클라우드 리소스 인벤토리, 예약 드리프트 감지, 관리형 배포, AI 에이전트 등의 기능을 제공한다. Pulumi Cloud는 호스팅 SaaS와 셀프 호스팅 에디션으로 제공되며, 개인(Individual) 티어는 무료다.
+Pulumi Cloud는 Pulumi CLI의 기본 상태 백엔드이자, 팀이 대규모로 Pulumi를 운영하는 데 필요한 기능을 제공하는 관리형 플랫폼이다. 액세스 제어, 재사용 가능한 구성 및 시크릿, 정책 강제, 클라우드 리소스 인벤토리, 예약 드리프트 감지, 관리형 배포, **Pulumi Neo**(AI 에이전트), **Ephemeral Environments**(Review Stacks, TTL Stacks) 등의 기능을 제공한다. Pulumi Cloud는 호스팅 SaaS와 셀프 호스팅 에디션으로 제공되며, 개인(Individual) 티어는 무료다.
+
+### Pulumi Cloud 주요 기능
+
+| 기능 | 설명 |
+|------|------|
+| [RBAC](https://www.pulumi.com/docs/administration/organizations-teams/teams/) | SAML/SSO 통합 및 세분화된 액세스 토큰을 통한 역할 기반 접근 제어 |
+| [Pulumi ESC](https://www.pulumi.com/docs/esc/) | 재사용 가능한 구성 및 시크릿 관리. 환경을 한 번 정의하여 여러 스택에서 사용 |
+| [Policy as Code](https://www.pulumi.com/docs/insights/policy/) | 모든 업데이트에 중앙 집중식 정책 강제. 보안, 컴플라이언스, 비용 규칙용 사전 구축 정책 팩 제공 |
+| [Cloud Resource Inventory](https://www.pulumi.com/docs/insights/) | 클라우드 계정 전체의 리소스 검색. Pulumi 관리 대상이 아닌 리소스 포함 |
+| [Drift Detection](https://www.pulumi.com/docs/deployments/deployments/drift/) | 예약 드리프트 감지. 배포된 인프라가 선언 상태와 다를 경우 알림 또는 자동 수정 |
+| [Managed Deployments](https://www.pulumi.com/docs/deployments/deployments/) | Git push 등에 응답하여 Pulumi 작업을 원격 실행. 웹훅을 통한 이벤트 기반 워크플로우 |
+| [Pulumi Neo](https://www.pulumi.com/docs/ai/) | AI 에이전트. 배포 디버깅, IaC 작성, 환경 질문 응답 지원 |
+| [Ephemeral Environments](https://www.pulumi.com/docs/deployments/deployments/review-stacks/) | Review Stacks(PR 기반 단기 환경) 및 TTL Stacks(수명 제한 스택) |
 
 ---
 
@@ -28,6 +41,8 @@ Pulumi Cloud는 Pulumi CLI의 기본 상태 백엔드이자, 팀이 대규모로
 | Admin | 멤버 초대, 팀/정책 생성, 스택 권한 및 RBAC 관리, 결제 정보 수정, 조직 설정 전체 제어 |
 | Member | 접근 권한이 있는 스택의 조회 및 편집, 멤버·팀 조회 가능 |
 | Billing Manager | 결제 정보 수정 및 다른 Billing Managers 조회. 스택·팀·정책에 대한 읽기/쓰기 권한 없음 |
+
+> **Organization default role:** 조직에서 custom roles가 활성화된 경우, Member 조직 역할을 가진 모든 멤버에게 적용할 **조직 기본 역할(organization default role)**을 설정할 수 있다. 기본 역할은 **Settings > Roles**에서 custom role을 열고 **Set as default role**을 선택하여 설정한다. 명시적으로 custom role이 할당되지 않은 Member 사용자는 이 기본 역할의 권한을 상속받는다.
 
 ### 조직 생성 및 멤버 관리
 
@@ -79,6 +94,10 @@ Pulumi 조직이 GitHub에 연결된 경우, 기존 GitHub 팀을 Pulumi로 가�
 조직에서 custom roles가 활성화된 경우, 팀에 여러 역할을 할당할 수 있다. 팀 멤버는 자신의 사용자 역할과 팀에 할당된 모든 역할의 **합집합** 권한을 갖는다.
 
 역할 할당 관리는 `role:update` 및 `team:update` 스코프를 가진 사용자만 수행할 수 있다(예: 조직 관리자). Team Admin은 역할 할당 수정 권한이 없어도 Entity Access Grants는 항상 직접 관리할 수 있다.
+
+> **Role-backed teams:** 팀을 생성하고 custom role을 할당한 뒤(예: 특정 스택 또는 [tag-based 규칙](https://www.pulumi.com/docs/administration/access-identity/rbac/roles/#tag-based-abac-rules)으로 접근 제한) 멤버를 추가하면, 해당 멤버는 자신의 사용자 역할에 더해 팀의 역할 권한을 추가로 획득한다. 이를 통해 역할 기반으로 팀 멤버십을 구성할 수 있다.
+
+역할 할당 관리는 팀의 **Access** 탭에서 수행한다. **Role assignments** 섹션에서 현재 할당된 역할을 확인하고 **Add role**로 추가 역할을 할당할 수 있다.
 
 ### Team Entity Access Grants
 
@@ -225,7 +244,7 @@ SSO 조직의 멤버는 `https://app.pulumi.com/welcome/<organization-name>/sso`
 | JumpCloud | [JumpCloud 가이드](https://www.pulumi.com/docs/administration/access-identity/saml/jumpcloud/) |
 | OneLogin | [OneLogin 가이드](https://www.pulumi.com/docs/administration/access-identity/saml/onelogin/) |
 
-> **참고:** 셀프 호스팅 Pulumi Cloud를 사용하는 경우, 먼저 셀프 호스팅 인프라에 SAML SSO를 구성(API 서비스 키 및 환경 변수)한 후 이 곳에서 IdP 구성을 완료해야 한다.
+> **참고:** 셀프 호스팅 Pulumi Cloud를 사용하는 경우, 먼저 [셀프 호스팅 인프라에 SAML SSO를 구성](https://www.pulumi.com/docs/administration/self-hosting/saml-sso/)(API 서비스 키 및 환경 변수)한 후 이 곳에서 IdP 구성을 완료해야 한다.
 
 ---
 
@@ -237,13 +256,17 @@ Pulumi Cloud는 SCIM(System for Cross-domain Identity Management) 2.0 통합을 
 
 SCIM으로 관리되는 팀 외에도 Pulumi Cloud 내에서 로컬 팀을 직접 구성하고 관리할 수 있다.
 
+> **참고:** Pulumi는 SCIM 애플리케이션당 하나의 Pulumi 조직만 지원한다. 여러 Pulumi 조직을 관리하는 경우 각 조직마다 별도의 SCIM 애플리케이션을 구성해야 한다.
+
 ### SCIM 지원 Identity Provider
 
 | Identity Provider | 문서 |
 |-------------------|------|
-| Microsoft Entra ID | [Entra ID SCIM 가이드](https://www.pulumi.com/docs/administration/access-identity/scim/entra/) |
+| Microsoft Entra ID (구 Azure AD) | [Entra ID SCIM 가이드](https://www.pulumi.com/docs/administration/access-identity/scim/entra/) |
 | Okta | [Okta SCIM 가이드](https://www.pulumi.com/docs/administration/access-identity/scim/okta/) |
 | OneLogin | [OneLogin SCIM 가이드](https://www.pulumi.com/docs/administration/access-identity/scim/onelogin/) |
+
+SCIM FAQ는 [SCIM FAQ](https://www.pulumi.com/docs/administration/access-identity/scim/faq/)를 참조하라.
 
 ---
 
@@ -440,16 +463,170 @@ curl -s -X POST \
 
 ## 감사 로그(Audit Logs)
 
-> 원문: [RBAC Scopes - Organization Settings](https://www.pulumi.com/docs/administration/access-identity/rbac/scopes/org-settings/)
+> 원문: [Audit Logs](https://www.pulumi.com/docs/administration/security-compliance/audit-logs/)
 
-감사 로그는 조직 내 모든 활동에 대한 가시성을 제공한다. 감사 로그에 대한 접근은 RBAC Scopes로 제어된다.
+감사 로그는 **Enterprise** 및 **Business Critical** 에디션에서 사용할 수 있다. 조직 관리자만 감사 로그를 조회할 수 있다.
 
-| Scope | 설명 | 기본 부여 역할 |
-|-------|------|----------------|
-| `audit_logs:read` | 조직 활동의 감사 로그 조회. 시스템 이벤트 및 사용자 작업에 대한 가시성 제공 | `Admin` |
-| `audit_logs:export` | 컴플라이언스 및 분석 목적으로 감사 로그 데이터 내보내기 | `Admin` |
+감사 로그는 조직 내 사용자 활동을 추적한다. 사용자가 수행한 작업, 수행 시점, 출처 IP 등을 기록하며, 로그는 변경 불가능(immutable)하다.
 
-Organization Token 및 Team Token으로 수행된 작업은 감사 로그에 해당 토큰의 이름으로 기록되어, 개인 사용자 노출 없이 작업 추적이 가능하다.
+### 감사 로그 조회
+
+1. 조직의 **Settings**로 이동
+2. **Audit Logs** 선택
+
+최근 이벤트가 내림차순으로 표시되며, 특정 사용자의 프로필 사진을 선택하여 필터링할 수 있다.
+
+### 감사 로그 내보내기
+
+**수동 내보내기:**
+
+- 콘솔: **Settings > Audit Logs > Download**
+- REST API: `/api/orgs/{orgName}/auditlogs` 엔드포인트 사용. 자세한 내용은 [Pulumi Cloud REST API](https://www.pulumi.com/docs/reference/service-rest-api#audit-logs) 참조
+
+**자동 내보내기 (Business Critical 전용):**
+
+| 대상 | 설명 |
+|------|------|
+| [AWS S3](https://www.pulumi.com/docs/administration/security-compliance/audit-logs/aws-s3/) | Amazon S3 버킷으로 감사 로그 지속적 내보내기 |
+| [Microsoft Sentinel](https://www.pulumi.com/docs/administration/security-compliance/audit-logs/azure-sentinel/) | Microsoft Sentinel로 SIEM 분석용 감사 로그 내보내기 |
+
+### 지원 감사 로그 형식
+
+| 형식 | 설명 |
+|------|------|
+| JSON | `timestamp`, `sourceIP`, `event`, `description`, `user` 필드 구성 |
+| CSV | 콤마로 구분된 텍스트 형식. `Timestamp`, `Name`, `Login`, `Event`, `Description`, `SourceIP`, `RequireOrgAdmin`, `RequireStackAdmin`, `AuthenticationFailure` 필드 포함 |
+| CEF (Common Event Format) | SIEM 시스템에서 널리 지원하는 표준 감사 및 로깅 이벤트 형식 |
+
+### 주요 감사 로그 이벤트
+
+| 이벤트 | 설명 |
+|--------|------|
+| Member Added / Removed | 조직 멤버 추가/제거 |
+| Member Role Changed | 멤버 역할 변경 |
+| Stack Created / Deleted / Renamed | 스택 생성/삭제/이름 변경 |
+| Stack Update Started / Completed / Canceled | 스택 업데이트 시작/완료/취소 |
+| Stack Exported / Imported | 스택 내보내기/가져오기 |
+| Stack Transferred to Organization | 스택 조직 간 이전 |
+| Team Created / Deleted / Updated | 팀 생성/삭제/업데이트 |
+| Secret Decrypted | 시크릿 복호화 |
+| Stack Collaborator Added / Removed / Permissions Changed | 스택 협업자 추가/제거/권한 변경 |
+| Policy Pack Created / Deleted / Enabled / Disabled | 정책 팩 생성/삭제/활성화/비활성화 |
+| SAML Configuration Updated | SAML 구성 업데이트 |
+| User Login / User Login Failed | 사용자 로그인/로그인 실패 |
+| Environment Created / Updated / Deleted / Open | 환경(Pulumi ESC) 관련 이벤트 |
+| Customer Managed Key Added / Set Default / Disabled | 고객 관리 키 관련 이벤트 |
+
+---
+
+## Security & Compliance (보안 및 컴플라이언스)
+
+> 원문: [Security & Compliance](https://www.pulumi.com/docs/administration/security-compliance/)
+
+보안 제어, 컴플라이언스 모니터링, 감사 로깅을 구성한다.
+
+### Customer Managed Keys (CMK)
+
+> 원문: [Customer Managed Keys](https://www.pulumi.com/docs/administration/security-compliance/customer-managed-keys/)
+
+Customer Managed Keys는 **Enterprise** 및 **Business Critical** 에디션에서 사용할 수 있다. 자체 암호화 키를 사용하여 Pulumi Cloud의 민감 데이터를 보호할 수 있다.
+
+CMK는 외부 Key Management System(KMS)을 통해 데이터 키를 암호화하며, 첫 CMK 추가 시 기존 Pulumi 관리 키로 암호화된 모든 데이터 키가 자동으로 새 CMK로 재암호화된다. 암호화된 데이터 자체는 변경되지 않는다.
+
+> **참고:** 현재 Customer Managed Keys는 Pulumi ESC 데이터 암호화에만 사용되며, AWS KMS만 지원한다. 추가 KMS 공급자 및 Pulumi 제품 확장 지원은 개발 중이다.
+
+**CMK 관리 (조직 관리자만):**
+
+1. **Settings > Organization > Customer Managed Keys** 탭에서 관리
+2. **Add Customer Managed Key**: AWS IAM Role ARN 및 KMS Key ARN 입력 (Alias ARN도 지원)
+3. **Disable**: 기존 데이터 키 재암호화용 키를 선택 후 비활성화. 기본 키는 비활성화 불가
+4. **Disable all**: 모든 CMK를 비활성화하고 Pulumi 관리 키로 재암호화
+
+**CMK 페이지에 표시되는 정보:**
+
+| 항목 | 설명 |
+|------|------|
+| Name | 관리자가 제공한 키의 고유 이름 |
+| Type | 암호화 키 유형 (예: AWS KMS) |
+| Default | 조직의 기본 암호화 키 여부. 새 데이터 키가 이 키로 암호화됨 |
+| Set as default | 기본 키로 설정 버튼. 이미 기본이거나 재암호화 중인 키는 비활성 |
+| Disable | 키 비활성화 버튼. 기본 키 또는 재암호화 중인 키는 비활성 |
+
+---
+
+## Ephemeral Environments (임시 환경)
+
+> 원문: [Review Stacks](https://www.pulumi.com/docs/deployments/deployments/review-stacks/) | [TTL Stacks](https://www.pulumi.com/docs/deployments/deployments/ttl/)
+
+Ephemeral Environments는 임시 클라우드 환경을 자동으로 생성하고 제거하는 기능으로, 비용 절감, 보안 강화, 운영 오버헤드 감소에 기여한다.
+
+### Review Stacks
+
+Review Stacks는 Pulumi Deployments로 구동되는 전용 클라우드 환경이다. Pull Request가 열리면 자동으로 생성되고, 새 커밋마다 업데이트되며, PR이 병합되거나 닫히면 자동으로 삭제된다.
+
+**지원 VCS 통합:** GitHub, GitLab, Azure DevOps, Bitbucket (Custom VCS는 미지원)
+
+**구성 단계:**
+
+1. 관례적으로 `pr`라는 새 스택 및 `Pulumi.pr.yaml` 구성 파일 생성
+2. 스택에 [Deployment Settings](https://www.pulumi.com/docs/deployments/deployments/reference/#deployment-settings) 구성
+3. `pullRequestTemplate` Deployment Setting을 `true`로 설정
+
+```bash
+# REST API로 Review Stack 활성화
+curl -i -XPOST -H "Content-Type: application/json" \
+  -H "Authorization: token $PULUMI_ACCESS_TOKEN" \
+  --location "https://api.pulumi.com/api/stacks/org/project/stack/deployments/settings" \
+  -d '{
+    "gitHub": {
+      "pullRequestTemplate": true
+    }
+  }'
+```
+
+**일반적인 패턴:**
+
+| 패턴 | 설명 |
+|------|------|
+| 단일 스택 | 동일 스택에 push-to-deploy, PR preview, review stacks 모두 구성. 가장 간단하지만 동일 클라우드 계정 사용 |
+| 분리 스택 | Review stack용 별도 스택 및 구성. 다른 클라우드 계정에 배포 가능 |
+| 다중 Pulumi 프로그램 | 공유 Kubernetes 클러스터 등을 활용한 복합 구성 |
+| Path 필터 | 코드 변경 경로에 따라 다른 review stack 템플릿 선택 |
+| GitHub Label 게이트 | `reviewStackLabels` 설정으로 특정 레이블이 있는 PR에만 review stack 생성 |
+
+### TTL (Time-to-Live) Stacks
+
+TTL Stacks는 지정한 날짜/시간 이후 스택을 자동으로 제거(destroy)하는 수명 관리 기능이다. 플랫폼 팀이 비용 통제, 보안 태세 개선, 운영 오버헤드 감소를 달성할 수 있게 한다.
+
+**구성 방법:**
+
+| 방법 | 설명 |
+|------|------|
+| Pulumi Cloud UI | Stack > Settings > Schedules > Time-to-Live 선택 후 cron 표현식으로 설정 |
+| REST API | `POST /api/stacks/{org}/{project}/{stack}/deployments/ttl/schedules` 엔드포인트 사용 |
+| Pulumi Cloud Service Provider | `pulumiservice.TtlSchedule` 리소스로 소스 제어에서 관리 |
+
+```bash
+# REST API로 TTL 스케줄 설정
+curl -H "Accept: application/vnd.pulumi+json" \
+     -H "Content-Type: application/json" \
+     -H "Authorization: token $PULUMI_ACCESS_TOKEN" \
+     --request POST \
+     --data '{"timestamp":"2024-12-31T23:59:59Z","deleteAfterDestroy":true}' \
+     https://api.pulumi.com/api/stacks/{organization}/{project}/{stack}/deployments/ttl/schedules
+```
+
+```typescript
+// Pulumi Cloud Service Provider로 TTL 설정
+import * as pulumiservice from "@pulumi/pulumiservice";
+
+const ttlSchedule = new pulumiservice.TtlSchedule("ttlSchedule", {
+  organization: "my-org",
+  project: "my-project",
+  stack: "temp-stack",
+  timestamp: "2024-01-01T00:00:00Z",
+});
+```
 
 ---
 
@@ -473,10 +650,14 @@ Pulumi **Business Critical** 에디션은 조직 인프라 내에서 Pulumi Clou
 
 ### 구성 요소
 
-| 항목 | 설명 |
-|------|------|
-| [Components](https://www.pulumi.com/docs/administration/self-hosting/components/) | Pulumi Cloud 프론트엔드 UI 및 백엔드 API Docker 이미지 |
-| [Network Requirements](https://www.pulumi.com/docs/administration/self-hosting/network/) | 인그레스, 이그레스, 인프라 요구 사항 |
+| 항목 | Docker 리포지토리 | 설명 |
+|------|-------------------|------|
+| [API](https://www.pulumi.com/docs/administration/self-hosting/components/api/) | `pulumi/service` | Pulumi Cloud 백엔드 API |
+| [Web Console](https://www.pulumi.com/docs/administration/self-hosting/components/console/) | `pulumi/console` | Pulumi Cloud 프론트엔드 UI |
+| Migrations | `pulumi/migrations` | 데이터베이스 마이그레이션 |
+| [Search](https://www.pulumi.com/docs/administration/self-hosting/components/search/) | - | 검색 서비스 |
+| [Deployments](https://www.pulumi.com/docs/administration/self-hosting/components/deployments/) | - | 배포 실행 서비스 |
+| [Network Requirements](https://www.pulumi.com/docs/administration/self-hosting/network/) | - | 인그레스, 이그레스, 인프라 요구 사항 |
 
 ### 운영 가이드
 
@@ -507,7 +688,12 @@ Pulumi **Business Critical** 에디션은 조직 인프라 내에서 Pulumi Clou
 | SCIM | Identity Provider 측 설정 | 사용자/그룹 프로비저닝 동기화 (Business Critical) |
 | OIDC Issuers | Settings > Access Management > OIDC Issuers | OpenID Connect 인증 구성 |
 | 정책 | Policies | 정책 팩, 정책 그룹 관리, 컴플라이언스 가드레일 |
-| 감사 로그 | Audit Logs | 조직 활동 로그 조회 및 내보내기 (Admin 전용) |
+| 감사 로그 | Audit Logs | 조직 활동 로그 조회 및 내보내기 (Enterprise / Business Critical) |
+| Customer Managed Keys | Settings > Organization > Customer Managed Keys | 자체 암호화 키 관리 (Enterprise / Business Critical) |
+| Review Stacks | Stack > Deployment Settings | PR 기반 임시 환경 자동 생성/삭제 |
+| TTL Stacks | Stack > Settings > Schedules | 수명 제한 스택 자동 제거 |
+| Neo (AI) | Settings > Neo Settings > General | Pulumi Neo AI 에이전트 활성화/비활성화 |
+| Neo Tasks | Neo > Agent Tasks | AI 작업(Tasks), Automations, PR 관리 |
 | 조직 삭제 | Settings > Delete Organization | 조직 영구 삭제 (Admin 전용). 사전에 스택 이전 필요 |
 
 ---
@@ -523,3 +709,189 @@ const organization = pulumi.getOrganization();
 ```python
 organization = pulumi.get_organization()
 ```
+
+```go
+organization := ctx.Organization()
+```
+
+```csharp
+var organization = Deployment.Instance.OrganizationName;
+```
+
+```yaml
+variables:
+  organization: ${pulumi.organization}
+```
+
+---
+
+## Pulumi Neo (Infrastructure AI)
+
+> 원문: [Infrastructure AI](https://www.pulumi.com/docs/ai/) | [Get Started](https://www.pulumi.com/docs/ai/get-started/) | [Tasks](https://www.pulumi.com/docs/ai/tasks/) | [Pull Requests](https://www.pulumi.com/docs/ai/pull-requests/) | [Automations](https://www.pulumi.com/docs/ai/automations/) | [Integrations](https://www.pulumi.com/docs/ai/integrations/)
+
+**Pulumi Neo**는 자연어 기반의 AI 인프라 자동화 에이전트다. 배포 디버깅, IaC 작성, 환경 질문 응답 등 플랫폼 엔지니어링 작업을 지원한다. Neo는 현재 **Public Preview** 상태이며 무료로 사용할 수 있다.
+
+### 활성화 및 비활성화
+
+Neo는 기본적으로 활성화되어 있다. 비활성화하려면 **Settings > Neo Settings > General**에서 설정한다.
+
+Neo에 접근하려면 Pulumi Cloud 콘솔의 왼쪽 탐색 메뉴에서 **Neo** 섹션 내 **Agent Tasks**를 선택한다.
+
+### Neo 권한 모델
+
+Neo는 대화하는 사용자의 [RBAC 권한](https://www.pulumi.com/docs/pulumi-cloud/access-management/rbac/) 범위 내에서 작동하며, 사용자가 수행할 수 없는 작업은 Neo도 수행할 수 없다. 권한 에스컬레이션 위험이나 특별한 관리자 접근이 필요하지 않다.
+
+| 권한 수준 | 설명 |
+|-----------|------|
+| **Use my permissions** | 전체 접근 (기본 동작) |
+| **Read-only** | 읽기, Preview, PR 생성만 가능. 인프라 변경(mutation) 불가 |
+
+Read-only 모드에서도 인프라 상태 읽기, Preview 실행, 코드 작성/리팩토링, 브랜치 생성, PR 열기는 가능하다. 배포 트리거나 Pulumi Cloud 직접 쓰기 작업만 제한된다.
+
+### Tasks (작업)
+
+Task는 Neo의 기본 작업 단위이다. 각 Task는 사용자가 목표를 설명하는 대화이며, Neo가 인프라 변경을 처리한다.
+
+**Task 시작 시 Neo의 동작:**
+
+1. 수행할 단계를 개요로 제시
+2. 사용자의 승인에 따라 단계별 실행
+3. 코드 수정 시 Preview 실행으로 변경 검증
+4. 만족하면 [Pull Request](https://www.pulumi.com/docs/ai/pull-requests/) 생성 제안
+
+#### Plan Mode
+
+복잡한 작업의 경우 Plan Mode를 활성화하면, Neo가 실행 전에 환경을 심층 조사하고 계획을 수립한다.
+
+Plan Mode 활성화 시 Neo의 동작:
+
+1. 기존 인프라, 코드, 의존성 조사
+2. 발견한 내용을 종합하여 계획 수립
+3. 대화를 통해 가정 검증, 대안 요청 가능
+4. 명시적 승인 전까지 실행하지 않음
+
+#### Task Modes
+
+Task modes는 실행 중 Neo의 자율성 수준을 제어한다. 작업 중 언제든 변경할 수 있다.
+
+| 모드 | 설명 |
+|------|------|
+| **Review mode** (기본) | `pulumi preview`, `pulumi up`, PR 열기 모두 승인 필요 |
+| **Balanced mode** | `pulumi up` 실행 전에만 승인 요청 |
+| **Auto mode** | 어떤 승인도 요청하지 않음 |
+
+Plan Mode와 Task modes는 독립적이다. 예를 들어 Plan Mode + Auto Mode 조합으로 사전에 접근법을 철저히 검토한 후 Neo가 자율 실행하도록 할 수 있다.
+
+### Pull Requests
+
+Neo가 제안하는 모든 변경은 PR을 통해 이루어진다. PR에는 변경 제목, 문제 설명, 수정 리소스 목록, Preview 출력 요약, Neo Task 링크가 포함된다.
+
+**VCS 통합 필요:** Neo가 코드를 읽고 PR을 생성하려면 [버전 제어 통합](https://www.pulumi.com/docs/integrations/version-control/)이 필요하다. GitHub, Azure DevOps, GitLab을 지원한다.
+
+### Automations (자동화)
+
+Automations는 Neo Task를 반복 작업으로 전환한다. 프롬프트를 정의하고 주기를 설정하면, Neo가 해당 간격으로 Task를 실행한다. 변경이 발생하면 PR을 연다.
+
+| 기본 설정 | 설명 |
+|-----------|------|
+| 승인 모드 | **Auto** (각 단계에서 사람 승인 대기 없음) |
+| 권한 모드 | **Read-only** (직접 인프라 쓰기 불가, PR으로만 제안) |
+
+**자동화 생성:** Neo Tasks > Automations 탭 > New automation. 템플릿(provider freshness check, encryption audit, backup audit, activity digest) 또는 빈 캔버스에서 시작. 이름, 프롬프트, 빈도(hourly, daily, weekdays, weekly)를 설정한다.
+
+### Integrations (통합)
+
+| 통합 유형 | 설명 |
+|-----------|------|
+| [MCP Integrations](https://www.pulumi.com/docs/ai/integrations/mcp/) | 이슈 트래커, 관측 플랫폼, 런북 위키, 온콜 도구에서 컨텍스트 가져오기 |
+| [CLI Integrations](https://www.pulumi.com/docs/ai/integrations/cli/) | Pulumi ESC에서 관리하는 자격 증명으로 클라우드 공급자 CLI 호출 |
+| [GitHub](https://www.pulumi.com/docs/ai/integrations/github/) | PR 스레드에서 Neo를 멘션하여 Task 시작 |
+| [Slack](https://www.pulumi.com/docs/ai/integrations/slack/) | Slack 채널에서 Neo를 멘션하여 Task 시작 |
+
+모든 통합은 조직 수준에서 관리자가 구성하며, 활성화되면 조직의 모든 Neo Task에서 사용할 수 있다.
+
+### 제한 사항
+
+- Neo는 코드를 통해서만 인프라를 수정할 수 있음. API나 UI 작업(배포 구성, 스택 설정 업데이트, 환경 관리 등)은 불가
+- 새 리포지토리 생성 또는 Git 초기화 불가. 기존 리포지토리 내에서만 작업
+- 새 Pulumi 프로젝트 초기화 불가. 이미 설정된 기존 프로젝트 내에서만 작업
+
+---
+
+## Onboarding Guide (조직 온보딩 가이드)
+
+> 원문: [Onboarding Guide](https://www.pulumi.com/docs/administration/onboarding-guide/) | [Choose Subscription](https://www.pulumi.com/docs/administration/onboarding-guide/choose-subscription/) | [Ways of Working](https://www.pulumi.com/docs/administration/onboarding-guide/ways-of-working/)
+
+조직에 Pulumi를 도입하기 위한 종합 가이드다. 설정부터 권장 사용 패턴과 실천 방법까지 다룬다.
+
+### 구독 티어 선택
+
+| 티어 | 대상 | 지원 |
+|------|------|------|
+| **Individual / Team** | 소규모 팀 또는 시작 단계. [Pulumi Neo](https://www.pulumi.com/product/neo/), [Pulumi Registry](https://www.pulumi.com/registry/) 문서, [examples repo](https://github.com/pulumi/examples) 활용 | GitHub Discussions, Issues, Community Slack, 무료 워크숍 |
+| **Enterprise** | 대규모 조직의 미션 크리티컬 워크로드 | 12x5 프리미엄 지원, 티켓팅, 보장 SLA, 프라이빗 Slack 채널 |
+| **Business Critical** | 규제/에어갭 환경, 셀프 호스팅 필요 | 24x7 프리미엄 지원, 전담 계정 매니저 및 아키텍트, 우선 버그/기능 요청 |
+
+### 배포 모델 선택
+
+| 모델 | 설명 |
+|------|------|
+| **SaaS (권장)** | 대부분의 조직에 적합. 고가용성, 재해 복구, 지리적 복제 기본 제공. [보안 백서](https://www.pulumi.com/security/pulumi-cloud-security-whitepaper) 참조 |
+| **Self-hosted** | Business Critical 전용. 에어갭 환경이나 격리된 Pulumi 플랫폼이 필요한 경우. [셀프 호스팅 가이드](https://www.pulumi.com/docs/administration/self-hosting/) 참조 |
+
+> **참고:** 셀프 호스팅 부트스트랩 시 Pulumi Cloud를 아직 사용할 수 없으므로 [DIY backend](https://www.pulumi.com/docs/iac/operations/stack-management/using-a-diy-backend/)로 상태를 관리해야 한다.
+
+### 결제 방식
+
+| 방식 | 설명 |
+|------|------|
+| **월간 결제** | 신용카드로 매월 결제. 유연하며 변동 사용량에 적합 |
+| **연간 약정** | 선불 송장 결제. 예측 가능한 사용량에 비용 절감 효과 |
+
+### 프로젝트 구성 권장 사항
+
+대부분의 팀은 작고 목적별로 구성된 프로젝트를 선호한다.
+
+**일반적인 IaC 프로젝트 구조:**
+
+| 프로젝트 유형 | 예시 |
+|---------------|------|
+| 보안 레이어 | IAM roles, KMS keys |
+| 네트워크 기반 레이어 | VPCs, subnets |
+| Kubernetes 클러스터 | 클러스터 정의 및 구성 |
+| 데이터베이스 프로젝트 | Data lakes, MySQL 인프라 |
+| 애플리케이션 프로젝트 | 컨테이너, VM, 서버리스 |
+
+**언어 전략:**
+
+| 전략 | 설명 |
+|------|------|
+| 단일 언어 (권장) | 도구, 패턴, 실천 방식의 표준화 용이. 팀이 이미 사용하는 언어 선택 |
+| 다중 언어 | 대규모 조직에서 일반적. [Pulumi Packages](https://www.pulumi.com/docs/iac/concepts/packages/)로 한 언어로 작성하고 다른 언어에서 사용 가능 |
+
+### 개발자 경험 패턴
+
+| 패턴 | 설명 |
+|------|------|
+| 개별 개발자 스택 | 각 개발자에게 고유한 완전한 환경 제공 |
+| 공유 인프라 | 데이터베이스 등 비용이 높은 리소스를 공유하면서 애플리케이션 인스턴스는 개별 제공 |
+| [Review Stacks](https://www.pulumi.com/docs/deployments/deployments/review-stacks/) | 각 PR에 대해 단기 스택을 자동 생성/삭제 |
+| [TTL Stacks](https://www.pulumi.com/docs/deployments/deployments/ttl/) | 지정 시간 후 자동 삭제되어 클라우드 비용 낭비 방지 |
+
+### 개발자 셀프 서비스 모델
+
+| 모델 | 설명 |
+|------|------|
+| **직접 Pulumi IaC 접근** | 별도 팀과 다른 RBAC 설정으로 개발자가 Pulumi 직접 사용. 컴포넌트, 템플릿, 정책으로 가드레일 적용 |
+| **YAML 인터페이스** | 개발자가 YAML 파일을 Git에 체크인하고 CI/CD가 나머지 처리 |
+| **UI 기반 경험** | 포털에 로그인하여 그래픽 인터페이스로 인프라 프로비저닝. [Pulumi IDP](https://www.pulumi.com/docs/idp/), [Backstage 플러그인](https://www.pulumi.com/blog/pulumi-backstage-plugin/), [Automation API](https://www.pulumi.com/docs/iac/concepts/automation-api/) 기반 커스텀 포털 |
+
+### CI/CD 배포
+
+| 옵션 | 설명 |
+|------|------|
+| [Pulumi Deployments](https://www.pulumi.com/docs/deployments/deployments/) (권장) | IaC 배포에 목적 구축된 Pulumi Cloud 통합 |
+| [Pulumi Kubernetes Operator](https://www.pulumi.com/docs/integrations/clouds/kubernetes/pulumi-kubernetes-operator/) | Kubernetes 클러스터 내에서 배포 트리거 |
+| 기존 CI/CD | GitHub Actions, GitLab CI, Octopus Deploy 등 |
+
+> **Pro tip:** 조직 전체에 Pulumi를 빠르게 도입하려면 "Pulumi champions" 그룹을 식별하여 다른 팀원들이 바로 시작하도록 장려하라.
