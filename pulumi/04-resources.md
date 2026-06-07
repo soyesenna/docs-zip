@@ -108,7 +108,7 @@ res = Resource(name, args, options)
 
 ## 리소스 이름과 식별
 
-각 리소스는 서로 다른 목적을 가진 **다섯 가지 식별 형태** 를 갖는다.
+각 리소스는 서로 다른 목적을 가진 **네 가지 식별 형태(four distinct forms of identity)** 를 갖는다.
 
 | 식별 형태 | 출처 | 예시 값 | 사용 시기 |
 |---|---|---|---|
@@ -116,9 +116,8 @@ res = Resource(name, args, options)
 | **물리적 이름** | 프로바이더 (논리적 이름과 자동 명명에 영향을 받음) | `"my-bucket-d7c3a1f"` | 프로바이더 API 호출에 사용. 프로바이더별 출력 속성으로 읽기 |
 | **물리적 ID** | 프로바이더 — 리소스 생성 후 반환 | `"my-bucket-d7c3a1f"` (S3), `"vpc-0abc1234"` (VPC) | `import`, `get`, 프로바이더 API에 전달. `resource.id`로 접근 |
 | **URN** | Pulumi — 프로젝트, 스택, 타입, 논리적 이름에서 파생 | `"urn:pulumi:dev::app::aws:s3/bucket:Bucket::my-bucket"` | Pulumi CLI 명령(`pulumi state`). 프로그램 코드에서는 거의 사용하지 않음. `resource.urn`으로 접근 |
-| **리소스 참조(Resource Reference)** | 프로그램 — 리소스 객체를 담은 변수 | `bucket` (Python/TS/Go 변수) | `ResourceOptions` 필드(`parent`, `depends_on`, `provider`, `deleted_with`)에 전달. URN이나 ID가 아닌 **변수 자체**를 전달해야 함 |
 
-> **주의:** `dependsOn` 옵션은 **리소스 참조**(변수 자체) 목록을 받으며, URN이나 ID가 아니다.
+> **참고:** Pulumi 프로그램에서 리소스 객체를 담은 변수(예: `bucket`)는 식별 형태가 아니라 프로그래밍 언어의 변수 참조다. `ResourceOptions` 필드(`parent`, `dependsOn`, `provider`, `deletedWith`)에 전달할 때는 URN이나 ID 문자열이 아닌 **리소스 변수 자체**를 전달해야 한다.
 
 ### 자동 명명 (Auto-Naming)
 
@@ -269,6 +268,15 @@ config:
 | `kubernetes:apps/v1:Deployment` | `kubernetes` | `apps/v1` | `Deployment` |
 | `random:index:RandomPassword` | `random` | `index` | `RandomPassword` |
 
+#### 단순화된 리소스 타입 이름 (Simplified Resource Type Names)
+
+타입 토큰은 일반적으로 3-컴포넌트 형식(`<package>:<module>:<typename>`)을 사용하지만, 다음과 같은 단순화 규칙이 적용된다.
+
+- **2-컴포넌트 형식(`<package>:<typename>`)**: 모듈 부분이 생략된 경우 `<package>:index:<typename>`으로 해석된다. 예를 들어 `random:RandomPassword`는 `random:index:RandomPassword`와 동일하다.
+- **모듈 경로에서 타입명 반복 생략**: 모듈 경로의 마지막 세그먼트가 타입명과 같으면 생략할 수 있다. 예를 들어 `aws:s3/bucket:Bucket`에서 모듈 `s3/bucket`의 마지막 세그먼트 `bucket`은 타입명 `Bucket`(대소문자 무시)과 같으므로, 단순화된 형태로 표기할 수 있다.
+
+이 단순화 규칙은 Pulumi YAML과 `pulumi state` 명령 등에서 실제로 사용된다.
+
 ### URN (Uniform Resource Name)
 
 각 리소스에는 전역적으로 고유한 URN이 자동으로 생성된다. URN은 프로젝트 이름, 스택 이름, 리소스 이름, 리소스 타입, 모든 부모 리소스의 타입으로 구성된다.
@@ -280,6 +288,8 @@ urn:pulumi:production::acmecorp-website::custom:resources:Resource$aws:s3/bucket
 ```
 
 URN은 전역적으로 고유해야 한다. 동일한 이름, 타입, 부모 경로를 가진 두 리소스를 생성하면 오류가 발생한다.
+
+> **컴포넌트 자식 리소스 명명 규칙:** 컴포넌트 리소스의 자식으로 생성되는 리소스는 컴포넌트 리소스의 이름을 자신의 이름의 일부(예: 접두사)로 포함해야 한다. 이렇게 하면 컴포넌트 리소스의 여러 인스턴스 간에 고유성이 보장되며, 컴포넌트의 이름이 변경되면 자식 리소스의 이름도 함께 변경된다.
 
 > **주의:** 리소스 이름을 변경하면 새 URN이 생성되어 이전 리소스는 삭제, 새 리소스는 생성된다. 이름 변경 없이 리소스를 유지하려면 `aliases` 옵션을 사용하라.
 
@@ -563,6 +573,8 @@ instance = aws.ec2.Instance("my-instance",
 ---
 
 ## 리소스 수명주기
+
+> **출처:** Create/Update/Delete/Replace 개념은 공식 문서에 명시적인 독립 페이지가 없으며, Pulumi 전반에 걸쳐 암묵적으로 사용되는 개념이다. 리소스 수명주기 훅은 https://www.pulumi.com/docs/iac/concepts/resources/options/hooks/ 에서 확인할 수 있다.
 
 Pulumi 리소스는 다음 네 가지 주요 수명주기 작업을 거친다.
 
