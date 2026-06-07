@@ -5,6 +5,7 @@
 > https://www.pulumi.com/docs/iac/guides/testing/integration/
 > https://www.pulumi.com/docs/iac/guides/testing/integration/framework/
 > https://www.pulumi.com/docs/iac/guides/testing/integration/automation-api/
+> https://www.pulumi.com/docs/insights/policy/policy-packs/authoring/
 
 Pulumi는 범용 프로그래밍 언어로 클라우드 리소스를 프로비저닝하므로, 네이티브 테스트 프레임워크를 활용하여 인프라에 대한 자동화 테스트를 수행할 수 있다. Pulumi는 세 가지 테스트 스타일을 제공한다: 모든 외부 호출을 모킹하는 **단위 테스트(Unit Tests)**, 인프라 배포 중에 리소스 수준의 단언을 실행하는 **속성 테스트(Property Tests)**, 임시 인프라를 배포하고 외부 테스트를 수행하는 **통합 테스트(Integration Tests)**.
 
@@ -24,7 +25,7 @@ Pulumi는 범용 프로그래밍 언어로 클라우드 리소스를 프로비�
 
 ### 속성 테스트와 Policy as Code
 
-속성 테스트(Property Tests)는 **Policy as Code** 기반으로 동작한다. Pulumi의 정책 팩(Policy Pack)은 TypeScript/JavaScript(Node.js)와 Python으로 작성할 수 있으며, 각 정책은 테스트가 평가하고 단언하는 **속성(property), 즉 불변식(invariant)**이 된다. 예를 들어 "모든 S3 버킷은 암호화되어야 한다", "보안 그룹은 22번 포트를 인터넷에 공개해서는 안 된다" 등의 규칙을 정책으로 정의하고, `pulumi up` 실행 시 자동으로 검사한다. 속성 테스트는 Pulumi CLI 내부에서 인프라 프로비저닝 전후에 실행되며, 단위 테스트와 달리 클라우드 제공자가 반환하는 실제 값을 평가할 수 있다. 모의(mock) 값이 아닌 실제 값을 검증할 수 있으므로 단위 테스트보다 높은 신뢰도를 제공한다. 속성 테스트는 모든 클라우드 환경에서 실행할 수 있다: 지속적인 "수용(acceptance)" 스택, 각 pull request마다 생성되는 임시 클라우드 환경, 또는 이들의 조합 등. 자세한 내용은 [Property Testing 가이드](https://www.pulumi.com/docs/iac/guides/testing/property-testing/) 및 [Policy as Code 가이드](https://www.pulumi.com/docs/insights/policy/policy-packs/authoring/)를 참조하라.
+속성 테스트(Property Tests)는 **Policy as Code** 기반으로 동작한다. Pulumi의 정책 팩(Policy Pack)은 TypeScript/JavaScript(Node.js), Python, OPA(Rego)로 작성할 수 있으며, 각 정책은 테스트가 평가하고 단언하는 **속성(property), 즉 불변식(invariant)**이 된다. 예를 들어 "모든 S3 버킷은 암호화되어야 한다", "보안 그룹은 22번 포트를 인터넷에 공개해서는 안 된다" 등의 규칙을 정책으로 정의하고, `pulumi up` 실행 시 자동으로 검사한다. 속성 테스트는 Pulumi CLI 내부에서 인프라 프로비저닝 전후에 실행되며, 단위 테스트와 달리 클라우드 제공자가 반환하는 실제 값을 평가할 수 있다. 모의(mock) 값이 아닌 실제 값을 검증할 수 있으므로 단위 테스트보다 높은 신뢰도를 제공한다. 속성 테스트는 모든 클라우드 환경에서 실행할 수 있다: 지속적인 "수용(acceptance)" 스택, 각 pull request마다 생성되는 임시 클라우드 환경, 또는 이들의 조합 등. 자세한 내용은 [Property Testing 가이드](https://www.pulumi.com/docs/iac/guides/testing/property-testing/) 및 [정책 팩 작성 가이드](https://www.pulumi.com/docs/insights/policy/policy-packs/authoring/)를 참조하라.
 
 ---
 
@@ -111,7 +112,7 @@ pulumi.runtime.setMocks({
 
 모킹 서버는 전체 Pulumi 엔진을 구현하지 않으므로 다음 기능이 모킹 기반 단위 테스트에서는 실행되지 않는다.
 
-- **Lifecycle Hooks**: 리소스의 `onCreate`, `onUpdate`, `onDelete` 등 생명주기 훅이 실행되지 않는다.
+- **Lifecycle Hooks**: 리소스의 `beforeCreate`/`afterCreate`, `beforeUpdate`/`afterUpdate`, `beforeDelete`/`afterDelete` 등 생명주기 훅이 실행되지 않는다.
 - **Resource Transforms**: 리소스 변환(transform)이 적용되지 않는다.
 
 이러한 제한을 회피하려면 다음 방법을 고려할 수 있다.
@@ -757,6 +758,232 @@ class Ec2Tests {
 - 클라우드 제공자가 계산하는 출력 속성은 모킹에서 명시적으로 반환해야 한다.
 - Pulumi 리소스 속성은 모두 `Output`이므로 `apply` 메서드로 값에 접근한다.
 - 출력은 비동기적으로 해결되므로 프레임워크의 비동기 테스트 기능을 사용해야 한다.
+
+### Neo(Pulumi AI)를 활용한 정책 팩 생성
+
+[Neo](https://www.pulumi.com/product/neo/)를 사용하면 정책 팩 생성 과정을 간소화할 수 있다. Neo는 선호하는 프로그래밍 언어와 클라우드 제공자에 맞춘 정책 팩 콘텐츠를 생성하여, 특정 요구 사항을 충족하는 정책을 빠르게 구축하면서 오류를 줄일 수 있다. [GitHub App](https://www.pulumi.com/docs/integrations/version-control/github-app/)과 함께 사용하면 Neo가 저장소에 직접 pull request를 열 수도 있다.
+
+다음은 Neo에서 사용할 수 있는 프롬프트 예시이다:
+
+> "Create a boilerplate TypeScript policy pack at `<GitHub Repository>`"
+> "Create a policy to enforce encryption of S3 buckets"
+> "Create a policy that requires environment tagging on all Google Cloud resources"
+
+---
+
+## 정책 팩 작성 (Policy Pack Authoring)
+
+> https://www.pulumi.com/docs/insights/policy/policy-packs/authoring/
+
+### 정책 팩 생성
+
+사전 빌드된 정책 팩이 요구 사항을 충족하지 않는 경우, 사용자 지정 정책 팩을 직접 작성할 수 있다. 정책은 TypeScript/JavaScript(Node.js), Python, OPA(Rego)로 작성할 수 있으며, 모든 언어로 작성된 Pulumi 스택에 적용할 수 있다.
+
+**사전 요구 사항:**
+
+- Pulumi CLI 설치
+- TypeScript/JavaScript 정책의 경우: Node.js 설치
+- Python 정책의 경우: Python 설치
+- OPA 정책의 경우: Pulumi CLI v3.227.0+에서 자동으로 OPA 분석기 플러그인 설치
+- (선택) 정책 팩을 게시하고 중앙에서 관리하려면 Pulumi Cloud 접근 필요. 오픈 소스 Pulumi로 로컬 정책 팩을 사용하는 경우 불필요
+
+**TypeScript 정책 팩 예제:**
+
+```typescript
+import * as aws from "@pulumi/aws";
+import { PolicyPack, validateResourceOfType } from "@pulumi/policy";
+
+// 새 정책 팩 생성
+new PolicyPack("policy-pack-typescript", {
+    // 정책 팩에 포함될 정책 목록
+    policies: [{
+        // 정책 이름은 팩 내에서 고유해야 함
+        name: "s3-bucket-prefix",
+        // 설명은 정책이 무엇을 하는지, 왜 존재하는지 문서화해야 함
+        description: "Ensures S3 buckets use the required naming prefix.",
+        // enforcementLevel은 "advisory", "mandatory", "disabled" 중 하나
+        // "advisory"는 경고만 출력, "mandatory"는 업데이트 차단, "disabled"는 정책 실행 중지
+        enforcementLevel: "mandatory",
+        // validateResourceOfType으로 특정 리소스 타입에만 정책 적용
+        validateResource: validateResourceOfType(aws.s3.Bucket, (bucket, args, reportViolation) => {
+            const requiredPrefix = "mycompany-";
+            const bucketPrefix = bucket.bucketPrefix || "";
+            if (!bucketPrefix.startsWith(requiredPrefix)) {
+                reportViolation(
+                    `S3 bucket must use '${requiredPrefix}' prefix. Current prefix: '${bucketPrefix}'`
+                );
+            }
+        }),
+    }],
+});
+```
+
+**Python 정책 팩 예제:**
+
+```python
+from pulumi_policy import PolicyPack, ReportViolation, ResourceValidationArgs, ResourceValidationFn
+
+def validate_bucket_prefix(args: ResourceValidationArgs, report_violation: ReportViolation):
+    required_prefix = "mycompany-"
+    bucket_prefix = args.props.get("bucketPrefix", "")
+    if not bucket_prefix.startswith(required_prefix):
+        report_violation(
+            f"S3 bucket must use '{required_prefix}' prefix. Current prefix: '{bucket_prefix}'"
+        )
+
+PolicyPack(
+    "policy-pack-python",
+    policies=[
+        {
+            "name": "s3-bucket-prefix",
+            "description": "Ensures S3 buckets use the required naming prefix.",
+            "enforcement_level": "mandatory",
+            "validate_resource": validate_bucket_prefix,
+        }
+    ],
+)
+```
+
+### 리소스 검증 vs 스택 검증
+
+Pulumi 정책은 두 가지 범위(scope)에서 검증한다.
+
+**리소스 검증 정책(Resource Validation Policies)**은 `pulumi preview` 또는 `pulumi up` 실행 중 각 리소스가 등록될 때마다 실행된다. `pulumi preview`와 `pulumi up` 모두에서 실행되며, 개별 리소스의 속성을 검사한다. 다음과 같은 경우에 사용한다:
+
+- 특정 리소스 타입에 규칙 적용 (예: "모든 S3 버킷은 암호화되어야 한다")
+- 개별 리소스 속성 검증
+- 리소스 생성 전 규칙 위반 사전 차단
+
+**스택 검증 정책(Stack Validation Policies)**은 모든 리소스 등록이 완료된 **후**에 실행된다. 리소스 생성 후에만 실행되며, `pulumi up`에서만 실행된다(`pulumi preview`에서는 실행되지 않음). 전체 리소스 그래프에 접근할 수 있어 리소스 간 관계를 검증할 수 있다. 다음과 같은 경우에 사용한다:
+
+- 리소스 간 관계 검증 (예: "데이터베이스는 VPC 내에 있어야 한다")
+- 스택 전체 규칙 적용 (예: "리전당 최대 리소스 수")
+- 여러 리소스에 걸친 종속성 검사
+- 전체 리소스 그래프 분석
+
+대부분의 정책은 리소스 검증 정책이다. 스택 검증 정책은 전체 컨텍스트 이해가 필요한 복잡한 시나리오에 유용하다.
+
+**TypeScript 스택 검증 예제:**
+
+```typescript
+new PolicyPack("stack-validation-pack", {
+    policies: [{
+        name: "stack-validation",
+        description: "Validates stack-wide rules.",
+        enforcementLevel: "mandatory",
+        validateStack: (args, reportViolation) => {
+            // args.resources로 모든 리소스에 접근 가능
+            for (const resource of args.resources) {
+                // 스택 전체 규칙 검증
+            }
+        },
+    }],
+});
+```
+
+### 스택 태그를 활용한 정책
+
+스택 검증 정책에서는 `args.stackTags`(TypeScript) 또는 `args.stack_tags`(Python)를 통해 스택에 할당된 태그에 접근할 수 있다. 이를 통해 환경(production, staging 등)에 따라 다른 정책을 적용할 수 있다.
+
+### Enforcement Level (적용 수준)
+
+각 정책은 다음 세 가지 적용 수준 중 하나를 가진다. 정책 팩 수준에서 기본값을 설정하거나, 개별 정책에서 재정의할 수 있다.
+
+| 수준 | 동작 |
+|------|------|
+| `advisory` | 경고만 출력하고 업데이트는 계속 진행 |
+| `mandatory` | 규칙 위반 시 업데이트 차단 |
+| `disabled` | 정책 실행 중지 |
+
+### Dynamic Provider를 위한 정책 작성
+
+[Dynamic Provider](https://www.pulumi.com/docs/iac/concepts/providers/dynamic-providers/)를 사용하는 경우, 모든 dynamic resource가 동일한 리소스 타입을 공유한다는 핵심 제약이 있다. TypeScript/JavaScript에서는 `pulumi-nodejs:dynamic:Resource`, Python에서는 `pulumi-python:dynamic:Resource`가 된다.
+
+따라서 리소스 타입만으로 특정 dynamic provider를 식별할 수 없으므로, **속성을 검사하여 dynamic provider를 구별**해야 한다.
+
+```typescript
+validateResource: (args, reportViolation) => {
+    // 모든 dynamic resource는 동일한 타입을 가짐
+    if (args.type === "pulumi-nodejs:dynamic:Resource" &&
+        args.props.hasOwnProperty("environmentName")) {
+        // 특정 dynamic provider만 검증
+        const name = args.props["environmentName"];
+        if (!name.startsWith("prod-")) {
+            reportViolation(`Environment name must start with 'prod-'. Got: '${name}'`);
+        }
+    }
+},
+```
+
+Dynamic provider 정책 작성 모범 사례:
+
+- **고유 속성 식별**: 검증하려는 dynamic provider를 고유하게 식별하는 속성을 결정하라.
+- **구체적인 속성 검사**: 모든 dynamic 리소스가 동일한 타입을 공유하므로, 특정 속성 이름이나 조합으로 구별하라.
+- **누락된 속성 처리**: 다른 dynamic provider에 대해 정책이 실행될 때 오류를 방지하기 위해 속성 존재 여부를 확인하라.
+- **가정 문서화**: dynamic provider를 식별하기 위해 어떤 속성을 사용하는지 명확히 문서화하라.
+
+### 정책 팩 구성 (Configuration)
+
+정책 팩은 JSON Schema 기반의 사용자 지정 구성을 지원한다. 이를 통해 조직의 다양한 요구에 맞게 정책을 매개변수화할 수 있다.
+
+**로컬 실행 (Local Execution):**
+
+구성 파일을 JSON 파일로 전달한다.
+
+```bash
+pulumi preview --policy-pack <path-to-policy-pack> --policy-pack-config config.json
+```
+
+**config.json 예제:**
+
+```json
+{
+    "all": {
+        "requiredTags": ["Environment", "Owner"]
+    },
+    "s3-bucket-prefix": {
+        "requiredPrefix": "mycompany-"
+    }
+}
+```
+
+**Pulumi Cloud 구성:**
+
+게시 후 관리자는 Pulumi Cloud 콘솔이나 CLI를 통해 정책 팩을 구성할 수 있다. 콘솔에서는 Policy Group으로 이동하여 **Add Policy Pack**을 클릭하고 구성 양식을 작성한다. 구성은 JSON Schema에 대해 자동으로 검증된다.
+
+### 로컬에서 정책 실행
+
+게시하기 전에 로컬에서 정책 팩을 테스트할 수 있다.
+
+```bash
+pulumi preview --policy-pack <path-to-policy-pack-directory>
+```
+
+스택이 규정을 준수하면 실행된 정책 팩 목록이 출력에 표시된다. 테스트 프로그램이 필요한 경우 `pulumi new`로 생성하면 된다.
+
+### 정책 팩 게시 (Publishing)
+
+로컬 검증이 완료되면 정책 팩을 Pulumi Cloud에 게시할 수 있다. Pulumi Cloud는 정책 팩을 버전 관리하며, 업데이트, 롤백, 점진적 출격(rollout)을 지원한다.
+
+```bash
+pulumi policy publish <org-name>
+```
+
+Pulumi Cloud가 단조 버전 번호를 할당한다.
+
+**버전 관리:**
+
+정책 팩 버전은 언어별로 다르게 관리된다:
+
+| 언어 | 버전 설정 위치 |
+|------|---------------|
+| TypeScript/JavaScript | `package.json`의 `version` 필드 |
+| Python | `PulumiPolicy.yaml`의 `version` 필드 |
+| OPA | `PulumiPolicy.yaml`의 `version` 필드 |
+
+각 버전은 한 번만 게시할 수 있다. 새 버전을 게시하려면 버전 번호를 업데이트해야 한다. 시맨틱 버전 관리(Semantic Versioning)를 따르는 것이 권장된다.
+
+게시 후 정책 팩은 Pulumi Cloud의 정책 팩 목록에 나타나며, Policy Group을 통해 스택이나 클라우드 계정에 적용할 수 있다.
 
 ---
 
