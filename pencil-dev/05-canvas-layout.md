@@ -31,6 +31,8 @@ Pencil은 무한 캔버스에 Flexbox 기반 레이아웃 시스템을 사용합
 
 `layout`과 `padding`은 **`frame` 타입에서만** 설정 가능합니다. 다른 노드 타입에는 설정할 수 없습니다.
 
+> **핵심 제약:** Pencil의 Flexbox 레이아웃은 **단일 축(single-axis)만** 지원하며, 아이템 wrapping(줄바꿈)을 지원하지 않습니다. CSS의 `flex-wrap`에 해당하는 기능이 없습니다. 그리드 형태의 레이아웃이 필요하면 각 행(row)을 별도의 Frame으로 수동 생성하세요.
+
 ### Layout 인터페이스
 
 ```typescript
@@ -42,6 +44,25 @@ interface Layout {
   justifyContent?: "start" | "center" | "end" | "space_between" | "space_around";
   alignItems?: "start" | "center" | "end";
 }
+```
+
+### 오버플로우 제어 (clip)
+
+Frame의 `clip` 속성으로 자식 콘텐츠가 Frame 경계를 넘어갈 때 잘라낼지 여부를 제어합니다.
+
+| 속성 | 타입 | 기본값 | 설명 |
+| --- | --- | --- | --- |
+| `clip` | `boolean` | `false` | `true`면 자식 콘텐츠가 Frame 경계를 벗어나지 못하게 잘라냄 |
+
+> **권장:** 화면(스크린) 프레임에는 `clip: true`를 사용하여 콘텐츠 오버플로우를 방지하세요.
+
+```javascript
+// 화면 프레임에 clip 적용
+screen = Insert(document, {
+  type: "frame", name: "Screen",
+  layout: "vertical", width: 1440, height: 900,
+  clip: true  // 자식이 경계를 벗어나지 않도록 제한
+})
 ```
 
 ### 방향
@@ -64,7 +85,7 @@ interface Layout {
 | 속성 | 설명 |
 | --- | --- |
 | `gap` | 자식 사이의 간격 (주축) |
-| `padding` | 컨테이너 안쪽 여백. 모든 자식에 동일하게 적용 |
+| `padding` | 컨테이너 내부 여백 (Inside padding) |
 
 **패딩 형식:**
 
@@ -78,14 +99,16 @@ padding: [16, 24, 16, 24]                      // [상, 우, 하, 좌]
 
 ## Sizing (크기 지정)
 
+> **기본 사이징:** Frame은 항상 방향이 `horizontal`이며, 크기는 기본적으로 `fit_content`로 설정됩니다. 즉, 명시적으로 width/height를 지정하지 않으면 자식 크기 합에 맞춰 자동 조절됩니다.
+
 ### 동적 크기
 
-| 값 | 설명 | 사용 시기 |
-| --- | --- | --- |
-| `"fit_content"` | 자식 크기 합 | 부모가 자식에 맞출 때 |
-| `"fill_container"` | 부모 크기 | 자식이 부모에 꽉 찰 때 |
-| `fit_content(N)` | 자식 크기 + fallback N | 자식이 없을 때 N 사용 |
-| `fill_container(N)` | 부모 크기 + fallback N | 부모가 레이아웃이 아닐 때 N 사용 |
+| 값 | 설명 | 사용 시기 | 사전조건 |
+| --- | --- | --- | --- |
+| `"fit_content"` | 자식 크기 합 | 부모가 자식에 맞출 때 | 해당 노드에 layout이 설정되어 있어야 함 |
+| `"fill_container"` | 부모 크기 | 자식이 부모에 꽉 찰 때 | 부모 노드에 layout이 설정되어 있어야 함 |
+| `fit_content(N)` | 자식 크기 + fallback N | 자식이 없을 때 N 사용 | 해당 노드에 layout이 설정되어 있어야 함 |
+| `fill_container(N)` | 부모 크기 + fallback N | 부모가 레이아웃이 아닐 때 N 사용 | 부모 노드에 layout이 설정되어 있어야 함 |
 
 ### 핵심 원칙
 
@@ -136,7 +159,12 @@ Insert(container, { type: "rectangle", x: 0, y: 100, width: 400, height: 2, fill
 
 ### layoutPosition: "absolute"
 
-Flexbox 레이아웃 안에서 특정 자식만 절대 배치:
+Flexbox 레이아웃 안에서 특정 자식만 절대 배치할 수 있습니다.
+
+| 값 | 설명 |
+| --- | --- |
+| `"auto"` | 기본값. 부모의 레이아웃 흐름에 따라 자동 배치됨 |
+| `"absolute"` | 부모의 레이아웃 흐름에서 분리되어 x/y 좌표로 절대 배치됨 |
 
 ```javascript
 // 부모는 flex 레이아웃이지만 이 자식만 절대 위치
@@ -222,8 +250,10 @@ sideCol = Insert(columns, { type: "frame", layout: "vertical", width: 360, gap: 
 | `fit_content` | `width: fit-content` | 유사 |
 | `alignItems` | `align-items` | `baseline`, `stretch` 미지원 |
 | `padding` (frame만) | `padding` (모든 요소) | Pencil은 frame만 패딩 가능 |
+| `clip` (frame) | `overflow: hidden` | Frame 전용. 기본값 `false` |
 | `gap` | `gap` | 동일 |
 | ❌ `margin` | `margin` | Pencil은 margin 미지원 |
+| ❌ `flex-wrap` | `flex-wrap` | Pencil은 wrapping 미지원. 행별 별도 Frame 생성 필요 |
 | ❌ `%` 크기 | `%` 크기 | Pencil은 퍼센트 미지원 |
 
 > Pencil의 속성이 CSS와 유사해 보이지만, 실제로는 다르게 동작합니다. 스키마에 명시된 속성만 사용하고, 없는 속성은 다른 방법으로 구현하세요.
