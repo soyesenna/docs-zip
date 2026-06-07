@@ -115,7 +115,7 @@ res = Resource(name, args, options)
 
 ## 리소스 이름과 식별
 
-각 리소스는 서로 다른 목적을 가진 **네 가지 식별 형태(four distinct forms of identity)** 를 갖는다. 어떤 상황에서 어떤 식별 형태를 사용해야 하는지 이해하는 것이 Pulumi 프로그램을 올바르게 작성하는 핵심이다.
+각 리소스는 서로 다른 목적을 가진 **다섯 가지 식별 형태(identity forms)** 를 갖는다. 어떤 상황에서 어떤 식별 형태를 사용해야 하는지 이해하는 것이 Pulumi 프로그램을 올바르게 작성하는 핵심이다.
 
 | 식별 형태 | 출처 | 예시 값 | 사용 시기 |
 |---|---|---|---|
@@ -125,7 +125,9 @@ res = Resource(name, args, options)
 | **URN** | Pulumi — 프로젝트, 스택, 타입, 논리적 이름에서 파생 | `"urn:pulumi:dev::app::aws:s3/bucket:Bucket::my-bucket"` | Pulumi CLI 명령(`pulumi state`). 프로그램 코드에서는 거의 사용하지 않음. `resource.urn`으로 접근 |
 | **리소스 참조(변수)** | 코드 — 리소스 객체를 담은 프로그래밍 변수 | `const bucket = ...` | `ResourceOptions` 필드(`parent`, `dependsOn`, `provider`, `deletedWith`)에 전달. URN이나 ID 문자열이 아닌 **변수 자체**를 전달해야 함 |
 
-> **참고:** 물리적 ID(`resource.id`)와 URN(`resource.urn`)은 서로 다른 목적을 가진다. 물리적 ID는 클라우드 프로바이더가 할당하는 식별자로 `import`나 `get`에 사용되고, URN은 Pulumi가 내부적으로 상태 추적에 사용하는 식별자다. 두 값을 혼동하지 않도록 주의하라.
+> **참고:** 가장 흔한 혼동 원인은 물리적 ID(`resource.id`)와 URN(`resource.urn`)의 구분이다. 물리적 ID는 클라우드 프로바이더 API와 Pulumi import 시스템이 기대하는 값이다. URN은 Pulumi 내부 식별자이며 애플리케이션 코드에서는 거의 필요하지 않다.
+>
+> **참고:** `dependsOn` 옵션은 **리소스 참조(변수 자체)** 목록을 받으며, URN이나 ID가 아니다. Python에서는 `depends_on=[bucket]`으로 전달하고, `depends_on=[bucket.urn]`이 아니다.
 
 ### 자동 명명 (Auto-Naming)
 
