@@ -18,14 +18,14 @@ Pulumi는 범용 프로그래밍 언어로 클라우드 리소스를 프로비�
 | 실제 인프라 프로비저닝 | 아니오 | 예 | 예 |
 | Pulumi CLI 필요 | 아니오 | 예 | 예 |
 | 실행 시간 | 밀리초 | 초 | 분 |
-| 사용 언어 | Pulumi 프로그램과 동일 | Node.js 또는 Python | 모든 언어 |
+| 사용 언어 | Pulumi 프로그램과 동일 | Node.js, Python, OPA(Rego) | 모든 언어 |
 | 검증 대상 | 리소스 입력값(Inputs) | 리소스 입력/출력값 | 외부 엔드포인트 |
 | 모킹 필요 | 예 | 아니오 | 아니오 |
 | 접근 방식 | 화이트박스 | 인프라 배포 중 검사 | 블랙박스 |
 
 ### 속성 테스트와 Policy as Code
 
-속성 테스트(Property Tests)는 **Policy as Code** 기반으로 동작한다. Pulumi의 정책 팩(Policy Pack)은 TypeScript/JavaScript(Node.js), Python, OPA(Rego)로 작성할 수 있으며, 각 정책은 테스트가 평가하고 단언하는 **속성(property), 즉 불변식(invariant)**이 된다. 예를 들어 "모든 S3 버킷은 암호화되어야 한다", "보안 그룹은 22번 포트를 인터넷에 공개해서는 안 된다" 등의 규칙을 정책으로 정의하고, `pulumi up` 실행 시 자동으로 검사한다. 속성 테스트는 Pulumi CLI 내부에서 인프라 프로비저닝 전후에 실행되며, 단위 테스트와 달리 클라우드 제공자가 반환하는 실제 값을 평가할 수 있다. 모의(mock) 값이 아닌 실제 값을 검증할 수 있으므로 단위 테스트보다 높은 신뢰도를 제공한다. 속성 테스트는 모든 클라우드 환경에서 실행할 수 있다: 지속적인 "수용(acceptance)" 스택, 각 pull request마다 생성되는 임시 클라우드 환경, 또는 이들의 조합 등. 자세한 내용은 [Property Testing 가이드](https://www.pulumi.com/docs/iac/guides/testing/property-testing/) 및 [정책 팩 작성 가이드](https://www.pulumi.com/docs/insights/policy/policy-packs/authoring/)를 참조하라.
+속성 테스트(Property Tests)는 **Policy as Code** 기반으로 동작한다. Pulumi의 정책 팩(Policy Pack)은 TypeScript/JavaScript(Node.js), Python, OPA(Rego)로 작성할 수 있으며, 각 정책은 테스트가 평가하고 단언하는 **속성(property), 즉 불변식(invariant)**이 된다. 예를 들어 "모든 S3 버킷은 암호화되어야 한다", "보안 그룹은 22번 포트를 인터넷에 공개해서는 안 된다" 등의 규칙을 정책으로 정의하고, `pulumi up` 실행 시 자동으로 검사한다. 속성 테스트는 Pulumi CLI 내부에서 인프라 프로비저닝 전후에 실행되며, 단위 테스트와 달리 클라우드 제공자가 반환하는 실제 값을 평가할 수 있다. 모의(mock) 값이 아닌 실제 값을 검증할 수 있으므로 단위 테스트보다 높은 신뢰도를 제공한다. 속성 테스트는 모든 클라우드 환경에서 실행할 수 있다: 지속적인 "수용(acceptance)" 스택, 각 pull request마다 생성되는 임시 클라우드 환경, 또는 이들의 조합 등. 자세한 내용은 [정책 팩 작성 가이드](https://www.pulumi.com/docs/insights/policy/policy-packs/authoring/)를 참조하라.
 
 ---
 
@@ -527,7 +527,7 @@ import (
     "sync"
     "testing"
 
-    "github.com/pulumi/pulumi-aws/sdk/v4/go/aws/ec2"
+    "github.com/pulumi/pulumi-aws/sdk/v7/go/aws/ec2"
     "github.com/pulumi/pulumi/sdk/v3/go/common/resource"
     "github.com/pulumi/pulumi/sdk/v3/go/pulumi"
     "github.com/stretchr/testify/assert"
@@ -759,16 +759,6 @@ class Ec2Tests {
 - Pulumi 리소스 속성은 모두 `Output`이므로 `apply` 메서드로 값에 접근한다.
 - 출력은 비동기적으로 해결되므로 프레임워크의 비동기 테스트 기능을 사용해야 한다.
 
-### Neo(Pulumi AI)를 활용한 정책 팩 생성
-
-[Neo](https://www.pulumi.com/product/neo/)를 사용하면 정책 팩 생성 과정을 간소화할 수 있다. Neo는 선호하는 프로그래밍 언어와 클라우드 제공자에 맞춘 정책 팩 콘텐츠를 생성하여, 특정 요구 사항을 충족하는 정책을 빠르게 구축하면서 오류를 줄일 수 있다. [GitHub App](https://www.pulumi.com/docs/integrations/version-control/github-app/)과 함께 사용하면 Neo가 저장소에 직접 pull request를 열 수도 있다.
-
-다음은 Neo에서 사용할 수 있는 프롬프트 예시이다:
-
-> "Create a boilerplate TypeScript policy pack at `<GitHub Repository>`"
-> "Create a policy to enforce encryption of S3 buckets"
-> "Create a policy that requires environment tagging on all Google Cloud resources"
-
 ---
 
 ## 정책 팩 작성 (Policy Pack Authoring)
@@ -984,6 +974,18 @@ Pulumi Cloud가 단조 버전 번호를 할당한다.
 각 버전은 한 번만 게시할 수 있다. 새 버전을 게시하려면 버전 번호를 업데이트해야 한다. 시맨틱 버전 관리(Semantic Versioning)를 따르는 것이 권장된다.
 
 게시 후 정책 팩은 Pulumi Cloud의 정책 팩 목록에 나타나며, Policy Group을 통해 스택이나 클라우드 계정에 적용할 수 있다.
+
+### Neo(Pulumi AI)를 활용한 정책 팩 생성
+
+[Neo](https://www.pulumi.com/product/neo/)를 사용하면 정책 팩 생성 과정을 간소화할 수 있다. Neo는 선호하는 프로그래밍 언어와 클라우드 제공자에 맞춘 정책 팩 콘텐츠를 생성하여, 특정 요구 사항을 충족하는 정책을 빠르게 구축하면서 오류를 줄일 수 있다. [GitHub App](https://www.pulumi.com/docs/integrations/version-control/github-app/)과 함께 사용하면 Neo가 저장소에 직접 pull request를 열 수도 있다.
+
+다음은 Neo에서 사용할 수 있는 프롬프트 예시이다:
+
+| 프롬프트 예시 | 설명 |
+|--------------|------|
+| `"Create a boilerplate TypeScript policy pack at <GitHub Repository>"` | TypeScript 정책 팩 보일러플레이트 생성 |
+| `"Create a policy to enforce encryption of S3 buckets"` | S3 버킷 암호화 강제 정책 생성 |
+| `"Create a policy that requires environment tagging on all Google Cloud resources"` | GCP 리소스 환경 태깅 필수 정책 생성 |
 
 ---
 
