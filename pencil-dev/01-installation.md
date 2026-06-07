@@ -107,10 +107,10 @@ Pencil의 AI 기능을 사용하려면 Claude Code CLI 설치와 인증이 필�
 
 ```bash
 # npm으로 설치
-npm install -g @anthropic-ai/claude-code-cli
+npm install -g @anthropic-ai/claude-code
 
 # 또는 공식 설치 스크립트
-curl https://claude.ai/cli/install.sh | sh
+curl https://claude.ai/install.sh | sh
 ```
 
 ### 인증
@@ -176,6 +176,30 @@ Pencil은 Pencil 자체 활성화와 Claude Code 인증 두 가지가 필요합�
 | 반복 활성화 프롬프트 | 알려진 이슈 | IDE 재시작, 확장 재설치 |
 | "Claude Code isn't connected" | CLI 인증 누락 | 터미널에서 `claude` 실행 후 인증 |
 | "Invalid API key" | 인증 충돌 | `ANTHROPIC_API_KEY` 환경변수 제거, CLI 인증 사용 |
+| CLI는 작동하지만 Pencil에서 미연결 | 서드파티 프로바이더 충돌 | 클린 Claude Code 세션 사용, IDE 재시작, 충돌 환경변수 확인 |
+
+### 인증 방식
+
+| 방식 | 설명 | 비고 |
+| --- | --- | --- |
+| **Claude CLI (권장)** | `claude` 실행 → 브라우저 인증 | 가장 간단하고 안정적 |
+| **API 키 (대안)** | `ANTHROPIC_API_KEY` 환경변수 설정 | CLI 인증과 충돌 가능, 일반 사용 비권장 |
+
+### 권한 및 접근
+
+| 이슈 | 원인 | 해결 |
+| --- | --- | --- |
+| 폴더 접근 불가 | 폴더 권한 제한, OS 보안 설정 | 접근 프롬프트 수락, 시스템 설정에서 권한 업데이트 |
+| 권한 프롬프트 미표시 | 시스템 알림 설정 | Pencil 외부에서 별도 Claude Code 세션 실행, 시스템 알림 설정 확인 |
+
+### MCP 서버 보안
+
+| 항목 | 설명 |
+| --- | --- |
+| 로컬 전용 | MCP 서버는 로컬에서만 실행 |
+| 데이터 전송 | AI 기능 사용 시에만 Claude에 프롬프트 전송 |
+| 저장소 | 현재 비공개 (소스 코드 미공개) |
+| 도구 검사 | Cursor/VS Code 설정에서 MCP 도구 확인 가능 |
 
 ### 권장 인증 흐름
 

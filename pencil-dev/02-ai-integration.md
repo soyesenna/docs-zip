@@ -27,6 +27,7 @@ MCP는 AI 어시스턴트가 디자인 파일과 상호작용할 수 있도록 �
 | --- | --- |
 | 로컬 전용 | MCP 서버는 사용자의 로컬 머신에서만 실행 |
 | 원격 접근 불가 | 디자인 파일은 로컬에 유지 |
+| 저장소 비공개 | 소스 코드는 현재 공개되지 않음 |
 | 도구 검사 | IDE 설정에서 사용 가능한 도구 확인 가능 |
 
 ---
@@ -225,3 +226,47 @@ AI에게 전체 화면을 설명하면 batch_design API를 통해 자동 생성:
 | 연결 불가 | Pencil 미실행 | Pencil 먼저 실행 후 AI 도구 사용 |
 | 권한 거부 | 폴더 접근 권한 | 접근 프롬프트 수락, 시스템 설정에서 권한 업데이트 |
 | AI 출력 품질 저하 | 모호한 프롬프트 | 구체적인 지시, 반복적 접근 |
+
+---
+
+## 핵심 제약사항
+
+AI 어시스턴트를 통해 Pencil을 사용할 때 반드시 알아야 할 제약사항:
+
+### CSS/HTML과의 차이
+
+| 제약 | 설명 |
+| --- | --- |
+| 커스텀 포맷 | Pencil은 자체 포맷 사용. CSS/HTML 속성이나 동작을 사용/생각하지 마세요 |
+| 퍼센트 미지원 | `width: "100%"`, `height: "50%"` 등 사용 불가 |
+| margin 미지원 | margin 대신 부모 frame의 padding이나 gap 사용 |
+| alignItems 제한 | `baseline`, `stretch` 미지원. `start`, `center`, `end`만 사용 |
+| layout/padding | `frame` 타입에서만 설정 가능. 다른 노드에는 설정 불가 |
+| 스키마 준수 | 스키마에 없는 속성은 지원되지 않으며 에러 발생 |
+
+### 필수 규칙
+
+| 규칙 | 설명 |
+| --- | --- |
+| Text fill 필수 | 텍스트 노드는 기본적으로 fill이 없어 보이지 않음. 반드시 fill 설정 |
+| placeholder 관리 | 새로 생성/수정 중인 루트 프레임은 `placeholder: true` 유지, 완료 후 즉시 `false` |
+| 컴포넌트 참조 | `ref` 노드로 컴포넌트를 재사용. 파일 간 참조 불가 — 복사해서 사용 |
+| 노드 ID | `reusable` 노드의 ID는 자동 생성. 수동 설정 불가 |
+| batch_design 분할 | 큰 변경은 여러 batch_design 호출로 분할. 에러 시 전체 롤백됨 |
+
+### batch_design API 참조
+
+batch_design은 JavaScript 스니펫으로 디자인을 프로그래밍 방식으로 수정하는 핵심 API입니다:
+
+| 함수 | 설명 | 반환 |
+| --- | --- | --- |
+| `Insert(parent, data)` | 새 노드 삽입 | 노드 ID |
+| `Copy(path, parent, data)` | 노드 복사 | 새 ID |
+| `Update(path, data)` | 속성 업데이트 | void |
+| `Replace(path, data)` | 노드 교체 | 새 ID |
+| `Move(path, parent, idx?)` | 위치 이동 | void |
+| `Delete(path)` | 삭제 | void |
+| `Generate(nodeId, type, prompt)` | 이미지 생성 | void |
+| `FindEmptySpace({w,h,...})` | 빈 영역 찾기 | `{x,y}` |
+
+> 상세한 API 문서는 [batch_design API](./10-batch-design-api.md)를 참조하세요.

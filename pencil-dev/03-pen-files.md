@@ -43,6 +43,62 @@ interface Document {
 | `variables` | `object` | 전역 변수. 키=변수명(정규식 `[^:]+`), 값=타입별 정의 |
 | `children` | `Child[]` | 문서의 최상위 자식 노드들 |
 
+### Child 노드 타입
+
+`children` 배열에는 다음 노드 타입들이 올 수 있습니다:
+
+| 타입 | 용도 | 상세 문서 |
+| --- | --- | --- |
+| `Frame` | 컨테이너, 화면, 컴포넌트 (layout, padding, slot 지원) | [노드 타입 참조](./04-node-types.md) |
+| `Group` | 논리적 그룹화 | [노드 타입 참조](./04-node-types.md) |
+| `Rectangle` | 사각형 도형 | [노드 타입 참조](./04-node-types.md) |
+| `Ellipse` | 원/타원/호 | [노드 타입 참조](./04-node-types.md) |
+| `Polygon` | 정다각형 | [노드 타입 참조](./04-node-types.md) |
+| `Path` | SVG 패스 | [노드 타입 참조](./04-node-types.md) |
+| `Text` | 텍스트 (textGrowth, 폰트 스타일) | [노드 타입 참조](./04-node-types.md), [텍스트 가이드](./06-text-typography.md) |
+| `Icon` | 아이콘 라이브러리 (lucide, Material 등) | [노드 타입 참조](./04-node-types.md) |
+| `Script` | JavaScript 동적 콘텐츠 생성 | [스크립팅 가이드](./13-scripting-shaders.md) |
+| `Ref` | 컴포넌트 인스턴스 (재사용) | [컴포넌트 가이드](./07-components-slots.md) |
+| `Note` | 메모/주석 | [노드 타입 참조](./04-node-types.md) |
+| `Prompt` | AI 프롬프트 정의 | [노드 타입 참조](./04-node-types.md) |
+| `Context` | AI 컨텍스트 제공 | [노드 타입 참조](./04-node-types.md) |
+
+### Entity (모든 노드의 기본 속성)
+
+| 속성 | 타입 | 설명 |
+| --- | --- | --- |
+| `id` | `string` | 고유 식별자 (`/` 포함 불가, 자동 생성) |
+| `name` | `string` | 사람이 읽을 수 있는 이름 |
+| `reusable` | `boolean` | `true` 시 컴포넌트로 정의, `ref`로 재사용 가능 |
+| `theme` | `Theme` | 테마 축→값 매핑 |
+| `enabled` | `BooleanOrVariable` | `false` 시 숨김 |
+| `opacity` | `NumberOrVariable` | 불투명도 |
+| `rotation` | `NumberOrVariable` | 좌상단 기준 반시계 방향 회전 (도) |
+| `x`, `y` | `number` | 부모 기준 위치 (Flexbox에서는 무시) |
+| `layoutPosition` | `"auto" \| "absolute"` | 레이아웃 내 위치 |
+
+### Layout (Frame 전용)
+
+Frame 노드는 Flexbox 레이아웃을 지원합니다. 상세한 레이아웃 규칙은 [캔버스와 레이아웃](./05-canvas-layout.md)을 참조하세요.
+
+| 속성 | 옵션 | 설명 |
+| --- | --- | --- |
+| `layout` | `"none"`, `"vertical"`, `"horizontal"` | 레이아웃 방향 |
+| `gap` | `NumberOrVariable` | 자식 간 간격 |
+| `padding` | `NumberOrVariable \| [N,N] \| [N,N,N,N]` | 안쪽 여백 |
+| `justifyContent` | `start`, `center`, `end`, `space_between`, `space_around` | 주축 정렬 |
+| `alignItems` | `start`, `center`, `end` | 교차축 정렬 |
+
+### Sizing (동적 크기)
+
+| 값 | 설명 |
+| --- | --- |
+| `"fit_content"` | 자식 크기에 맞춤. fallback 가능: `fit_content(100)` |
+| `"fill_container"` | 부모 크기에 맞춤. fallback 가능: `fill_container(900)` |
+| 숫자 | 고정 픽셀 값 |
+
+> **순환 의존 주의:** 부모가 `fit_content`인데 모든 자식이 `fill_container`이면 순환 의존이 발생합니다.
+
 ---
 
 ## Design as Code 개념
