@@ -1,7 +1,7 @@
 # Pencil Dev 개발자 문서
 
 > https://pencil.dev, https://docs.pencil.dev를 기반으로 정리한 한국어 개발자 가이드입니다.
-> 최종 업데이트: 2026-06-07 (공식 문서 동기화 완료)
+> 최종 업데이트: 2026-06-08 (공식 문서 동기화 완료)
 
 Pencil은 IDE 내부에서 동작하는 벡터 디자인 도구입니다. "Design on canvas. Land in code." — 디자인과 코드를 같은 환경에서 작업하며, MCP를 통해 AI 어시스턴트가 디자인을 직접 조작할 수 있습니다.
 
