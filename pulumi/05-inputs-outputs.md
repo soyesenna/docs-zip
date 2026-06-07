@@ -41,6 +41,24 @@ Output은 Promise/Future와 유사하다. 프로비저닝이 완료되기 전에
 
 ---
 
+## Input과 Output이 필요한 이유: 선언형 vs 명령형
+
+Pulumi의 Input/Output 시스템은 **명령형(imperative) 프로그래밍 언어**로 작성된 프로그램에서 **선언형(declarative)** 인프라 관리를 가능하게 하는 핵심 메커니즘이다.
+
+**명령형** 프로그래밍에서는 단계별로 컴퓨터에 "VPC를 먼저 생성하고, 완료될 때까지 대기한 다음, VPC ID를 가져와서 Subnet을 생성하라"고 지시한다.
+
+**선언형** 프로그래밍에서는 "VPC와 그 안에 있는 Subnet을 원한다"고 원하는 상태만 기술하면, 시스템이 자동으로 VPC를 먼저 만들고 Subnet을 그 뒤에 만드는 순서를 결정한다.
+
+| 구분 | 명령형 | 선언형 (Pulumi) |
+|---|---|---|
+| 접근 방식 | 단계별 실행 순서를 직접 제어 | 원하는 상태를 선언, 시스템이 순서 결정 |
+| 의존성 관리 | 개발자가 명시적으로 대기/순서 제어 | Output을 Input으로 전달하면 자동 추적 |
+| 대표 예시 | "VPC 생성 → 대기 → ID 획득 → Subnet 생성" | "VPC의 `vpcId`를 Subnet의 `vpcId`에 전달" |
+
+Pulumi의 Input/Output은 한 리소스의 Output을 다른 리소스의 Input으로 전달할 때 의존성을 **자동으로 기록**하고, 리소스가 올바른 순서로 생성·수정·삭제되도록 보장한다. 개발자가 명시적인 순서 제어 로직을 작성할 필요가 없다.
+
+---
+
 ## 의존성 추적
 
 Pulumi 프로그램에서는 한 리소스의 Output을 다른 리소스의 Input으로 전달하는 경우가 많다. Pulumi는 이 관계를 통해 **자동으로 의존성을 추적**한다.
@@ -104,6 +122,70 @@ Input과 Output 타입은 각 언어 SDK에 정의된다.
 ### Input\<T\>에 평문 값 전달
 
 `pulumi.Input<string>`에는 일반 `string`을, `pulumi.Input<number>`에는 일반 `number`를 그대로 전달할 수 있다. Pulumi가 자동으로 래핑한다.
+
+### Python의 객체 타입 Input: Args vs ArgsDict
+
+Python에서 여러 값을 그룹화하는 객체 타입 Input은 **클래스(class)** 또는 **딕셔너리 리터럴(dictionary literal)** 두 가지 방식으로 표현할 수 있다.
+
+| 표현 방식 | 타입 접미사 | 특징 |
+|---|---|---|
+| 클래스 | `Args` | 타입 힌트 및 IDE 자동완성 지원 |
+| 딕셔너리 리터럴 | `ArgsDict` | 더 간결한 표기 가능 |
+
+> `ArgsDict` 접미사 타입은 2024년 7월에 도입되었다. 아직 업데이트되지 않은 Provider에서는 기존 딕셔너리 리터럴을 그대로 사용할 수 있지만, 새 타입의 타입 검사 혜택을 받을 수 없다.
+
+```python
+import pulumi_aws as aws
+
+# 딕셔너리 리터럴 사용 (ArgsDict)
+repo1 = aws.ecr.Repository("repo1-with-dictionary-literals",
+    image_tag_mutability="MUTABLE",
+    image_scanning_configuration={
+        "scan_on_push": True,
+    })
+
+# 클래스 사용 (Args)
+repo2 = aws.ecr.Repository("repo2-with-args",
+    image_tag_mutability="MUTABLE",
+    image_scanning_configuration=aws.ecr.RepositoryImageScanningConfigurationArgs(
+        scan_on_push=True
+    ))
+```
+
+### 리소스 식별자(Identity)와 Input
+
+Pulumi 리소스는 네 가지 식별 형태를 가진다. 각 형태는 용도가 다르며, 잘못된 형태를 인자에 전달하는 것은 Python 프로그램에서 타입 불일치 에러의 가장 흔한 원인이다.
+
+| 식별 형태 | 설명 | 접근 방식 | 타입 |
+|---|---|---|---|
+| Logical name | Pulumi가 상태 추적·URN 생성에 사용 | 생성자 첫 번째 인자 | `str` (평문) |
+| Physical name | 클라우드 공급자가 할당한 이름 | 리소스 속성 | `Output[str]` |
+| Physical ID | 클라우드 공급자가 할당한 ID (예: `vpc-0abc123`) | `resource.id` | `Output[str]` |
+| URN | Pulumi 내부 식별자 (`urn:pulumi:<stack>::<project>::<type>::<name>`) | `resource.urn` | `Output[str]` |
+
+**리소스 입력에 Physical ID 전달**: 한 리소스가 다른 리소스를 참조할 때(예: Subnet을 VPC 안에 배치), 상위 리소스의 `id` Output을 하위 리소스의 Input으로 전달한다.
+
+```python
+subnet = aws.ec2.Subnet("main-subnet",
+    vpc_id=vpc.id,          # Output[str] — AWS가 할당한 VPC ID
+    cidr_block="10.0.1.0/24",
+    availability_zone="us-east-1a",
+)
+```
+
+**ResourceOptions에는 리소스 객체 자체를 전달**: `parent`, `depends_on`, `provider`, `deleted_with` 등 `ResourceOptions` 필드는 URN이나 ID가 아닌 **리소스 객체 자체**를 받는다.
+
+```python
+# 올바른 예: 리소스 객체 전달
+subnet = aws.ec2.Subnet("main-subnet",
+    vpc_id=vpc.id,
+    cidr_block="10.0.1.0/24",
+    opts=pulumi.ResourceOptions(
+        parent=vpc,          # 리소스 객체 — vpc.urn, vpc.id 아님
+        depends_on=[vpc],    # 리소스 객체 리스트
+    ),
+)
+```
 
 ---
 
@@ -233,6 +315,97 @@ def validate(n: str) -> str:
 validated = name.apply(validate)
 ```
 
+### apply 체이닝 패턴
+
+`apply`의 반환값은 새로운 `Output<T>`이므로, 연속해서 `apply`를 호출하는 **체이닝**이 가능하다. 각 단계의 의존성은 자동으로 유지된다.
+
+```typescript
+// 체이닝: DNS 이름 → URL → 대문자 변환
+const upperUrl = server.publicDns
+    .apply(dns => `https://${dns}`)
+    .apply(url => url.toUpperCase());
+
+export const result = upperUrl;
+```
+
+```python
+# 체이닝: DNS 이름 → URL → 대문자 변환
+upper_url = server.public_dns \
+    .apply(lambda dns: f"https://{dns}") \
+    .apply(lambda url: url.upper())
+
+pulumi.export("result", upper_url)
+```
+
+### Output과 Secret
+
+Output이 Secret(비밀)으로 표시되면 Pulumi 엔진은 state 파일과 모든 전파 경로에서 해당 값을 **암호화**한다. Secret Output은 다음 방법으로 생성된다.
+
+| 방법 | 설명 |
+|---|---|
+| `pulumi.secret()` / `Output.secret()` | 기존 값을 Secret Output으로 래핑 |
+| `config.requireSecret()` | Secret 구성 값 읽기 |
+| `additionalSecretOutputs` 옵션 | 리소스의 특정 Output 속성을 Secret으로 표시 |
+| `apply` 또는 `all`에서 Secret 값 사용 | Secret Output과의 연산 결과도 자동으로 Secret |
+
+`apply` 또는 `Output.all`의 콜백 내부에서는 Secret이 **평문으로 복호화**되어 전달된다. 이 평문 값을 신뢰할 수 없는 코드에 전달하지 않도록 주의해야 한다.
+
+#### additionalSecretOutputs 리소스 옵션
+
+`additionalSecretOutputs` 리소스 옵션은 특정 Output 속성 이름 목록을 받아, 해당 속성을 Secret으로 처리한다. Pulumi가 Secret Input을 통해 자동 감지하는 값 목록에 추가된다.
+
+> **커스텀 리소스에만 적용**된다. TypeScript, C#, Java SDK에서는 `CustomResourceOptions`에 정의되어 있어 컴포넌트 리소스에 전달하면 컴파일 에러가 발생한다. Python과 Go SDK는 단일 리소스 옵션 타입을 노출하므로 컴파일 타임에는 허용되지만 컴포넌트 리소스에 적용해도 직접적인 효과는 없다.
+
+최상위(top-level) 리소스 속성만 Secret으로 지정할 수 있다. 민감한 데이터가 중첩된 속성 내부에 있으면 전체 최상위 Output 속성을 Secret으로 표시해야 한다.
+
+```typescript
+let db = new Database("db", { /*...*/ }, {
+    additionalSecretOutputs: ["password"],
+});
+```
+
+```python
+db = Database("db",
+    opts=pulumi.ResourceOptions(additional_secret_outputs=["password"]),
+)
+```
+
+```go
+db, err := NewDatabase(ctx, "db", &DatabaseArgs{/*...*/},
+    pulumi.AdditionalSecretOutputs([]string{"password"}))
+```
+
+```csharp
+var db = new Database("db", new DatabaseArgs(),
+    new CustomResourceOptions { AdditionalSecretOutputs = { "password" } });
+```
+
+```java
+var db = new Database("db",
+    DatabaseArgs.Empty,
+    CustomResourceOptions.builder()
+        .additionalSecretOutputs("password")
+        .build());
+```
+
+#### Output.isSecret
+
+Output 객체는 `isSecret` 속성을 통해 해당 Output이 Secret인지 확인할 수 있는 정보를 제공한다. 공식 문서에서는 Output을 직접 출력했을 때 나타나는 디버그 정보에서 `isSecret: Promise { <pending> }` 형태로 확인할 수 있으며, 이는 Output이 비동기적으로 Secret 여부를 추적함을 보여준다.
+
+```
+// TypeScript에서 Output 직접 출력 시 (권장하지 않음)
+OutputImpl {
+    __pulumiOutput: true,
+    resources: [Function (anonymous)],
+    allResources: [Function (anonymous)],
+    isKnown: Promise { <pending> },
+    isSecret: Promise { <pending> },
+    promise: [Function (anonymous)],
+    toString: [Function (anonymous)],
+    toJSON: [Function (anonymous)]
+}
+```
+
 ---
 
 ## all()로 여러 Output 조합
@@ -261,6 +434,43 @@ connection_string = Output.all(sql_server.name, database.name) \
 connection_string = Output.all(server=sql_server.name, db=database.name) \
     .apply(lambda args:
         f"Server=tcp:{args['server']}.database.windows.net;initial catalog={args['db']};")
+```
+
+```go
+connectionString := pulumi.All(sqlServer.Name, database.Name).ApplyT(
+    func(args []interface{}) pulumi.StringOutput {
+        server := args[0]
+        db := args[1]
+        return pulumi.Sprintf(
+            "Server=tcp:%s.database.windows.net;initial catalog=%s;",
+            server, db,
+        )
+    },
+)
+```
+
+```csharp
+// Output.All: 모든 입력이 같은 타입일 때 사용, ImmutableArray 생성
+var connectionString = Output.All(sqlServer.Name, database.Name)
+    .Apply(t => $"Server=tcp:{t[0]}.database.windows.net;initial catalog={t[1]};");
+
+// Output.Tuple: 각 값의 타입을 개별적으로 보존
+var connectionString2 = Output.Tuple(sqlServer.Name, database.Name)
+    .Apply(t => $"Server=tcp:{t.Item1}.database.windows.net;initial catalog={t.Item2};");
+```
+
+```java
+// Output.all: 모든 입력이 같은 타입일 때 사용
+var connectionString = Output.all(sqlServer.name(), database.name())
+    .applyValue(t -> String.format(
+        "Server=tcp:%s.database.windows.net;initial catalog=%s;",
+        t.get(0), t.get(1)));
+
+// Output.tuple: 각 값의 타입을 개별적으로 보존
+var connectionString2 = Output.tuple(sqlServer.name, database.name())
+    .applyValue(t -> String.format(
+        "Server=tcp:%s.database.windows.net;initial catalog=%s;",
+        t.t1, t.t2));
 ```
 
 ### 새 데이터 구조 생성
@@ -542,6 +752,33 @@ instance = aws.ec2.Instance(
     instance_type="t3.micro",
 )
 ```
+
+### Get Functions
+
+Get Functions는 Pulumi가 관리하지 않는 **기존 리소스를 참조**하는 데 사용하는 패키지 수준 함수다. `pulumi import` 명령이 리소스를 Pulumi 관리로 가져오는 것과 달리, Get Functions는 기존 리소스의 속성을 **읽기 전용**으로 조회한다.
+
+| 특징 | 설명 |
+|---|---|
+| 용도 | Pulumi가 관리하지 않는 기존 리소스 참조 |
+| 권한 | 읽기 전용, 업데이트/삭제 불가 |
+| 접근 방식 | 리소스 타입의 `get:` 스탠자 또는 정적 메서드 사용 |
+| 사용 시점 | 관리되지 않는 리소스의 ID를 알고 있고, 해당 속성을 Pulumi 관리 리소스에서 참조해야 할 때 |
+
+```typescript
+// ID로 기존 VPC를 조회하여 속성 참조
+const existingVpc = aws.ec2.Vpc.get("imported-vpc", "vpc-0abc123def456789");
+```
+
+```python
+# ID로 기존 VPC를 조회하여 속성 참조
+existing_vpc = aws.ec2.Vpc.get("imported-vpc", id="vpc-0abc123def456789")
+```
+
+> Get Functions로 접근한 리소스는 Pulumi에 의해 업데이트되거나 삭제되지 않는다.
+
+### Resource Methods
+
+Resource Methods는 Pulumi가 관리 중인 **특정 리소스 타입에 연결된 함수**로, 해당 리소스 인스턴스에서 호출하여 파생된 값을 반환한다. 예를 들어 관리형 Kubernetes 클러스터 리소스는 Kubeconfig 파일을 반환하는 리소스 메서드를 제공한다.
 
 ### 직접 형식 vs Output 형식
 
