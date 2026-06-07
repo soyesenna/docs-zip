@@ -58,16 +58,153 @@ Insert(section, { type: "text", name: "Subtitle", textGrowth: "fixed-width", wid
 
 ### fixed-width-height
 
-고정 너비 + 고정 높이. 줄바꿈 수행, 오버플로우 가능.
+고정 너비 + 고정 높이. 줄바꿈 수행, 텍스트 콘텐츠가 수직으로 오버플로우됨.
 
 | 속성 | 동작 |
 | --- | --- |
 | `width` | **필수 지정** |
 | `height` | **필수 지정** |
-| 줄바꿈 | 함 (오버플로우 가능) |
+| 줄바꿈 | 함 (텍스트 콘텐츠가 수직으로 오버플로우됨) |
 | 용도 | 높이를 명시적으로 제어해야 할 때만 사용 |
 
 > `fixed-width-height`는 높이를 오버라이드해야 할 때만 사용하세요. 대부분의 경우 `fixed-width` + `fill_container`가 더 좋습니다.
+
+---
+
+## 텍스트 스타일 속성
+
+`TextStyle` 인터페이스에 정의된 텍스트 스타일 속성입니다. 모든 속성은 선택 사항이며, 미지정 시 기본값이 적용됩니다.
+
+| 속성 | 타입 | 설명 |
+| --- | --- | --- |
+| `fontFamily` | `string \| Variable` | 글꼴 패밀리. 모든 Google Fonts 사용 가능 |
+| `fontSize` | `number \| Variable` | 글꼴 크기 (픽셀) |
+| `fontWeight` | `string \| Variable` | 글꼴 굵기. 예: `"400"`(Regular), `"600"`(Semi Bold), `"700"`(Bold) |
+| `letterSpacing` | `number \| Variable` | 글자 간격 (픽셀 단위). 양수면 넓게, 음수면 좁게 |
+| `fontStyle` | `string \| Variable` | 글꼴 스타일. 이탈릭 등 |
+| `underline` | `boolean \| Variable` | 밑줄 표시 여부 |
+| `strikethrough` | `boolean \| Variable` | 취소선(가로선) 표시 여부 |
+| `href` | `string` | 텍스트에 연결된 하이퍼링크 URL |
+| `lineHeight` | `number \| Variable` | 줄 간격 (fontSize의 비율). 자세한 내용은 아래 lineHeight 섹션 참조 |
+| `textAlign` | `"left" \| "center" \| "right" \| "justify"` | 가로 정렬. 자세한 내용은 아래 텍스트 정렬 섹션 참조 |
+| `textAlignVertical` | `"top" \| "middle" \| "bottom"` | 세로 정렬. 자세한 내용은 아래 텍스트 정렬 섹션 참조 |
+
+### fontWeight
+
+글꼴 굵기를 문자열로 지정합니다. 사용할 수 있는 일반적인 값은 다음과 같습니다.
+
+| 값 | 이름 | 설명 |
+| --- | --- | --- |
+| `"100"` | Thin | 가장 얇은 굵기 |
+| `"200"` | Extra Light | 매우 얇은 굵기 |
+| `"300"` | Light | 얇은 굵기 |
+| `"400"` | Regular | 기본 굵기 |
+| `"500"` | Medium | 중간 굵기 |
+| `"600"` | Semi Bold | 약간 굵은 굵기 |
+| `"700"` | Bold | 굵은 굵기 |
+| `"800"` | Extra Bold | 매우 굵은 굵기 |
+| `"900"` | Black | 가장 굵은 굵기 |
+
+> 글꼴이 해당 굵기를 지원해야 실제로 반영됩니다. 지원하지 않는 굵기를 지정하면 가장 가까운 굵기로 대체됩니다.
+
+```javascript
+// 제목에 Semi Bold 적용
+Insert(section, {
+  type: "text",
+  name: "Heading",
+  fontFamily: "Inter",
+  fontWeight: "600",
+  content: "제목 텍스트",
+  fontSize: 24,
+  fill: "$text-primary"
+})
+```
+
+### letterSpacing
+
+글자 사이의 간격을 픽셀 단위로 설정합니다.
+
+```javascript
+// 넓은 글자 간격 (대문자 타이틀에 유용)
+Insert(parent, {
+  type: "text",
+  fontFamily: "Inter",
+  content: "WELCOME",
+  fontSize: 12,
+  letterSpacing: 2,
+  fill: "$text-secondary"
+})
+
+// 좁은 글자 간격
+Insert(parent, {
+  type: "text",
+  fontFamily: "Inter",
+  content: "Tight text",
+  fontSize: 14,
+  letterSpacing: -0.5,
+  fill: "$text-primary"
+})
+```
+
+### fontStyle
+
+글꼴의 스타일 변형을 지정합니다. 이탈릭 등의 스타일을 적용할 수 있습니다.
+
+```javascript
+// 이탈릭 스타일 적용
+Insert(section, {
+  type: "text",
+  fontFamily: "Inter",
+  fontStyle: "italic",
+  content: "강조된 텍스트",
+  fontSize: 14,
+  fill: "$text-secondary"
+})
+```
+
+### underline / strikethrough
+
+텍스트 장식 속성입니다. 부울 값으로 밑줄과 취소선을 각각 독립적으로 제어합니다.
+
+```javascript
+// 밑줄이 있는 링크 텍스트
+Insert(parent, {
+  type: "text",
+  fontFamily: "Inter",
+  content: "자세히 보기",
+  fontSize: 14,
+  underline: true,
+  href: "https://example.com",
+  fill: "$accent"
+})
+
+// 취소선이 있는 할인 가격
+Insert(row, {
+  type: "text",
+  fontFamily: "Inter",
+  content: "₩29,000",
+  fontSize: 14,
+  strikethrough: true,
+  fill: "$text-secondary"
+})
+```
+
+### href
+
+텍스트 노드에 하이퍼링크 URL을 연결합니다. 클릭 시 해당 URL로 이동합니다.
+
+```javascript
+// 링크가 있는 텍스트
+Insert(nav, {
+  type: "text",
+  fontFamily: "Inter",
+  content: "문서 보기",
+  fontSize: 14,
+  href: "https://docs.example.com",
+  fill: "$accent",
+  underline: true
+})
+```
 
 ---
 
@@ -86,6 +223,26 @@ Insert(container, { type: "text", content: "abc", textGrowth: "fixed-width", wid
 
 // ❌ 텍스트 크기 추측 (항상 레이아웃으로 해결)
 Insert(container, { type: "text", content: "Long text...", width: 276, height: 42, fontSize: 14 })
+```
+
+### 순환 의존성 안티패턴
+
+부모가 `fit_content`(기본값)인데 모든 자식이 `fill_container`를 사용하면 순환 의존성이 발생합니다. 부모는 자식 크기의 합으로 자신의 크기를 결정하려 하지만, 자식은 부모 크기에 맞추려 하므로 크기가 0으로 붕괴됩니다.
+
+```javascript
+// ❌ 부모가 fit_content인데 자식이 모두 fill_container → 0 너비로 붕괴
+badParent = Insert(screen, { type: "frame", layout: "vertical" })
+Insert(badParent, { type: "text", textGrowth: "fixed-width", width: "fill_container", content: "텍스트", fontSize: 14, fill: "#000" })
+// 결과: badParent의 너비가 0이 되고, 자식 텍스트도 보이지 않음
+
+// ✅ 부모에 명시적 너비를 지정하여 순환 해결
+goodParent = Insert(screen, { type: "frame", layout: "vertical", width: 400 })
+Insert(goodParent, { type: "text", textGrowth: "fixed-width", width: "fill_container", content: "텍스트", fontSize: 14, fill: "#000" })
+
+// ✅ 또는 부모를 fill_container로 설정하여 상위에서 크기를 물려받기
+outerFrame = Insert(screen, { type: "frame", layout: "vertical", width: 400 })
+innerFrame = Insert(outerFrame, { type: "frame", layout: "vertical", width: "fill_container" })
+Insert(innerFrame, { type: "text", textGrowth: "fixed-width", width: "fill_container", content: "텍스트", fontSize: 14, fill: "#000" })
 ```
 
 ---
@@ -131,7 +288,7 @@ Insert(container, { type: "text", content: "Long text...", width: 276, height: 4
 | --- | --- |
 | `1.0` | 100% (글자 크기와 동일) |
 | `1.5` | 150% (여유 있는 줄간격) |
-| `2.0` | 200% (넓은 줄간격) |
+| `2.0` | 200% (넓은 준간격) |
 
 미지정 시 글꼴의 기본 lineHeight가 적용됩니다.
 
