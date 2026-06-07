@@ -1,7 +1,7 @@
 # Pulumi 보안과 컴플라이언스
 
 > https://www.pulumi.com/docs/iac/operations/iac-least-privileges/
-> https://www.pulumi.com/docs/pulumi-cloud/
+> https://www.pulumi.com/docs/administration/organizations-teams/
 > https://www.pulumi.com/docs/administration/security-compliance/
 > https://www.pulumi.com/docs/administration/security-compliance/audit-logs/
 > https://www.pulumi.com/docs/administration/security-compliance/customer-managed-keys/
@@ -14,6 +14,9 @@
 > https://www.pulumi.com/docs/administration/self-hosting/operations/security-hardening/
 > https://www.pulumi.com/docs/iac/concepts/secrets/
 > https://www.pulumi.com/docs/administration/self-hosting/
+> https://www.pulumi.com/docs/iac/cli/commands/pulumi_login/
+> https://www.pulumi.com/docs/reference/cloud-rest-api/oauth-token-exchange/
+> https://www.pulumi.com/docs/iac/cli/commands/pulumi_stack_change-secrets-provider/
 
 Pulumi IaC는 인프라 프로비저닝 시 최소 권한(Least Privilege) 보안 태세를 채택하여 보안과 컴플라이언스를 동시에 충족한다. Pulumi Cloud는 RBAC(Role-Based Access Control), OIDC(OpenID Connect) 인증, 시크릿 암호화, 감사 로그, SAML SSO, SCIM 사용자 프로비저닝, Customer Managed Keys 등 다계층 보안 기능을 제공하며, Business Critical 에디션에서는 셀프 호스팅을 통한 완전한 인프라 제어가 가능하다.
 
@@ -175,8 +178,7 @@ Enterprise/Business Critical 에디션에서는 커스텀 역할을 생성하여
 | `Read` | 스택 상태 조회 | 환경 정의 조회 (시크릿 복호화 불가) | Insights 계정 조회 |
 | `Write` | 스택 업데이트 | 환경 업데이트 | - |
 | `Admin` | 전체 관리 | 환경 생성/수정/삭제 | 전체 관리 |
-| `open` | - | 시크릿 복호화 및 동적 자격 증명 조회 | - |
-| `opener` | - | 시크릿 복호화 및 동적 자격 증명 조회 | - |
+| `open` (`Environment opener`) | - | 시크릿 복호화 및 동적 자격 증명 조회 | - |
 
 **ESC 환경 권한 값(API/CLI):**
 
@@ -202,6 +204,8 @@ OIDC Issuers를 사용하면 외부 서비스가 하드코딩된 자격 증명 �
 1. 외부 워크로드가 호스트 서비스에서 OIDC id_token 획득
 2. 해당 id_token을 Pulumi Cloud에 전달하여 단기 Pulumi 액세스 토큰으로 교환
 3. Pulumi 액세스 토큰으로 Pulumi 작업 수행
+
+> **OIDC 토큰의 admin 권한:** OIDC를 통해 발급된 토큰은 기본적으로 admin 권한을 갖지 않는다. 스택 생성/삭제 등 상위 권한이 필요한 작업을 수행하려면 토큰 교환 시 `scope` 파라미터에 `admin`을 명시해야 한다. 예: `scope: "admin"` 또는 `scope: "team:my-team admin"`. admin scope 없이 발급된 OIDC 토큰으로 스택 생성/삭제를 시도하면 권한 부족 오류가 발생한다.
 
 ### 에디션별 사용 가능 토큰 유형
 
@@ -268,17 +272,35 @@ openssl x509 -in certificate.crt -fingerprint -sha256 -noout > sha256
 
 Pulumi CLI는 `pulumi login`을 통해 OIDC 토큰 교환을 기본 지원한다. 대부분의 사용 사례에 권장되는 방식이다.
 
+**주요 OIDC 로그인 플래그:**
+
+| 플래그 | 설명 |
+|---|---|
+| `--oidc-token` | OIDC 토큰. 원시 토큰 값 또는 `file://` 접두사가 있는 파일 경로 |
+| `--oidc-org` | 토큰 교환 audience에 사용할 조직 |
+| `--oidc-team` | 팀 토큰 교환 시 대상 팀 |
+| `--oidc-user` | 개인 토큰 교환 시 대상 사용자 |
+| `--oidc-expiration` | 클라우드 백엔드 액세스 토큰 만료 시간. duration 형식 사용 (예: `15m`, `24h`) |
+
 ```bash
 # 기본 OIDC 로그인
 pulumi login --oidc-token <token> --oidc-org <org-name>
 
-# 파일 경로에서 토큰 읽기
+# 파일 경로에서 토큰 읽기 (file:// 접두사 사용)
 pulumi login --oidc-token file:///path/to/token --oidc-org <org-name>
 
 # 추가 옵션: 팀, 사용자, 만료 시간 지정
 pulumi login --oidc-token <token> --oidc-org <org-name> \
     --oidc-team <team-name> \
-    --oidc-expiration <seconds>
+    --oidc-expiration <duration>
+
+# 개인 토큰 교환 시 사용자 지정
+pulumi login --oidc-token <token> --oidc-org <org-name> \
+    --oidc-user <user-login>
+
+# 만료 시간은 duration 형식 사용 (예: 15m, 24h)
+pulumi login --oidc-token <token> --oidc-org <org-name> \
+    --oidc-expiration 15m
 ```
 
 > **주의:** `OIDC token exchange failed` 오류 발생 시 백엔드 URL을 명시적으로 포함해야 한다:
@@ -286,7 +308,7 @@ pulumi login --oidc-token <token> --oidc-org <org-name> \
 
 ### REST API를 통한 토큰 교환
 
-고급 시나리오에서 직접 토큰 교환을 제어해야 하는 경우 OAuth 2.0 토큰 엔드포인트를 호출한다. `application/json`과 `application/x-www-form-urlencoded` 모두 지원한다.
+고급 시나리오에서 직접 토큰 교환을 제어해야 하는 경우 OAuth 2.0 토큰 엔드포인트를 호출한다. `application/json`과 `application/x-www-form-urlencoded` 모두 지원한다. 자세한 API 레퍼런스는 [OAuth Token Exchange](https://www.pulumi.com/docs/reference/cloud-rest-api/oauth-token-exchange/) 문서를 참조한다.
 
 **파라미터:**
 
@@ -295,7 +317,7 @@ pulumi login --oidc-token <token> --oidc-org <org-name> \
 | `audience` | `urn:pulumi:org:{ORG_NAME}` |
 | `grant_type` | `urn:ietf:params:oauth:grant-type:token-exchange` |
 | `subject_token_type` | `urn:ietf:params:oauth:token-type:id_token` |
-| `requested_token_type` | 조직 토큰: `urn:pulumi:token-type:access_token:organization`, 팀 토큰: `urn:pulumi:token-type:access_token:team`, 개인 토큰: `urn:pulumi:token-type:access_token:personal` |
+| `requested_token_type` | 조직 토큰: `urn:pulumi:token-type:access_token:organization`, 팀 토큰: `urn:pulumi:token-type:access_token:team`, 개인 토큰: `urn:pulumi:token-type:access_token:personal`, Deployment Runner 토큰: `urn:pulumi:token-type:access_token:runner` (Business Critical 에디션 전용) |
 | `scope` | 팀 또는 개인 토큰 요청 시 필요. 형식: `team:{TEAM_NAME}` 또는 `user:{USER_LOGIN}` |
 | `expiration` | 토큰 만료 시간(초). 기본값: 2시간 |
 | `subject_token` | OIDC 프로바이더가 발급한 id_token |
@@ -426,6 +448,18 @@ Pulumi는 GitHub Actions 외에도 다음과 같은 주요 CI/CD 플랫폼과 �
 | Organization token | 조직 자체로 인증. 감사 로그에 조직으로 기록 | Enterprise, Business Critical |
 | Team token | 특정 팀으로 인증. 팀의 역할에 따른 권한 | Enterprise, Business Critical |
 
+> **레거시 조직 토큰(Legacy Organization Tokens):** RBAC가 도입되기 전에 생성된 조직 토큰은 **Standard**(현재 RBAC의 `Member` 역할에 해당) 또는 **Admin** 고정 권한을 가진다. 이 레거시 토큰들은 여전히 작동하지만, 새로운 자동화에는 RBAC 기반 커스텀 역할을 할당한 조직/팀 토큰을 사용하는 것이 권장된다. 기존 Standard/Admin 토큰을 사용 중인 경우, RBAC 마이그레이션을 위해 해당 토큰을 삭제하고 커스텀 역할이 할당된 새 조직 토큰으로 교체해야 한다.
+
+### 토큰별 권한(RBAC)
+
+| 토큰 유형 | 권한 결정 방식 |
+|---|---|
+| Personal token | 생성한 사용자의 모든 조직 멤버십, 팀 멤버십, 역할 할당을 그대로 상속. 사용자가 속한 모든 Pulumi Cloud 조직의 권한 포함 |
+| Organization token | 생성 시 할당된 RBAC 역할에 따라 권한 결정. 명시적 역할이 없으면 조직의 기본 멤버 역할(default member role)을 받음. 개인 토큰과 달리 토큰이 생성된 단일 조직으로만 접근이 제한됨. 역할을 통해 읽기 전용 접근부터 전체 관리 제어까지 세밀하게 조정 가능 |
+| Team token | 토큰이 속한 팀에 할당된 역할에 따라 실시간으로 권한 결정. 팀의 역할 할당이 변경되면 토큰의 권한도 즉시 반영됨. 특정 팀이 관리하는 리소스에만 접근을 제한하는 CI/CD 파이프라인에 적합 |
+
+> **참고:** 액세스 토큰은 조직의 접근 관리 설정에서 모든 멤버의 스택 생성을 허용하거나, 토큰에 할당된 역할에 `stack:create` 스코프가 포함된 경우 스택을 생성할 수 있다. Admin 조직 토큰은 항상 이 기능을 갖는다. 스택 생성자는 자동으로 소유자가 되며 삭제 권한을 포함한 모든 스택 권한을 갖는다.
+
 ### 토큰 보안 모범 사례
 
 | 권장 사항 | 설명 |
@@ -516,6 +550,15 @@ pulumi stack change-secrets-provider "<secrets-provider>"
 ```
 
 지원 프로바이더: `default`, `passphrase`, `awskms`, `azurekeyvault`, `gcpkms`, `hashivault`
+
+**`pulumi stack change-secrets-provider` CLI 옵션:**
+
+| 플래그 | 설명 |
+|---|---|
+| `-s`, `--stack` | 대상 스택 이름. 생략 시 현재 스택 사용 |
+| `-h`, `--help` | 도움말 |
+
+자세한 CLI 레퍼런스는 [pulumi stack change-secrets-provider](https://www.pulumi.com/docs/iac/cli/commands/pulumi_stack_change-secrets-provider/) 문서를 참조한다.
 
 ### AWS KMS 고급 옵션
 
