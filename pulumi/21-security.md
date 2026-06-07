@@ -274,13 +274,13 @@ Pulumi CLI는 `pulumi login`을 통해 OIDC 토큰 교환을 기본 지원한다
 
 **주요 OIDC 로그인 플래그:**
 
-| 플래그 | 설명 |
-|---|---|
-| `--oidc-token` | OIDC 토큰. 원시 토큰 값 또는 `file://` 접두사가 있는 파일 경로 |
-| `--oidc-org` | 토큰 교환 audience에 사용할 조직 |
-| `--oidc-team` | 팀 토큰 교환 시 대상 팀 |
-| `--oidc-user` | 개인 토큰 교환 시 대상 사용자 |
-| `--oidc-expiration` | 클라우드 백엔드 액세스 토큰 만료 시간. duration 형식 사용 (예: `15m`, `24h`) |
+| 플래그 | 타입 | 설명 |
+|---|---|---|
+| `--oidc-token` | string | OIDC 토큰. 원시 토큰 값 또는 `file://` 접두사가 있는 파일 경로 |
+| `--oidc-org` | string | 토큰 교환 audience에 사용할 조직 |
+| `--oidc-team` | string | 팀 토큰 교환 시 대상 팀 |
+| `--oidc-user` | string | 개인 토큰 교환 시 대상 사용자 |
+| `--oidc-expiration` | duration | 클라우드 백엔드 액세스 토큰 만료 시간. duration 형식 사용 (예: `15m`, `24h`) |
 
 ```bash
 # 기본 OIDC 로그인
@@ -308,7 +308,7 @@ pulumi login --oidc-token <token> --oidc-org <org-name> \
 
 ### REST API를 통한 토큰 교환
 
-고급 시나리오에서 직접 토큰 교환을 제어해야 하는 경우 OAuth 2.0 토큰 엔드포인트를 호출한다. `application/json`과 `application/x-www-form-urlencoded` 모두 지원한다. 자세한 API 레퍼런스는 [OAuth Token Exchange](https://www.pulumi.com/docs/reference/cloud-rest-api/oauth-token-exchange/) 문서를 참조한다.
+고급 시나리오에서 직접 토큰 교환을 제어해야 하는 경우 OAuth 2.0 토큰 엔드포인트를 호출한다. `application/json`과 `application/x-www-form-urlencoded` 모두 지원한다. 전체 API 레퍼런스(요청/응답 스키마, 에러 코드, 인증 방식)는 [OAuth Token Exchange 참조 페이지](https://www.pulumi.com/docs/reference/cloud-rest-api/oauth-token-exchange/)에서 확인한다.
 
 **파라미터:**
 
@@ -445,18 +445,20 @@ Pulumi는 GitHub Actions 외에도 다음과 같은 주요 CI/CD 플랫폼과 �
 | 유형 | 설명 | 가용 에디션 |
 |---|---|---|
 | Personal token | 생성한 사용자와 동일한 권한. 모든 조직 멤버십 포함 | 모든 에디션 |
-| Organization token | 조직 자체로 인증. 감사 로그에 조직으로 기록 | Enterprise, Business Critical |
-| Team token | 특정 팀으로 인증. 팀의 역할에 따른 권한 | Enterprise, Business Critical |
+| Organization token | 조직 자체로 인증. 감사 로그에 조직으로 기록. RBAC 역할 할당 가능 | Enterprise, Business Critical |
+| Team token | 특정 팀으로 인증. 팀에 할당된 RBAC 역할에 따른 권한 | Enterprise, Business Critical |
 
 > **레거시 조직 토큰(Legacy Organization Tokens):** RBAC가 도입되기 전에 생성된 조직 토큰은 **Standard**(현재 RBAC의 `Member` 역할에 해당) 또는 **Admin** 고정 권한을 가진다. 이 레거시 토큰들은 여전히 작동하지만, 새로운 자동화에는 RBAC 기반 커스텀 역할을 할당한 조직/팀 토큰을 사용하는 것이 권장된다. 기존 Standard/Admin 토큰을 사용 중인 경우, RBAC 마이그레이션을 위해 해당 토큰을 삭제하고 커스텀 역할이 할당된 새 조직 토큰으로 교체해야 한다.
 
 ### 토큰별 권한(RBAC)
 
-| 토큰 유형 | 권한 결정 방식 |
-|---|---|
-| Personal token | 생성한 사용자의 모든 조직 멤버십, 팀 멤버십, 역할 할당을 그대로 상속. 사용자가 속한 모든 Pulumi Cloud 조직의 권한 포함 |
-| Organization token | 생성 시 할당된 RBAC 역할에 따라 권한 결정. 명시적 역할이 없으면 조직의 기본 멤버 역할(default member role)을 받음. 개인 토큰과 달리 토큰이 생성된 단일 조직으로만 접근이 제한됨. 역할을 통해 읽기 전용 접근부터 전체 관리 제어까지 세밀하게 조정 가능 |
-| Team token | 토큰이 속한 팀에 할당된 역할에 따라 실시간으로 권한 결정. 팀의 역할 할당이 변경되면 토큰의 권한도 즉시 반영됨. 특정 팀이 관리하는 리소스에만 접근을 제한하는 CI/CD 파이프라인에 적합 |
+조직 및 팀 토큰은 생성 시 RBAC 역할을 할당받아 해당 역할의 권한 범위 내에서만 작동한다. 역할은 기본 역할(default role) 또는 커스텀 역할이 될 수 있으며, Settings > Access Tokens에서 토큰 생성 시 지정한다.
+
+| 토큰 유형 | 권한 결정 방식 | 역할 할당 |
+|---|---|---|
+| Personal token | 생성한 사용자의 모든 조직 멤버십, 팀 멤버십, 역할 할당을 그대로 상속. 사용자가 속한 모든 Pulumi Cloud 조직의 권한 포함 | 사용자 역할 자동 상속 |
+| Organization token | 생성 시 할당된 RBAC 역할에 따라 권한 결정. 명시적 역할이 없으면 조직의 기본 멤버 역할(default member role)을 받음. 개인 토큰과 달리 토큰이 생성된 단일 조직으로만 접근이 제한됨. 역할을 통해 읽기 전용 접근부터 전체 관리 제어까지 세밀하게 조정 가능 | 토큰 생성 시 명시적 역할 할당 |
+| Team token | 토큰이 속한 팀에 할당된 역할에 따라 실시간으로 권한 결정. 팀의 역할 할당이 변경되면 토큰의 권한도 즉시 반영됨. 특정 팀이 관리하는 리소스에만 접근을 제한하는 CI/CD 파이프라인에 적합 | 팀에 할당된 역할 자동 반영 |
 
 > **참고:** 액세스 토큰은 조직의 접근 관리 설정에서 모든 멤버의 스택 생성을 허용하거나, 토큰에 할당된 역할에 `stack:create` 스코프가 포함된 경우 스택을 생성할 수 있다. Admin 조직 토큰은 항상 이 기능을 갖는다. 스택 생성자는 자동으로 소유자가 되며 삭제 권한을 포함한 모든 스택 권한을 갖는다.
 
@@ -551,14 +553,14 @@ pulumi stack change-secrets-provider "<secrets-provider>"
 
 지원 프로바이더: `default`, `passphrase`, `awskms`, `azurekeyvault`, `gcpkms`, `hashivault`
 
+> **참고:** 시크릿 암호화의 개념 설명은 [Secrets](https://www.pulumi.com/docs/iac/concepts/secrets/) 페이지에서, 각 프로바이더 설정 및 CLI 명령어 레퍼런스는 [pulumi stack change-secrets-provider](https://www.pulumi.com/docs/iac/cli/commands/pulumi_stack_change-secrets-provider/) 명령어 페이지에서 각각 확인할 수 있다. 공식 문서에서 개념 페이지와 CLI 명령어 페이지가 분리되어 있다.
+
 **`pulumi stack change-secrets-provider` CLI 옵션:**
 
 | 플래그 | 설명 |
 |---|---|
 | `-s`, `--stack` | 대상 스택 이름. 생략 시 현재 스택 사용 |
 | `-h`, `--help` | 도움말 |
-
-자세한 CLI 레퍼런스는 [pulumi stack change-secrets-provider](https://www.pulumi.com/docs/iac/cli/commands/pulumi_stack_change-secrets-provider/) 문서를 참조한다.
 
 ### AWS KMS 고급 옵션
 
