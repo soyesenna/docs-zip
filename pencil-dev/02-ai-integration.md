@@ -2,7 +2,23 @@
 
 > 원문: https://docs.pencil.dev/getting-started/ai-integration
 
-Pencil은 MCP(Model Context Protocol)를 통한 AI 어시스턴트 통합으로 강력한 디자인 자동화를 제공합니다.
+Pencil은 MCP(Model Context Protocol)를 통한 AI 어시스턴트 통합으로 강력한 디자인 자동화와 워크플로를 제공합니다.
+
+---
+
+## 지원 AI 어시스턴트
+
+Pencil은 MCP를 통해 다음 AI 도구들과 연동됩니다:
+
+| AI 어시스턴트 | 설명 |
+| --- | --- |
+| **Claude Code** (CLI + IDE) | Anthropic Claude 기반 CLI 및 IDE 내장 패널 |
+| **Claude Desktop** | Claude 데스크톱 애플리케이션 |
+| **Cursor** | AI 기반 IDE |
+| **Windsurf IDE** (Codeium) | Codeium에서 제공하는 AI IDE |
+| **Codex CLI** (OpenAI) | OpenAI 기반 명령줄 도구 |
+| **Antigravity IDE** | Pencil 내장 IDE |
+| **OpenCode CLI** | 오픈소스 CLI 도구 |
 
 ---
 
@@ -10,7 +26,7 @@ Pencil은 MCP(Model Context Protocol)를 통한 AI 어시스턴트 통합으로 
 
 ### MCP란?
 
-MCP는 AI 어시스턴트가 디자인 파일과 상호작용할 수 있도록 하는 프로토콜입니다. AI가 .pen 파일을 프로그래밍 방식으로 읽고 수정할 수 있는 API 역할을 합니다.
+MCP는 AI 어시스턴트가 디자인 파일과 상호작용할 수 있도록 하는 프로토콜입니다. AI가 `.pen` 파일을 프로그래밍 방식으로 읽고 수정할 수 있는 API 역할을 합니다.
 
 ### 작동 방식
 
@@ -37,9 +53,14 @@ MCP는 AI 어시스턴트가 디자인 파일과 상호작용할 수 있도록 �
 ### 설정
 
 **사전 요구사항:**
-- Claude Code CLI 설치 및 인증
+- Claude Code CLI 설치
+- 인증: `claude`
 - Pencil 실행 중
 - `.pen` 파일 열림 상태
+
+### Antigravity/VSCode에서 Claude Code 패널 사용
+
+Antigravity IDE 또는 VSCode에서 Pencil 확장과 함께 Claude Code 패널을 사용할 수 있습니다. Pencil이 실행 중이면 Claude Code 패널이 MCP를 통해 자동으로 Pencil 도구에 접근합니다.
 
 ### 기본 워크플로
 
@@ -96,19 +117,23 @@ MCP는 AI 어시스턴트가 디자인 파일과 상호작용할 수 있도록 �
 3. Claude Code 인증
 4. MCP 연결 확인: Settings → Tools & MCP
 
+### Cursor에서 Pencil 확장 사용
+
+Cursor에서 Pencil 확장을 설치하고 활성화하면 MCP를 통해 자동으로 Pencil 도구에 접근합니다.
+
 ### Cursor 전용 기능
 
 | 기능 | 설명 |
 | --- | --- |
-| 인라인 편집 | Pencil에서 요소 선택 → Cursor AI 채팅으로 수정 → .pen 파일에 즉시 반영 |
-| 코드베이스 인식 | Cursor가 코드와 디자인을 모두 인식 → 컴포넌트 동기화 요청 가능 |
+| 인라인 편집 | Pencil에서 요소 선택 → Cursor AI 채팅으로 수정 → `.pen` 파일에 즉시 반영 |
+| 코드베이스 인식 | Cursor가 코드와 디자인을 모두 인식 → 컴포넌트 동기화 요청 가능, 자동으로 일관성 유지 |
 
 ### 일반적인 문제
 
 | 문제 | 해결 |
 | --- | --- |
-| "Need Cursor Pro" | Cursor Pro 구독 필요 가능성 |
-| 프롬프트 패널 누락 | 활성화/로그인 확인 → Cursor 재시작 → MCP 설정 확인 |
+| "Need Cursor Pro" | 일부 기능은 Cursor Pro 구독이 필요할 수 있음. Cursor 가격 페이지에서 현재 제한 확인 |
+| 프롬프트 패널 누락 | 활성화/로그인 확인 → Cursor 재시작 → MCP 설정에서 연결 확인 |
 
 ---
 
@@ -129,35 +154,56 @@ MCP는 AI 어시스턴트가 디자인 파일과 상호작용할 수 있도록 �
 > Generate a color scheme based on blue
 ```
 
+### 장점
+
+| 장점 | 설명 |
+| --- | --- |
+| 명령줄 워크플로 | 터미널에서 직접 디자인 생성 및 수정 |
+| 스크립트 가능한 디자인 생성 | 스크립트를 통한 반복적 디자인 자동화 |
+| 빌드 도구 통합 | 빌드 파이프라인과 연동 가능 |
+
+### 알려진 이슈
+
+| 이슈 | 설명 |
+| --- | --- |
+| `config.toml` 수정 문제 | Pencil이 Codex의 `config.toml`을 수정하거나 복제할 수 있음. 공식적으로 인지된 이슈이며 조사 중. 최초 사용 전 설정 파일 백업 권장 |
+
 ---
 
 ## MCP 도구 목록
 
-Pencil MCP 서버가 AI 어시스턴트에게 제공하는 도구:
+AI 어시스턴트가 Pencil MCP 서버에 연결하면 다음 도구에 접근할 수 있습니다:
 
-### 디자인 도구
-
-| 도구 | 설명 |
-| --- | --- |
-| `get_editor_state` | 현재 활성 편집기, 선택 상태, 디자인 정보 조회 |
-| `batch_get` | 노드 ID 또는 검색 패턴으로 노드 배치 조회 |
-| `batch_design` | JavaScript 스니펫으로 디자인 생성/수정 |
-| `get_screenshot` | 특정 노드의 스크린샷 캡처 |
-| `export_nodes` | 노드를 PNG/JPEG/WEBP/PDF로 내보내기 |
-| `snapshot_layout` | 레이아웃 구조 확인 (클리핑, 겹침 등 문제 탐지) |
-
-### 변수 및 테마 도구
+### Design Tools
 
 | 도구 | 설명 |
 | --- | --- |
-| `get_variables` | 문서에 정의된 변수와 테마 조회 |
-| `set_variables` | 변수와 테마 업데이트 |
+| `batch_design` | 디자인 요소 생성, 수정, 조작. Insert, Copy, Update, Replace, Move, Delete 작업 및 이미지 생성/배치 |
+| `batch_get` | 노드 ID 또는 검색 패턴으로 디자인 컴포넌트와 계층 구조 조회. 요소 검색 및 컴포넌트 구조 검사 |
 
-### 가이드 도구
+### Analysis Tools
 
 | 도구 | 설명 |
 | --- | --- |
-| `get_guidelines` | 작업별 가이드와 스타일 프리셋 로드 |
+| `get_screenshot` | 디자인 미리보기 렌더링, 시각적 출력 검증, 변경 전후 비교 |
+| `snapshot_layout` | 레이아웃 구조 분석, 포지셔닝 이슈 탐지, 겹치는 요소 찾기 |
+| `get_editor_state` | 현재 편집기 컨텍스트, 선택 정보, 활성 파일 상세 조회 |
+
+### Variables & Theming
+
+| 도구 | 설명 |
+| --- | --- |
+| `get_variables` / `set_variables` | 디자인 토큰 읽기, 테마 값 업데이트, CSS와 동기화 |
+
+### And More
+
+각 IDE에서 사용 가능한 전체 도구 목록을 확인하는 방법:
+
+| IDE | 확인 방법 |
+| --- | --- |
+| Cursor | Settings → Tools & MCP |
+| VS Code | MCP 설정 확인 |
+| Codex | `/mcp` 실행 후 Pencil 도구 검사 |
 
 ---
 
@@ -168,30 +214,63 @@ Pencil MCP 서버가 AI 어시스턴트에게 제공하는 도구:
 AI에게 전체 화면을 설명하면 batch_design API를 통해 자동 생성:
 
 ```
-"Create a web app dashboard with:
+"Create a dashboard with:
  - Sidebar navigation with 5 items
  - Main content area with 3 metric cards
  - Recent activity table with 5 rows
  - Use the Design System guide"
 ```
 
-### 디자인 시스템 관리
+**스타일 가이드 적용:**
 
 ```
-"Create a complete design system with:
- - Button variants (primary, secondary, outline, ghost, destructive)
- - Input fields
- - Cards with header, content, and actions slots
- - Sidebar with navigation items
- - Use semantic color tokens"
+"Create a dashboard using Material Design principles"
+"Design a landing page with modern, minimal aesthetics"
+"Build components following our design system in design-system.pen"
+```
+
+**배치 작업:**
+
+```
+"Create 5 variations of this button component"
+"Generate a complete form with all input types"
+"Design an entire landing page with hero, features, pricing, and footer"
+```
+
+### 디자인 시스템 관리
+
+**일관성 유지:**
+
+```
+"Ensure all buttons use the primary color variable"
+"Update all headings to use the typography scale"
+"Apply 8px spacing grid to all elements"
+```
+
+**컴포넌트 라이브러리:**
+
+```
+"Create a complete button component with all variants"
+"Generate form input components (text, select, checkbox, radio)"
+"Build a card component with image, title, description, and actions"
 ```
 
 ### 코드-디자인 워크플로
 
+**기존 앱 가져오기:**
+
 ```
-"Read the React components in src/components/
- and create matching .pen design components
- with proper variants and design tokens"
+"Recreate all components from src/components in Pencil"
+"Import the design system from our Tailwind config"
+"Analyze the codebase and create matching designs"
+```
+
+**변경 동기화:**
+
+```
+"Update all React components to match the Pencil designs"
+"Apply the new color scheme to both design and code"
+"Sync typography variables between CSS and Pencil"
 ```
 
 ---
@@ -200,32 +279,102 @@ AI에게 전체 화면을 설명하면 batch_design API를 통해 자동 생성:
 
 ### 효과적인 프롬프트
 
-| 원칙 | 설명 |
+**구체적으로 작성 (Be specific):**
+
+| 프롬프트 | 평가 |
 | --- | --- |
-| 구체적으로 | "버튼"보다 "파란색 기본 버튼, 둥근 모서리, 흰색 텍스트" |
-| 반복적 디자인 | 한 번에 완벽한 디자인을 요구하지 말고, 점진적으로 개선 |
-| 검증 | 작업 후 스크린샷으로 결과 확인 |
+| ~~"Make it better"~~ | 모호함 |
+| "Increase the button padding to 16px and change color to blue" | 구체적 |
+
+**컨텍스트 제공 (Provide context):**
+
+| 프롬프트 | 평가 |
+| --- | --- |
+| ~~"Add a form"~~ | 모호함 |
+| "Add a login form with email, password, remember me checkbox, and submit button" | 구체적 |
+
+**디자인 시스템 참조 (Reference design systems):**
+
+| 프롬프트 예시 | 설명 |
+| --- | --- |
+| "Use our existing button component" | 기존 컴포넌트 재사용 |
+| "Follow the spacing scale from our variables" | 변수에 정의된 간격 스케일 적용 |
+| "Match the style of the header component" | 헤더 컴포넌트 스타일 일치 |
 
 ### 반복적 디자인
 
 ```
-1차: "Create a login page"
+1차: "Create a dashboard layout"           → 시작
 → 스크린샷 확인
-2차: "Add more spacing between fields and make the button wider"
+2차: "Add a sidebar with navigation items"  → 보완
 → 스크린샷 확인
-3차: "Change the color scheme to dark mode"
+3차: "Style the nav items with hover states" → 디테일
+→ 스크린샷 확인
+4차: "Adjust spacing to match 8px grid"     → 마무리
 → 최종 확인
 ```
+
+### 검증
+
+AI가 변경을 수행한 후:
+
+1. 캔버스에서 시각적으로 검토
+2. 레이어 패널에서 구조 확인
+3. 필요시 인터랙션 테스트
+4. 복잡한 레이아웃은 스크린샷으로 검증 요청
 
 ---
 
 ## 문제 해결
 
+### 연결 이슈
+
 | 문제 | 원인 | 해결 |
 | --- | --- | --- |
-| 연결 불가 | Pencil 미실행 | Pencil 먼저 실행 후 AI 도구 사용 |
-| 권한 거부 | 폴더 접근 권한 | 접근 프롬프트 수락, 시스템 설정에서 권한 업데이트 |
-| AI 출력 품질 저하 | 모호한 프롬프트 | 구체적인 지시, 반복적 접근 |
+| "Claude Code not connected" | Claude Code 미로그인 | `claude`로 로그인 → Pencil 재시작 → 프로젝트 디렉토리에서 `claude` 실행 |
+| MCP 서버 미표시 | Pencil 미실행 | Pencil 실행 확인 → IDE MCP 설정 확인 → Pencil과 AI 어시스턴트 모두 재시작 |
+
+### 권한 이슈
+
+| 문제 | 원인 | 해결 |
+| --- | --- | --- |
+| 폴더 접근 불가 | 폴더 접근 권한 없음 | 접근 프롬프트 수락 → 시스템 폴더 권한 확인 → IDE/Pencil을 올바른 권한으로 실행 |
+| 권한 프롬프트 미표시 | 알림 설정 | 별도 Claude Code 세션에서 시도 → 알림 설정 확인 → IDE 권한 확인 |
+
+### AI 출력 이슈
+
+| 문제 | 원인 | 해결 |
+| --- | --- | --- |
+| "Invalid API key" | 인증 만료 | `claude`로 재인증 → 충돌하는 인증 설정 확인 → 환경 변수 초기화 |
+| AI가 예상치 못한 변경 | 모호한 프롬프트 | 프롬프트를 더 구체적으로 → 적용 전 설명 요청 → 버전 관리로 필요시 되돌리기 |
+
+---
+
+## Example Session
+
+실제 Pencil + AI 어시스턴트 사용 예시입니다:
+
+```bash
+# 1. Pencil과 Claude Code 시작
+claude
+
+# 2. IDE에서 design.pen 열기
+# 3. Cmd + K를 눌러 디자인 시작
+```
+
+| 단계 | 사용자 입력 | AI 응답 |
+| --- | --- | --- |
+| **디자인 생성** | "Create a modern landing page hero section" | 헤딩, 서브헤딩, CTA 버튼이 포함된 히어로 섹션 생성 |
+| **섹션 추가** | "Add a features section with 3 columns" | 히어로 아래에 피처 섹션 추가 |
+| **변수 적용** | "Use our primary color variable for the CTA buttons" | 버튼에 색상 변수 적용 |
+| **코드 생성** | "Generate React code for this entire page" | Tailwind CSS가 적용된 React 컴포넌트로 내보내기 |
+
+```bash
+# 4. 검토 및 보완
+# 5. Git에 커밋
+git add design.pen src/pages/landing.tsx
+git commit -m "Add landing page design and implementation"
+```
 
 ---
 
