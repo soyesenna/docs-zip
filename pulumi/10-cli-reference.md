@@ -752,8 +752,7 @@ Pulumi CLI는 명령어의 결과를 나타내는 숫자 종료 코드를 반환
 | `-H` / `--header` | 커스텀 HTTP 헤더 `Key: Value` (반복 가능). 사용자 헤더가 기본값(`Accept`, `Content-Type`)보다 우선 |
 | `--body` | 인라인 요청 본문. `--input`과 상호 배타적 |
 | `--input` | 파일에서 요청 본문 읽기; `-`는 stdin에서 읽기 |
-| `--all` | 페이지네이션 커서를 따라 결합된 결과를 출력 |
-| `--envelope-version int` | 호출자가 기대하는 JSON 봉투 버전 고정 (기본값 1) |
+| `--paginate` | 연속 커서를 따라 단일 결합 JSON 봉투를 출력. 최대 1000페이지까지 처리하며, 잘림·네트워크 오류·취소 발생 시 부분 결과라도 플러시하여 호출자가 항상 결과를 받을 수 있음 |
 | `-i` / `--include` | 출력에 HTTP 상태 라인 및 응답 헤더 포함 |
 | `--silent` | 성공 시 응답 본문 억제 (오류는 여전히 출력됨) |
 | `--verbose` | 해석된 요청과 전체 응답을 stderr에 출력 |
@@ -818,7 +817,7 @@ cat tags.json | pulumi api UpdateStackTags --input -
 pulumi api /api/user --output=json | jq '.githubLogin'
 
 # 페이지네이션
-pulumi api ListUserStacks --all | jq -r '.stacks[].stackName'
+pulumi api ListUserStacks --paginate | jq -r '.stacks[].stackName'
 
 # API 탐색
 pulumi api list --output=json | jq '.operations[] | select(.tag == "Stacks")'
