@@ -15,15 +15,17 @@ Pencil 인터페이스의 핵심 구성 요소와 전체 키보드 단축키를 
 
 ### 캔버스 탐색 단축키
 
-| 단축키 | 동작 |
-| --- | --- |
-| `Spacebar + Drag` / `Middle mouse button` | 캔버스 패닝 (이동) |
-| `Shift + Scroll` | 수평 패닝 |
-| `=` | 줌 인 (Zoom in) |
-| `-` | 줌 아웃 (Zoom out) |
-| `0` | 100%로 줌 |
-| `1` | 모든 요소에 맞게 줌 |
-| `2` | 선택 영역에 맞게 줌 |
+> 아래 단축키 중 `Spacebar + Drag`, `Shift + Scroll`, `0`, `1`은 [pencil-interface](https://docs.pencil.dev/core-concepts/pencil-interface) 원문에 등재된 항목입니다. `=`, `-`, `2`는 [keyboard-shortcuts](https://docs.pencil.dev/core-concepts/keyboard-shortcuts) 페이지에 등재된 추가 단축키입니다.
+
+| 단축키 | 동작 | 출처 |
+| --- | --- | --- |
+| `Spacebar + Drag` / `Middle mouse button` | 캔버스 패닝 (이동) | pencil-interface |
+| `Shift + Scroll` | 수평 패닝 | pencil-interface |
+| `0` | 100%로 줌 | pencil-interface |
+| `1` | 모든 요소에 맞게 줌 | pencil-interface |
+| `=` | 줌 인 (Zoom in) | keyboard-shortcuts |
+| `-` | 줌 아웃 (Zoom out) | keyboard-shortcuts |
+| `2` | 선택 영역에 맞게 줌 | keyboard-shortcuts |
 
 ---
 
@@ -56,8 +58,8 @@ Pencil 인터페이스의 핵심 구성 요소와 전체 키보드 단축키를 
 | `Cmd/Ctrl + Click` | 직접 선택 (가장 깊은 요소) |
 | `Shift + Click` | 선택 영역에 추가 |
 | `Cmd/Ctrl + A` | 전체 선택 |
-| `Enter` | 현재 선택된 부모의 자식 요소 선택 |
-| `Shift + Enter` | 현재 선택된 자식의 부모 요소 선택 |
+| `Enter` | 현재 선택된 부모 요소의 자식 요소 선택 |
+| `Shift + Enter` | 현재 선택된 자식 요소의 부모 요소 선택 |
 | `Esc` | 선택 해제 |
 
 ---
@@ -130,8 +132,8 @@ Pencil의 AI 채팅은 바이브 디자이닝(vibe-designing)을 위한 인터�
 | `Cmd/Ctrl + D` | 선택 항목 복제 |
 | `Cmd/Ctrl + X` | 잘라내기 |
 | `Delete` / `Backspace` | 삭제 |
-| `Arrow keys` | 1px 이동 / Flex 레이아웃에서 순서 교환 |
-| `Shift + Arrow keys` | 10px 이동 |
+| `Arrow keys` / `Shift + Arrow keys` | 1px / 10px 이동 |
+| `Arrow keys` | Flex 레이아웃에서 요소 순서 교환 |
 | `Cmd/Ctrl + G` | 그룹화 |
 | `Cmd/Ctrl + Shift + G` | 그룹 해제 |
 | `Cmd/Ctrl + Option/Alt + G` | 선택 항목에 Flex 레이아웃 적용 |
@@ -210,8 +212,8 @@ Pencil의 AI 채팅은 바이브 디자이닝(vibe-designing)을 위한 인터�
 | | `Cmd/Ctrl + D` | 복제 |
 | | `Cmd/Ctrl + X` | 잘라내기 |
 | | `Delete` / `Backspace` | 삭제 |
-| | `Arrow keys` | 1px 이동 / Flex 순서 교환 |
-| | `Shift + Arrow keys` | 10px 이동 |
+| | `Arrow keys` / `Shift + Arrow keys` | 1px / 10px 이동 |
+| | `Arrow keys` | Flex 레이아웃에서 요소 순서 교환 |
 | | `Cmd/Ctrl + G` | 그룹화 |
 | | `Cmd/Ctrl + Shift + G` | 그룹 해제 |
 | | `Cmd/Ctrl + Option/Alt + G` | Flex 레이아웃 적용 |
@@ -222,8 +224,8 @@ Pencil의 AI 채팅은 바이브 디자이닝(vibe-designing)을 위한 인터�
 | **선택** | `Cmd/Ctrl + A` | 전체 선택 |
 | | `Cmd/Ctrl + Click` | 직접 선택 |
 | | `Shift + Click` | 선택 추가 |
-| | `Enter` | 자식 요소 선택 |
-| | `Shift + Enter` | 부모 요소 선택 |
+| | `Enter` | 현재 선택된 부모 요소의 자식 요소 선택 |
+| | `Shift + Enter` | 현재 선택된 자식 요소의 부모 요소 선택 |
 | | `Esc` | 선택 해제 |
 | **컴포넌트** | `Cmd/Ctrl + Option/Alt + K` | 컴포넌트 변환/되돌리기 |
 | | `Cmd/Ctrl + Option/Alt + X` | 인스턴스 분리 |

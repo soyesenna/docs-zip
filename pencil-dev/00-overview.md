@@ -2,13 +2,15 @@
 
 > 원문: https://docs.pencil.dev
 
-Pencil은 IDE 내부에서 직접 동작하는 벡터 디자인 도구입니다. "Design on canvas. Land in code."라는 모토처럼, 디자인과 코드를 같은 환경에서 작업할 수 있게 해줍니다.
+Pencil fundamentally increases your engineering speed by bringing designing directly into your preferred IDE. IDE 내부에서 직접 동작하는 벡터 디자인 도구입니다. "Design on canvas. Land in code."라는 모토처럼, 디자인과 코드를 같은 환경에서 작업할 수 있게 해줍니다.
 
 ---
 
 ## Pencil이란?
 
 Pencil은 전통적인 디자인 도구(Figma, Sketch 등)와 달리 개발자의 IDE 안에서 동작하는 파워풀한 벡터 디자인 도구입니다. 별도의 애플리케이션이나 브라우저 탭을 오갈 필요 없이, 코드 옆에서 바로 디자인할 수 있습니다.
+
+> **소개 영상**: [Pencil 소개 영상 보기 (YouTube)](https://www.youtube.com/watch?v=mduKhXvmsyA)
 
 **핵심 특징:**
 
@@ -133,9 +135,16 @@ Pencil 에코시스템
 
 | 항목 | 설명 |
 | --- | --- |
-| [설치 및 설정](./01-installation.md) | VS Code, Cursor, 데스크톱, Claude Code CLI 설치 |
+| [설치 및 설정](./01-installation.md) | Your first steps with Pencil - VS Code, Cursor, 데스크톱, Claude Code CLI 설치 |
+| [.pen 파일 기본](./03-pen-files.md) | Understanding .pen files and components - 파일 포맷, 구조, 변수, 컴포넌트 |
+| [코드 생성](./11-code-generation.md) | Syncing design with your codebase - Design ↔ Code, React, Tailwind |
+| [문제 해결](./12-troubleshooting.md) | Common issues and solutions |
+| [개발자 가이드 (.pen Format)](./14-pen-format.md) | Technical information - .pen 파일 포맷 기술 명세 |
+
+### 추가 가이드
+
+| 항목 | 설명 |
+| --- | --- |
 | [AI 통합](./02-ai-integration.md) | MCP 서버, Claude Code, Cursor, Codex 연동 |
-| [.pen 파일 기본](./03-pen-files.md) | 파일 포맷, 구조, 버전 이해 |
 | [노드 타입 참조](./04-node-types.md) | Frame, Text, Rectangle, Ellipse, Polygon, Path, Icon, Script, Ref 등 |
 | [캔버스와 레이아웃](./05-canvas-layout.md) | Flexbox, sizing, positioning |
-| [코드 생성](./11-code-generation.md) | Design ↔ Code, React, Tailwind |

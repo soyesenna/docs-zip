@@ -78,7 +78,7 @@ interface Document {
 | `version` | `"2.13"` | 파일 포맷 버전 (고정값) |
 | `themes` | `object` | 테마 축 정의. 키=축 이름, 값=축 값 배열 |
 | `imports` | `object` | 외부 .pen 파일 임포트. 키=별칭, 값=상대 URI |
-| `variables` | `object` | 전역 변수. 키=변수명(정규식 `[^:]+`), 값=타입별 정의 |
+| `variables` | `object` | 전역 변수. 키=변수명(정규식 `[^:]+`, 콜론 제외 모든 문자). 마침표(`.`) 포함 가능 (예: `color.background`, `text.title`). 값=타입별 정의 |
 | `children` | `Child[]` | 문서의 최상위 자식 노드들 |
 
 ### Child 노드 타입
@@ -148,13 +148,13 @@ Frame 노드는 Flexbox 레이아웃을 지원합니다. 상세한 레이아웃 
 
 #### Fill 타입
 
-| 타입 | 설명 |
-| --- | --- |
-| `color` | 단색 채우기 (`ColorOrVariable`) |
-| `gradient` | 그라디언트 (linear, radial, angular) |
-| `image` | 이미지 채우기 (URL은 .pen 파일 기준 상대 경로, 예: `./image.jpg`) |
-| `shader` | WebGL 1.0 fragment shader 파일 참조. URL은 .pen 파일 기준 상대 경로(예: `./effect.glsl`). `uniforms`로 셰이더 변수 전달. `@resolution` 주석이 있는 `vec2` uniform은 자동으로 fill 크기(px)에 바인딩됨 |
-| `mesh_gradient` | Bezier 보간 컬러 그리드 (row-major) |
+| 타입 | 설명 | 공통 속성 |
+| --- | --- | --- |
+| `color` | 단색 채우기 (`ColorOrVariable`). 불투명도는 hex alpha 채널로만 제어 | `enabled`, `blendMode`, `color` |
+| `gradient` | 그라디언트 (linear, radial, angular) | `enabled`, `blendMode`, `opacity`, `gradientType`, `center`, `size`, `rotation`, `colors` |
+| `image` | 이미지 채우기 (URL은 .pen 파일 기준 상대 경로, 예: `./image.jpg`) | `enabled`, `blendMode`, `opacity`, `url`, `mode` (`stretch`/`fill`/`fit`) |
+| `shader` | WebGL 1.0 fragment shader 파일 참조. URL은 .pen 파일 기준 상대 경로(예: `./effect.glsl`). `uniforms`로 셰이더 변수 전달. `@resolution` 주석이 있는 `vec2` uniform은 자동으로 fill 크기(px)에 바인딩됨 | `enabled`, `blendMode`, `opacity`, `url`, `uniforms` |
+| `mesh_gradient` | Bezier 보간 컬러 그리드 (row-major). 가장자리 정점은 기본 위치 유지 권장 | `enabled`, `blendMode`, `opacity`, `columns`, `rows`, `colors`, `points` |
 
 > 객체는 여러 fill을 가질 수 있으며, 문서에 나타나는 순서대로 위에 겹쳐 그려집니다.
 
@@ -181,6 +181,52 @@ Frame 노드는 Flexbox 레이아웃을 지원합니다. 상세한 레이아웃 
 | `shadow` | `shadowType?: "inner" \| "outer"`, `offset?: { x, y }`, `spread?`, `blur?`, `color?: ColorOrVariable`, `blendMode?: BlendMode` | 내부 또는 외부 그림자 효과 |
 
 > `effect` 속성은 `Effect` 단일 값 또는 배열(`Effects`)로 지정합니다. 모든 effect에는 `enabled?: BooleanOrVariable` 속성이 있습니다.
+
+#### Fill 타입별 세부 속성
+
+모든 fill 타입은 공통으로 `enabled?: BooleanOrVariable`, `blendMode?: BlendMode` 속성을 가집니다. `BlendMode` 값: `normal`, `darken`, `multiply`, `linearBurn`, `colorBurn`, `light`, `screen`, `linearDodge`, `colorDodge`, `overlay`, `softLight`, `hardLight`, `difference`, `exclusion`, `hue`, `saturation`, `color`, `luminosity`.
+
+| 타입 | 속성 | 설명 |
+| --- | --- | --- |
+| `color` | `color: ColorOrVariable` | 단색 채우기. 불투명도는 hex alpha 채널로만 제어 가능 |
+| `gradient` | `gradientType?: "linear" \| "radial" \| "angular"` | 그라디언트 유형 |
+| | `opacity?: NumberOrVariable` | 그라디언트 불투명도 |
+| | `center?: Position` | 중심점. bbox 기준 정규화. 기본값 `0.5, 0.5` |
+| | `size?: { width?, height? }` | 크기. bbox 기준 정규화. Linear: height=그라디언트 길이, width=무시. Radial/Angular: 타원 지름 |
+| | `rotation?: NumberOrVariable` | 반시계 방향 회전 각도 (0°=위, 90°=좌, 180°=아래) |
+| | `colors?: { color, position }[]` | 색상 정지점 배열 |
+| `image` | `url?: string` | 이미지 URL (.pen 파일 기준 상대 경로, 예: `./image.jpg`) |
+| | `mode?: "stretch" \| "fill" \| "fit"` | 이미지 맞춤 모드 |
+| | `opacity?: NumberOrVariable` | 불투명도 |
+| `shader` | `url: string` | WebGL 1.0 fragment shader 파일 경로 (.pen 파일 기준 상대 경로, 예: `./effect.glsl`) |
+| | `uniforms?: { [key: string]: number \| boolean \| string \| number[] }` | 셰이더 uniform 오버라이드. `number`(float/int), `boolean`(bool), hex 색상 문자열(`#RRGGBB[AA]`, color), 2-4개 숫자 배열(vec2/3/4), 변수 참조(`$name`) 지원. `@resolution`, `@time` 주석이 있는 uniform은 이곳에 포함하지 않음 |
+| | `opacity?: NumberOrVariable` | 불투명도 |
+| `mesh_gradient` | `columns?: number`, `rows?: number` | 그리드 크기 |
+| | `colors?: ColorOrVariable[]` | 정점별 색상 |
+| | `points?: ([number, number] \| { position, handles? })[]` | `columns * rows`개의 [0,1] 범위 좌표. Bezier 핸들 선택적 지원. 가장자리 정점은 기본 위치 유지 권장 |
+| | `opacity?: NumberOrVariable` | 불투명도 |
+
+#### Components and Instances (Ref)
+
+`reusable: true`가 설정된 객체는 컴포넌트로 정의되며, `ref` 타입 객체로 재사용(인스턴스화)할 수 있습니다. `Ref` 인터페이스:
+
+```typescript
+interface Ref extends Entity {
+  type: "ref";
+  ref: string;            // 참조할 컴포넌트의 ID
+  descendants?: {         // 하위 노드 커스터마이징
+    [key: string]: {}     // 키: 하위 노드의 ID, ID 경로 또는 고유 이름
+  };
+}
+```
+
+| 개념 | 설명 |
+| --- | --- |
+| **Overrides** | `ref` 인스턴스에서 상속된 속성을 직접 오버라이드. 루트 객체 속성은 `ref` 객체에 직접 지정. 하위 객체 속성은 `descendants` 맵에 오버라이드할 속성을 나열 (`type` 미포함 시 속성 오버라이드) |
+| **Nesting** | 중첩된 인스턴스 내부의 객체에 접근하려면 인스턴스 ID 뒤에 슬래시(`/`) prefix 사용. 예: `descendants: { "instanceA/iconB": { fill: "#FF0000" } }`. 임의의 깊이로 중첩 가능 |
+| **Object replacement** | `descendants` 항목에 `type` 속성이 포함되면 기존 하위 노드 전체를 새 객체 트리로 교체. 이 경우 오버라이드는 완전한 객체 트리여야 함 (속성 부분 집합이 아님). 컨테이너형 컴포넌트(윈도우, 테이블, 그리드, 카드 등)의 슬롯 교체에 유용 |
+
+> 인스턴스는 하위 객체의 `enabled`를 `false`로 오버라이드하여 해당 객체를 숨길 수 있습니다(삭제 에뮬레이션). 파일 간 컴포넌트 참조는 불가능합니다.
 
 ---
 
@@ -239,6 +285,8 @@ themes: {
 | 축 이름 | 정규식 `[^:]+` 형식 |
 | 축 값 | 문자열 배열 |
 | 변수 연동 | 변수 값에 테마별 값을 지정할 수 있음 |
+| **다중 값 매칭 시 마지막 우선** | 변수 값이 테마 배열일 때, 여러 항목이 동시에 매칭되면 **마지막 매칭 항목의 값**이 사용됨 |
+| **테마 축 기본값** | 테마 축에 명시적으로 값을 지정하지 않으면 **해당 축의 첫 번째 값**이 기본값으로 사용됨 |
 
 ---
 
@@ -286,6 +334,18 @@ variables: {
 - 변수 참조는 `$` 접두사 사용: `fill: "$primary-color"`, `gap: "$spacing-small"`
 - 변수명은 `$`로 시작하면 안 됨 (참조 시에만 `$` 사용)
 - 속성에서 변수를 참조하면 해당 변수의 값으로 바인딩됨
+- 변수명에 마침표(`.`) 사용 가능: `color.background`, `text.title`, `spacing.unit` 등 카테고리 분류에 유용 (정규식 `[^:]+`은 콜론만 제외하므로 마침표 포함 허용)
+
+```typescript
+// 마침표 포함 변수명 사용 예시
+variables: {
+  "color.background": { type: "color", value: "#FFFFFF" },
+  "color.primary":    { type: "color", value: "#3B82F6" },
+  "text.title":       { type: "string", value: "Inter" },
+  "spacing.unit":     { type: "number", value: 8 }
+}
+// 참조: fill: "$color.background", fontFamily: "$text.title", gap: "$spacing.unit"
+```
 
 ---
 
