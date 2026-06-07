@@ -26,7 +26,7 @@ Pulumi는 TypeScript/JavaScript, Python, Go, C#/.NET, Java, HCL, YAML 등 다양
 | C# / F# / VB (.NET) | .NET | NuGet | `pulumi new csharp` | 완전 지원 |
 | Java | JVM | Maven Central | `pulumi new java` | 완전 지원 |
 | Pulumi YAML | Pulumi CLI (별도 런타임 불필요) | Pulumi Registry | `pulumi new yaml` | 완전 지원 |
-| HCL | Pulumi CLI >= 3.235.0 (별도 런타임 불필요) | Pulumi Registry | N/A (직접 프로젝트 생성) | 실험적 (pulumi-labs) |
+| HCL | Pulumi CLI >= 3.235.0 (별도 런타임 불필요) | Pulumi Registry | N/A (직접 프로젝트 생성) | 지원 (pulumi-labs) |
 
 > 즐겨 쓰는 언어가 목록에 없다면, Pulumi는 오픈 소스이므로 [직접 언어를 추가](https://github.com/pulumi/pulumi)할 수 있다.
 
@@ -166,7 +166,7 @@ runtime:
     binary: bin/MyInfra.dll
 ```
 
-**F# 사용자**: F#에서 Pulumi를 사용할 때 `Pulumi.FSharp` NuGet 패키지를 추가하면 F# 친화적인 DSL을 사용할 수 있다. Automation API를 활용하려면 `Pulumi.Automation` NuGet 패키지를 사용한다.
+**F# 사용자**: F#에서 Pulumi를 사용할 때 [`Pulumi.FSharp`](https://www.pulumi.com/docs/reference/pkg/dotnet/pulumi.fsharp/pulumi.fsharp.html) NuGet 패키지를 추가하면 F# 친화적인 관용적 헬퍼(idiomatic helpers)를 사용할 수 있다. Automation API를 활용하려면 [`Pulumi.Automation`](https://www.pulumi.com/docs/reference/pkg/dotnet/pulumi.automation/pulumi.automation.html) NuGet 패키지를 사용한다.
 
 **Troubleshooting .NET 버전**: .NET 버전 관련 문제가 발생하는 경우, Pulumi는 .NET 8, 9, 10에서 테스트한다. 지원되는 .NET 버전을 사용 중인지 확인하고, 문제가 지속되면 [Troubleshooting](https://www.pulumi.com/docs/iac/troubleshooting/) 문서를 참고한다.
 
@@ -338,7 +338,7 @@ runtime:
 | Function serialization | 지원 (Node.js), 미지원 (Bun) | 미지원 | 미지원 | 미지원 | 미지원 | 미지원 |
 | 패키지 수 (프로바이더) | 100+ | 100+ | 100+ | 100+ | 100+ | 100+ |
 
-> **Policy as Code**: TypeScript(`@pulumi/policy`)와 Python(`pulumi_policy`) Policy SDK는 OPA(Rego) 정책도 지원한다. 자세한 내용은 [Policy SDK 문서](https://www.pulumi.com/docs/iac/using-pulumi/adopting-pulumi/policy-as-code/)를 참고한다.
+> **Policy as Code**: TypeScript/JavaScript(`@pulumi/policy`), Python(`pulumi_policy`), 그리고 OPA(Rego)로 Policy를 작성할 수 있다. 작성된 정책은 모든 언어로 된 Pulumi 프로그램에 적용할 수 있다. 자세한 내용은 [Policy as Code 문서](https://www.pulumi.com/docs/insights/policy/#languages)를 참고한다.
 
 ---
 
@@ -370,7 +370,7 @@ runtime:
 
 ### HCL (Pulumi HCL)
 
-Pulumi HCL은 Terraform 형태의 HCL 구문으로 Pulumi 프로그램을 작성할 수 있게 하는 언어 플러그인이다. 친숙한 HCL 블록, 표현식, 내장 함수를 그대로 사용하면서 Pulumi의 상태 관리, 시크릿 처리, 배포 엔진을 활용할 수 있다. **참고**: HCL은 pulumi-labs에서 개발 중인 실험적 프로젝트이며, 공식 지원 언어 개요 페이지에는 포함되지 않는다. `pulumi-labs/pulumi-hcl` 저장소에서 개발된다.
+Pulumi HCL은 Terraform 형태의 HCL 구문으로 Pulumi 프로그램을 작성할 수 있게 하는 언어 플러그인이다. 친숙한 HCL 블록, 표현식, 내장 함수를 그대로 사용하면서 Pulumi의 상태 관리, 시크릿 처리, 배포 엔진을 활용할 수 있다. [pulumi-labs/pulumi-hcl](https://github.com/pulumi-labs/pulumi-hcl) 저장소에서 개발된다.
 
 **사전 요구사항**: Pulumi CLI 버전 3.235.0 이상. HCL 언어 및 컨버터 플러그인이 CLI에 포함되어 있다.
 
