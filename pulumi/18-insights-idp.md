@@ -2,8 +2,11 @@
 
 > https://www.pulumi.com/docs/insights/
 > https://www.pulumi.com/docs/insights/discovery/
+> https://www.pulumi.com/docs/insights/discovery/accounts/
 > https://www.pulumi.com/docs/insights/policy/
-> https://www.pulumi.com/docs/idp/
+> https://www.pulumi.com/docs/insights/policy/policy-findings/
+> https://www.pulumi.com/docs/insights/self-hosted/
+> https://www.pulumi.com/docs/idp/concepts/
 
 Pulumi Insights & Governance는 클라우드 인프라 전체에 대한 가시성과 정책 실행을 제공한다. 리소스가 Pulumi, Terraform, CloudFormation 또는 수동으로 생성되었는지와 무관하게 모든 인프라를 검색하고 컴플라이언스를 보장한다. Pulumi IDP(Internal Developer Platform)는 플랫폼 팀이 재사용 가능한 컴포넌트, 템플릿, 골든 패스를 제공하여 개발자가 Day 0부터 Day 2까지 셀프 서비스 인프라 워크플로를 구축할 수 있게 한다.
 
@@ -76,7 +79,6 @@ Discovery는 필요시 자동으로 자식 어카운트를 생성한다. AWS의 
 | **AWS** | ESC를 통한 OIDC. IAM Role에 `ReadOnlyAccess` 관리형 정책 권장. 모든 AWS 파티션 지원 (Standard, GovCloud, ISO, ISOB, ISOF, ISOE, European Sovereign Cloud, China) |
 | **Azure** | ESC를 통한 OIDC(권장) 또는 클라이언트 시크릿. Microsoft Entra 앱 구성 필요 |
 | **Oracle Cloud (OCI)** | API 키 인증. `OCI_TENANCY_OCID`, `OCI_USER_OCID`, `OCI_PRIVATE_KEY_PASSWORD`(선택), `OCI_FINGERPRINT`, `OCI_REGION`, `OCI_PRIVATE_KEY_PATH` 필요 |
-| **Google Cloud** | ESC를 통한 OIDC. Service Account에 Viewer 역할 부여. `fn::open::gcp-login` 사용. `GOOGLE_PROJECT`, `GOOGLE_OAUTH_ACCESS_TOKEN` 환경 변수 설정 필요 |
 | **Kubernetes** | kubeconfig 기반. `get` 및 `list` 권한이 있는 ServiceAccount + ClusterRole 권장. client-go credential plugin 미지원 |
 
 ### Resource Search
@@ -93,6 +95,7 @@ Resource Search 인터페이스에서 제공하는 기능:
 
 - 페이지당 최대 10,000개 결과 표시
 - 대규모 데이터셋은 [Data Export](https://www.pulumi.com/docs/insights/discovery/data-export/) 또는 [REST API](https://www.pulumi.com/docs/pulumi-cloud/cloud-rest-api#resource-search) 사용
+- 쿼리 문법 가이드: [Learn Resource Search syntax](https://www.pulumi.com/docs/insights/discovery/resource-search/)
 
 ### 리소스 관계 및 통합
 
@@ -182,6 +185,23 @@ Policy as Code는 [analyzer plugin](https://www.pulumi.com/docs/iac/concepts/plu
 | **.NET** | Future |
 | **Go** | Future |
 
+### Policy Next Steps
+
+공식 문서에서 제공하는 다음 단계 가이드:
+
+| 경로 | 설명 |
+|---|---|
+| [Get Started](https://www.pulumi.com/docs/insights/policy/get-started/) | 첫 Policy Group 구성 및 스택/클라우드 어카운트에 정책 적용 |
+| [Pre-built Policy Packs](https://www.pulumi.com/docs/insights/policy/policy-packs/pre-built-packs/) | CIS, PCI DSS, HITRUST, NIST 등 프레임워크별 사전 구축 팩 |
+| [Custom Policy Packs 작성](https://www.pulumi.com/docs/insights/policy/policy-packs/authoring/) | TypeScript, JavaScript, Python, OPA(Rego)로 조직 맞춤 정책 작성 |
+| [Terraform Compliance](https://www.pulumi.com/docs/insights/policy/terraform-compliance/) | Terraform으로 프로비저닝된 리소스에 대한 정책 평가 |
+| [CI/CD 통합](https://www.pulumi.com/docs/insights/policy/integrations/) | GitHub Actions, Google Cloud Build 등 CI/CD 파이프라인에 정책 실행 통합 |
+| [Policy Findings](https://www.pulumi.com/docs/insights/policy/policy-findings/) | 위반 사항 관리, 소유자 할당, 컴플라이언스 트렌드 모니터링 |
+| [Custom Policy Pack Tutorial](https://www.pulumi.com/docs/insights/policy/policy-packs/custom-policy-pack-tutorial/) | 정책 팩 생성, 검증, 게시 단계별 튜토리얼 |
+| [CLI Reference](https://www.pulumi.com/docs/insights/policy/cli/) | `pulumi policy` 명령어로 정책 팩 생성, 게시, 관리 |
+| [API & SDK Reference](https://www.pulumi.com/docs/insights/policy/api/) | Policy SDK 및 Pulumi Cloud REST API 엔드포인트 |
+| [FAQ](https://www.pulumi.com/docs/insights/policy/faq/) | 자주 묻는 질문 및 문제 해결 |
+
 ### 사전 구축된 Policy Packs
 
 > https://www.pulumi.com/docs/insights/policy/policy-packs/pre-built-packs/
@@ -229,6 +249,20 @@ Policy Findings는 클라우드 인프라 전체의 컴플라이언스를 관리
 | **Assignment** | 조직 내 특정 팀 멤버에게 할당 |
 | **AI Remediation** | Pulumi Neo 사용 시 여러 이슈를 선택해 AI 기반 자동 수정 작업 생성 가능 |
 
+**Issue Detail View:**
+
+이슈 테이블에서 이슈를 선택하면 상세 뷰가 열리며, 다음 필드를 확인할 수 있다.
+
+| 필드 그룹 | 세부 필드 |
+|---|---|
+| **Policy 정보** | Policy Pack 이름 및 버전, Policy Group, Policy Group 유형 (Audit / Preventative), Severity |
+| **Resource 정보** | Entity Type (Stack 또는 Insights-Account), Entity Project, Entity Name, Issue Resource ID, Cloud Provider |
+| **Timestamps** | First Seen (최초 감지일), Last Updated (최근 갱신일) |
+| **Issue Description** | 위반된 정책 규칙에 대한 설명 메시지 |
+| **Policy Description** | 해당 정책의 요구사항에 대한 추가 컨텍스트 |
+
+상세 뷰에서 이슈 할당, 상태 및 우선순위 업데이트, **Create Neo Task** 버튼으로 AI 기반 수정 작업 생성이 가능하다.
+
 Policy Findings는 [Pulumi Cloud REST API](https://www.pulumi.com/docs/reference/cloud-rest-api/policy-results/)를 통해서도 접근 가능하다.
 
 ---
@@ -270,6 +304,16 @@ Pulumi IDP 모범 사례의 핵심은 네 가지 요소(Templates, Components, E
 | **Components** | 재사용 가능한 인프라 빌딩 블록. 보안, 컴플라이언스, 운영 요구사항이 캡슐화됨 |
 | **Environments** (ESC) | 비밀, 구성, 자격 증명 관리. 서비스/팀/수명 주기 단계별로 환경 구성 |
 | **Policies** | 코드로 정책을 정의하여 비용, 보안, 컴플라이언스 규칙 강제 |
+
+### Custom IDP
+
+Pulumi의 유연한 빌딩 블록은 맞춤형 IDP를 구축해야 하는 조직의 요구도 지원한다. 기존 개발자 포털과 Pulumi를 통합할 수 있다.
+
+| 통합 방식 | 설명 |
+|---|---|
+| **Organization Templates** | Pulumi Cloud 콘솔 내에서 조직 표준 템플릿을 제공하여 개발자가 승인된 골든 패스로 프로젝트를 스캐폴딩 |
+| **Backstage Plugin** | Spotify의 Backstage 등 기존 개발자 포털에 Pulumi 인프라 관리 기능을 통합. 자세한 내용은 [Pulumi Backstage Plugin](https://www.pulumi.com/docs/idp/guides/backstage-plugin/) 참조 |
+| **GitHub Actions** | CI/CD 파이프라인에서 Pulumi 워크플로를 실행하여 인프라 프로비저닝 및 정책 실행을 자동화. 자세한 내용은 [GitHub Actions Integration](https://www.pulumi.com/docs/insights/policy/integrations/) 참조 |
 
 ---
 
@@ -508,7 +552,7 @@ new PolicyPack("component-version-enforcement", {
 |---|---|---|---|
 | **목적** | 기존 인프라 전수 검색 및 가시성 | 정책 실행 및 컴플라이언스 | 셀프 서비스 인프라 워크플로 |
 | **대상** | 클라우드 어카운트 리소스 | Pulumi 스택 + 클라우드 어카운트 | 전체 인프라 라이프사이클 |
-| **프로바이더 지원** | AWS, Azure, OCI, Google Cloud, Kubernetes | 모든 Pulumi 프로바이더 | 모든 Pulumi 프로바이더 |
+| **프로바이더 지원** | AWS, Azure, OCI, Kubernetes | 모든 Pulumi 프로바이더 | 모든 Pulumi 프로바이더 |
 | **실행 시점** | 예약 스캔 (24시간) 또는 수동 | 배포 시 (Preventative) / 지속적 (Audit) | Day 0-2 전체 |
 | **차단 기능** | 아니오 | 예 (Preventative + Mandatory) | 정책을 통해 간접적 |
 | **Private Registry** | 해당 없음 | 해당 없음 | 핵심 기능 |
@@ -517,7 +561,57 @@ new PolicyPack("component-version-enforcement", {
 
 ### Self-hosted Insights
 
-Pulumi Insights는 Self-hosted 환경에서도 실행 가능하다. 자체 관리하는 워크플로 러너를 사용하여 고객 환경 내에서 Discovery 스캔과 Policy 평가를 수행할 수 있다. 자세한 내용은 [Self-hosted Insights](https://www.pulumi.com/docs/insights/self-hosted/)를 참조.
+> https://www.pulumi.com/docs/insights/self-hosted/
+
+Pulumi Insights는 **Business Critical** 에디션에서 Self-hosted 운영을 지원한다. 고객 관리 워크플로 러너(customer-managed workflow runner)를 사용하여 Discovery 스캔과 Policy 평가를 자체 인프라 내에서 실행할 수 있다.
+
+**활성화 조건:**
+
+| 조건 | 설명 |
+|---|---|
+| **에디션** | Pulumi Cloud **Business Critical** 전용 |
+| **문의** | Sales 팀에 문의하여 기능 활성화 필요 |
+
+**Self-hosted 이점:**
+
+| 이점 | 설명 |
+|---|---|
+| **Data residency** | 모든 스캔 데이터와 정책 평가 결과를 사설 네트워크 내에 유지 |
+| **Private infrastructure access** | 공용 인터넷에서 접근 불가능한 완전 프라이빗 VPC 및 환경의 리소스 스캔 가능 |
+| **Compliance** | 클라우드 프로바이더 자격 증명이 네트워크를 떠나지 않음 |
+| **Flexible hosting** | Linux 및 macOS를 포함한 모든 하드웨어/환경에서 워크플로 러너 호스팅 가능 |
+
+**설정 절차:**
+
+Insights 스캔 설정:
+
+| 단계 | 설명 |
+|---|---|
+| 1 | [customer-managed workflow runner pool 설정](https://www.pulumi.com/docs/pulumi-cloud/deployments/self-hosted/) |
+| 2 | Pulumi Cloud의 **Management > Accounts**에서 해당 어카운트의 워크플로 러너 풀 선택 |
+| 3 | 스캔 트리거 후 정상 완료 확인 |
+
+Policy 평가 설정:
+
+| 단계 | 설명 |
+|---|---|
+| 1 | customer-managed workflow runner pool 설정 |
+| 2 | Pulumi Cloud의 **Management > Policies > Policy Groups**에서 Audit Policy Group의 워크플로 러너 풀 선택 |
+| 3 | 스택에 대해 Policy 평가 실행 후 결과 확인 |
+
+**조직 기본 풀:**
+
+조직 수준에서 기본 워크플로 러너 풀을 설정하면, 명시적으로 풀을 지정하지 않은 모든 어카운트 스캔과 Policy Group이 기본적으로 조직 기본 풀을 사용한다.
+
+**워크플로 타입 제한:**
+
+기본적으로 워크플로 러너는 모든 워크플로 타입(deployments, Insights scans, policy evaluations)을 처리한다. `pulumi-workflow-agent.yaml`의 `enabled_workflow_types` 설정으로 특정 타입만 처리하도록 제한할 수 있다.
+
+```yaml
+enabled_workflow_types:
+  - insights_scan
+  - policy_evaluation
+```
 
 ---
 
