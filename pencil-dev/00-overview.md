@@ -1,6 +1,6 @@
 # Pencil Dev 개요
 
-> 원문: https://pencil.dev, https://docs.pencil.dev
+> 원문: https://docs.pencil.dev
 
 Pencil은 IDE 내부에서 직접 동작하는 벡터 디자인 도구입니다. "Design on canvas. Land in code."라는 모토처럼, 디자인과 코드를 같은 환경에서 작업할 수 있게 해줍니다.
 
@@ -15,7 +15,7 @@ Pencil은 전통적인 디자인 도구(Figma, Sketch 등)와 달리 개발자�
 | 특징 | 설명 |
 | --- | --- |
 | IDE 통합 | VS Code, Cursor 확장 및 독립 데스크톱 앱 제공 |
-| .pen 파일 포맷 | 자체 암호화된 벡터 디자인 파일 포맷 (JSON 기반 스키마) |
+| .pen 파일 포맷 | JSON 기반 벡터 디자인 파일 포맷 (구조화된 읽기 가능한 데이터 포맷, Git 호환) |
 | MCP 서버 | AI 어시스턴트가 디자인 파일을 읽고 수정할 수 있는 로컬 MCP 서버 내장 |
 | 코드 생성 | 디자인에서 React, Tailwind CSS 등의 코드를 직접 생성 |
 | 디자인 시스템 | 재사용 가능한 컴포넌트, 변수, 테마 시스템 지원 |
@@ -58,7 +58,21 @@ Pencil은 MCP(Model Context Protocol)를 통해 여러 AI 도구와 연동됩니
 
 ### 캔버스와 노드
 
-무한 캔버스 위에 다양한 노드 타입(Frame, Text, Shape, Icon, Path 등)을 배치하고, Flexbox 기반 레이아웃 시스템으로 정밀하게 배치합니다.
+무한 캔버스 위에 다양한 노드 타입(Frame, Text, Rectangle, Ellipse, Polygon, Icon, Path, Group, Note, Prompt, Context, Script, Ref 등)을 배치하고, Flexbox 기반 레이아웃 시스템으로 정밀하게 배치합니다.
+
+| 노드 타입 | 설명 |
+| --- | --- |
+| Frame | 자식 노드를 포함하는 컨테이너. Flexbox 레이아웃 지원 |
+| Text | 텍스트 콘텐츠 노드 |
+| Rectangle / Ellipse / Polygon | 기본 도형 노드 |
+| Icon | 아이콘 라이브러리(lucide, feather, Material Symbols 등)에서 아이콘 표시 |
+| Path | SVG 경로 기반 벡터 노드 |
+| Group | 자식 노드를 그룹화. 그래픽 속성 없이 효과만 적용 가능 |
+| Note | 캔버스에 텍스트 주석을 남기는 노드 |
+| Prompt | AI 모델 프롬프트를 위한 노드 (`model` 속성으로 모델 지정) |
+| Context | 컨텍스트 정보를 제공하는 노드 |
+| Script | JavaScript 파일로 동적 콘텐츠를 생성하는 노드 |
+| Ref | 재사용 가능한 컴포넌트의 인스턴스를 참조하는 노드 |
 
 ### 컴포넌트 시스템
 
@@ -76,9 +90,13 @@ JavaScript 스니펫으로 프로그래매틱하게 디자인을 생성·수정�
 
 디자인에서 React 컴포넌트를 생성하고, Tailwind CSS v4 클래스로 스타일링합니다. SVG 패스 추출, CSS 변수 매핑, 디자인 토큰 변환을 자동으로 수행합니다.
 
-### 스크립팅과 셰이더
+### 스크립팅
 
-Script 노드로 JavaScript 파일을 연결해 동적 콘텐츠를 생성합니다. WebGL 1.0 프래그먼트 셰이더로 복잡한 그래픽 효과를 만들 수 있습니다.
+Script 노드로 JavaScript(.js) 파일을 연결해 동적 콘텐츠를 생성합니다. `@input` 지시어로 `number`, `string`, `boolean`, `color`, `enum`, `ref` 타입의 입력을 선언할 수 있습니다.
+
+### 셰이더
+
+.pen 파일 포맷의 fill 속성 중 Shader fill을 통해 WebGL 1.0(`#version 100`) 프래그먼트 셰이더 파일(.frag)을 URL로 참조하여 복잡한 그래픽 효과를 만들 수 있습니다.
 
 ---
 
