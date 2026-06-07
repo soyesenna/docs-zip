@@ -158,6 +158,30 @@ Frame 노드는 Flexbox 레이아웃을 지원합니다. 상세한 레이아웃 
 
 > 객체는 여러 fill을 가질 수 있으며, 문서에 나타나는 순서대로 위에 겹쳐 그려집니다.
 
+#### Stroke
+
+`CanHaveStroke` 인터페이스에 정의됩니다. 객체는 하나의 stroke를 가질 수 있으며, stroke 자체는 여러 fill을 가질 수 있습니다.
+
+| 속성 | 타입 | 설명 |
+| --- | --- | --- |
+| `stroke` | `Fills` | stroke의 채우기. `Fill` 단일 값 또는 배열. 색상, 그라디언트, 이미지, 셰이더 등 Fill과 동일한 타입 사용 |
+| `strokeWidth` | `NumberOrVariable \| { top?, right?, bottom?, left? }` | stroke 두께. 균일 값 또는 네 변별 개별 설정 |
+| `strokeLinecap` | `"butt" \| "round" \| "square"` | 선 끝 cap 스타일 |
+| `strokeLinejoin` | `"miter" \| "bevel" \| "round"` | 선 연결점(join) 스타일 |
+| `strokeAlignment` | `"inner" \| "center" \| "outer"` | stroke 정렬 기준 |
+
+#### Effect
+
+`CanHaveEffects` 인터페이스에 정의됩니다. 객체는 여러 effect를 가질 수 있으며, 문서에 나타나는 순서대로 적용됩니다.
+
+| 타입 | 속성 | 설명 |
+| --- | --- | --- |
+| `blur` | `radius?: NumberOrVariable` | 노드 전체를 흐리게 처리 |
+| `background_blur` | `radius?: NumberOrVariable` | 노드 뒤의 배경을 흐리게 처리 |
+| `shadow` | `shadowType?: "inner" \| "outer"`, `offset?: { x, y }`, `spread?`, `blur?`, `color?: ColorOrVariable`, `blendMode?: BlendMode` | 내부 또는 외부 그림자 효과 |
+
+> `effect` 속성은 `Effect` 단일 값 또는 배열(`Effects`)로 지정합니다. 모든 effect에는 `enabled?: BooleanOrVariable` 속성이 있습니다.
+
 ---
 
 ## Design as Code 개념
