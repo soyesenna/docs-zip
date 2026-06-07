@@ -35,7 +35,7 @@ interface Script extends Entity, Size {
   type: "script";
   clip?: BooleanOrVariable;           // 오버플로우 클리핑. 기본값 false
   scriptUri?: string;                  // JS 파일 URI (.pen 파일 기준 상대경로)
-  inputs?: { [key: string]: any };     // 입력값
+  inputs?: { [key: string]: string | number | boolean | Variable }; // 입력값
 }
 ```
 
@@ -43,7 +43,7 @@ interface Script extends Entity, Size {
 
 ```javascript
 /**
- * @schema 2.13                       // ← 필수: 현재 버전
+ * @schema 2.11                       // ← 필수: 현재 버전
  * @input rows: number = 3            // 입력 선언
  * @input gap: number = 4
  * @input color: color = #3B82F6
@@ -76,7 +76,7 @@ return nodes;  // 노드 배열을 반환
 
 | 요소 | 설명 |
 | --- | --- |
-| `@schema 2.13` | 파일 첫 줄에 필수. 누락 시 에러. 현재 스키마 버전은 `2.13` |
+| `@schema 2.11` | 파일 첫 줄에 필수. 누락 시 에러. 현재 스키마 버전은 `2.11` |
 | `pencil` 객체 | `pencil.width`, `pencil.height`, `pencil.input.<name>` |
 | `return` | 노드 객체 배열을 반환해야 함 |
 
