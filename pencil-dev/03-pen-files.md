@@ -2,7 +2,7 @@
 
 > 원문: https://docs.pencil.dev/core-concepts/pen-files, https://docs.pencil.dev/core-concepts/design-as-code, https://docs.pencil.dev/for-developers/the-pen-format
 
-.pen 파일은 Pencil의 독자적인 벡터 디자인 파일 포맷입니다. 암호화되어 있어 MCP 도구로만 접근해야 합니다.
+.pen 파일은 Pencil의 독자적인 벡터 디자인 파일 포맷입니다. JSON 기반의 구조화된 포맷이지만, MCP 도구로만 접근해야 합니다.
 
 ---
 
@@ -10,14 +10,50 @@
 
 | 속성 | 설명 |
 | --- | --- |
-| 포맷 | 암호화된 독자 포맷 |
-| 기반 | JSON 스키마 기반 내부 구조 |
+| 포맷 | JSON 기반 독자 포맷 |
+| 특징 | 구조화된 읽기 가능한 데이터 형식 (Structured, readable data format) |
 | 현재 버전 | `2.13` |
 | 접근 방식 | Pencil MCP 도구만으로 접근 (Read/Grep 사용 금지) |
 
 ### 주의사항
 
-> .pen 파일은 암호화되어 있습니다. Pencil MCP 도구(`batch_get`, `batch_design` 등)로만 접근하세요. 일반 `Read`나 `Grep` 도구로는 내용을 읽을 수 없습니다.
+> .pen 파일은 JSON 기반 포맷이지만 Pencil 편집기를 통해서만 열 수 있습니다. Pencil MCP 도구(`batch_get`, `batch_design` 등)로만 접근하세요. 일반 `Read`나 `Grep` 도구로는 내용을 읽을 수 없습니다.
+
+---
+
+## 파일 작업 가이드
+
+### 파일 생성
+
+| 방법 | 설명 |
+| --- | --- |
+| IDE | `.pen` 확장자로 새 파일 생성 |
+| Desktop | File → New 또는 `Cmd/Ctrl + N` |
+
+### 파일 열기
+
+| 방법 | 설명 |
+| --- | --- |
+| 더블 클릭 | `.pen` 파일을 더블 클릭하여 열기 |
+| IDE | 다른 파일처럼 IDE에서 열기 |
+| 자동 활성화 | 파일을 열면 Pencil이 자동으로 활성화됨 |
+
+### 파일 저장
+
+| 단축키 | 설명 |
+| --- | --- |
+| `Cmd/Ctrl + S` | 수동 저장 |
+
+> **Auto-save 미지원:** 현재 자동 저장 기능이 제공되지 않습니다. 작업 중 자주 저장하세요!
+
+### 모범 사례 (Best Practices)
+
+| 권장 사항 | 설명 |
+| --- | --- |
+| 자주 저장 | 자동 저장이 없으므로 수동으로 자주 저장 (`Cmd/Ctrl + S`) |
+| Git 커밋 | 버전 관리를 위해 정기적으로 Git에 커밋 |
+| 프로젝트 워크스페이스 | 코드와 함께 `.pen` 파일을 프로젝트 워크스페이스에 보관 |
+| 설명적 파일명 | `dashboard.pen`, `components.pen` 등 의미 있는 이름 사용 |
 
 ---
 
@@ -103,14 +139,21 @@ Frame 노드는 Flexbox 레이아웃을 지원합니다. 상세한 레이아웃 
 
 ## Design as Code 개념
 
-Pencil은 "Design as Code" 철학을 따릅니다:
+Pencil은 "Design as Code" 철학을 따릅니다. .pen 파일은 코드 파일처럼 다룰 수 있습니다:
 
 | 개념 | 설명 |
 | --- | --- |
-| 구조적 디자인 | JSON 스키마로 디자인의 모든 속성이 정의됨 |
+| 코드처럼 커밋 | .pen 파일을 코드 파일처럼 Git에 커밋 (Commit .pen files like code files) |
+| Git diff 확인 | 텍스트 기반 포맷으로 Git에서 diff 확인 가능 (View diffs in Git - text-based format) |
+| 브랜치와 병합 | 코드와 함께 디자인을 브랜치/병합 (Branch and merge designs with code) |
 | 프로그래매틱 접근 | batch_design API로 JavaScript 코드로 디자인 생성/수정 |
-| 버전 관리 | .pen 파일을 Git으로 관리 가능 |
-| AI 친화적 | MCP를 통해 AI 에이전트가 직접 디자인 수정 |
+
+### 버전 관리 모범 사례
+
+| 권장 사항 | 설명 |
+| --- | --- |
+| 빈번한 커밋 | 작업 단위로 자주 커밋 (Frequent commits) |
+| 설명적 커밋 메시지 | 변경 내용을 명확히 나타내는 커밋 메시지 작성 (Descriptive commit messages) |
 
 ---
 
