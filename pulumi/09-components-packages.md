@@ -941,3 +941,143 @@ creation_time = pulumi.Stash("creationTime",
 # 항상 원래 생성 시간 반환
 pulumi.export("firstDeployed", creation_time.output)
 ```
+
+**Go:**
+
+```go
+import (
+    "time"
+    "github.com/pulumi/pulumi/sdk/v3/go/pulumi"
+)
+
+func main() {
+    pulumi.Run(func(ctx *pulumi.Context) error {
+        creationTime, err := pulumi.NewStash(ctx, "creationTime", &pulumi.StashArgs{
+            Input: pulumi.String(time.Now().Format(time.RFC3339)),
+        })
+        if err != nil {
+            return err
+        }
+
+        // 항상 원래 생성 시간 반환
+        ctx.Export("firstDeployed", creationTime.Output)
+        return nil
+    })
+}
+```
+
+**C#:**
+
+```csharp
+using Pulumi;
+using System;
+
+return await Deployment.RunAsync(() =>
+{
+    var creationTime = new Stash("creationTime", new StashArgs
+    {
+        Input = DateTime.UtcNow.ToString("o"),
+    });
+
+    // 항상 원래 생성 시간 반환
+    return new Dictionary<string, object?>
+    {
+        ["firstDeployed"] = creationTime.Output,
+    };
+});
+```
+
+#### 안정적인 랜덤 값 보존
+
+배포 간에 변경되지 않는 랜덤 값이 필요할 때:
+
+**TypeScript:**
+
+```typescript
+import * as pulumi from "@pulumi/pulumi";
+import * as random from "@pulumi/random";
+
+// 랜덤 비밀번호를 한 번 생성
+const randomPassword = generatePassword()
+
+// Stash에 저장하여 후속 배포에서도 변경되지 않도록 함
+const passwordStash = new pulumi.Stash("passwordStash", {
+    input: pulumi.secret(randomPassword.result),
+});
+
+// 데이터베이스 설정에 Stash된 비밀번호 사용
+export const dbPassword = passwordStash.output;
+```
+
+**Python:**
+
+```python
+import pulumi
+import pulumi_random as random
+
+# 랜덤 비밀번호를 한 번 생성
+random_password = generatePassword()
+
+# Stash에 저장하여 후속 배포에서도 변경되지 않도록 함
+password_stash = pulumi.Stash("passwordStash",
+    input=pulumi.Output.secret(random_password.result))
+
+# 데이터베이스 설정에 Stash된 비밀번호 사용
+pulumi.export("dbPassword", password_stash.output)
+```
+
+**Go:**
+
+```go
+import (
+    "github.com/pulumi/pulumi/sdk/v3/go/pulumi"
+    "github.com/pulumi/pulumi-random/sdk/v4/go/random"
+)
+
+func main() {
+    pulumi.Run(func(ctx *pulumi.Context) error {
+        // 랜덤 비밀번호를 한 번 생성
+        randomPassword, err := generatePassword()
+        if err != nil {
+            return err
+        }
+
+        // Stash에 저장하여 후속 배포에서도 변경되지 않도록 함
+        passwordStash, err := pulumi.NewStash(ctx, "passwordStash", &pulumi.StashArgs{
+            Input: pulumi.ToSecret(randomPassword.Result),
+        })
+        if err != nil {
+            return err
+        }
+
+        // 데이터베이스 설정에 Stash된 비밀번호 사용
+        ctx.Export("dbPassword", passwordStash.Output)
+        return nil
+    })
+}
+```
+
+**C#:**
+
+```csharp
+using Pulumi;
+using Pulumi.Random;
+
+return await Deployment.RunAsync(() =>
+{
+    // 랜덤 비밀번호를 한 번 생성
+    var randomPassword = generatePassword();
+
+    // Stash에 저장하여 후속 배포에서도 변경되지 않도록 함
+    var passwordStash = new Stash("passwordStash", new StashArgs
+    {
+        Input = Output.CreateSecret(randomPassword.Result),
+    });
+
+    // 데이터베이스 설정에 Stash된 비밀번호 사용
+    return new Dictionary<string, object?>
+    {
+        ["dbPassword"] = passwordStash.Output,
+    };
+});
+```
