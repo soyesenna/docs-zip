@@ -3,7 +3,7 @@
 > Pulumi 공식 문서(https://www.pulumi.com/docs/)를 기반으로 정리한 한국어 개발자 가이드입니다.
 > 최종 업데이트: 2026-06-07
 
-Pulumi는 TypeScript, Python, Go, C#, Java 등 범용 프로그래밍 언어로 인프라를 정의하고 관리하는 Infrastructure as Code (IaC) 프레임워크입니다. AWS, Azure, GCP, Kubernetes 등 100개 이상의 클라우드/서비스 프로바이더를 지원하며, Pulumi Cloud를 통해 상태 관리, 배포 자동화, 시크릿 관리, 정책 강제 등의 기능을 제공합니다.
+Pulumi는 TypeScript, Python, Go, C#, Java 등 범용 프로그래밍 언어로 인프라를 정의하고 관리하는 Infrastructure as Code (IaC) 프레임워크입니다. AWS, Azure, GCP, Kubernetes 등 100개 이상의 클라우드/서비스 프로바이더를 지원하며, Pulumi Cloud를 통해 상태 관리, 배포 자동화, 시크릿 관리, 정책 강제 등의 기능을 제공합니다. Pulumi Neo(AI 에이전트)를 통해 자연어로 인프라를 생성하고 관리할 수 있습니다.
 
 ---
 
@@ -52,6 +52,7 @@ Pulumi는 TypeScript, Python, Go, C#, Java 등 범용 프로그래밍 언어로 
 | 16 | [Pulumi Deployments](./16-deployments.md) | 배포 자동화, 트리거, OIDC, Drift Detection, Runner |
 | 17 | [Pulumi ESC](./17-esc.md) | 환경·시크릿·설정 관리, 프로바이더, 로테이션, CLI |
 | 18 | [Insights & IDP](./18-insights-idp.md) | 리소스 Discovery, Policy, Internal Developer Platform |
+| 22 | [Pulumi AI](./22-pulumi-ai.md) | Pulumi Neo AI 에이전트, AI Skills, Automations, IDE/CLI 통합 |
 
 ### 고급
 
