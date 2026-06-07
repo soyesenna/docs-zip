@@ -12,6 +12,8 @@
 | --- | --- |
 | 포맷 | JSON 기반 독자 포맷 |
 | 특징 | 구조화된 읽기 가능한 데이터 형식 (Structured, readable data format) |
+| Portable | 팀과 플랫폼 간 파일 공유 가능 (Share files across teams and platforms) |
+| Version-control friendly | Git에서 코드 파일처럼 작동 (Works with Git like any code file) |
 | 현재 버전 | `2.13` |
 | 접근 방식 | Pencil MCP 도구만으로 접근 (Read/Grep 사용 금지) |
 
@@ -92,7 +94,7 @@ interface Document {
 | `Polygon` | 정다각형 | [노드 타입 참조](./04-node-types.md) |
 | `Path` | SVG 패스 | [노드 타입 참조](./04-node-types.md) |
 | `Text` | 텍스트 (textGrowth, 폰트 스타일) | [노드 타입 참조](./04-node-types.md), [텍스트 가이드](./06-text-typography.md) |
-| `Icon` | 아이콘 라이브러리 (lucide, Material 등) | [노드 타입 참조](./04-node-types.md) |
+| `Icon` | 아이콘 라이브러리 (lucide, Material 등). `weight` (NumberOrVariable, 100-700), `fill` (Fills) 속성 지원 | [노드 타입 참조](./04-node-types.md) |
 | `Script` | JavaScript 동적 콘텐츠 생성 | [스크립팅 가이드](./13-scripting-shaders.md) |
 | `Ref` | 컴포넌트 인스턴스 (재사용) | [컴포넌트 가이드](./07-components-slots.md) |
 | `Note` | 메모/주석 | [노드 타입 참조](./04-node-types.md) |
@@ -112,6 +114,10 @@ interface Document {
 | `rotation` | `NumberOrVariable` | 좌상단 기준 반시계 방향 회전 (도) |
 | `x`, `y` | `number` | 부모 기준 위치 (Flexbox에서는 무시) |
 | `layoutPosition` | `"auto" \| "absolute"` | 레이아웃 내 위치 |
+| `context` | `string` | AI 컨텍스트용 문자열 |
+| `flipX` | `BooleanOrVariable` | 수평 뒤집기 |
+| `flipY` | `BooleanOrVariable` | 수직 뒤집기 |
+| `metadata` | `{type: string, [key: string]: any}` | 메타데이터 (type 필드 필수) |
 
 ### Layout (Frame 전용)
 
@@ -124,6 +130,7 @@ Frame 노드는 Flexbox 레이아웃을 지원합니다. 상세한 레이아웃 
 | `padding` | `NumberOrVariable \| [N,N] \| [N,N,N,N]` | 안쪽 여백 |
 | `justifyContent` | `start`, `center`, `end`, `space_between`, `space_around` | 주축 정렬 |
 | `alignItems` | `start`, `center`, `end` | 교차축 정렬 |
+| `layoutIncludeStroke` | `boolean` | 레이아웃 계산 시 stroke 포함 여부 |
 
 ### Sizing (동적 크기)
 
@@ -134,6 +141,22 @@ Frame 노드는 Flexbox 레이아웃을 지원합니다. 상세한 레이아웃 
 | 숫자 | 고정 픽셀 값 |
 
 > **순환 의존 주의:** 부모가 `fit_content`인데 모든 자식이 `fill_container`이면 순환 의존이 발생합니다.
+
+### Graphics (fill, stroke, effect)
+
+객체의 그래픽 외관은 `fill`, `stroke`, `effect` 속성으로 제어합니다.
+
+#### Fill 타입
+
+| 타입 | 설명 |
+| --- | --- |
+| `color` | 단색 채우기 (`ColorOrVariable`) |
+| `gradient` | 그라디언트 (linear, radial, angular) |
+| `image` | 이미지 채우기 (URL은 .pen 파일 기준 상대 경로, 예: `./image.jpg`) |
+| `shader` | WebGL 1.0 fragment shader 파일 참조. URL은 .pen 파일 기준 상대 경로(예: `./effect.glsl`). `uniforms`로 셰이더 변수 전달. `@resolution` 주석이 있는 `vec2` uniform은 자동으로 fill 크기(px)에 바인딩됨 |
+| `mesh_gradient` | Bezier 보간 컬러 그리드 (row-major) |
+
+> 객체는 여러 fill을 가질 수 있으며, 문서에 나타나는 순서대로 위에 겹쳐 그려집니다.
 
 ---
 
@@ -263,3 +286,71 @@ variables: {
 ### 새 화면 배치
 
 문서 루트에 새 객체를 배치할 때는 `FindEmptySpace`를 사용해 빈 영역을 찾으세요. 루트 객체는 절대 겹치지 않게 합니다.
+
+---
+
+## Slots
+
+컴포넌트 내부의 특정 Frame을 **slot**으로 지정하면, 인스턴스 생성 시 해당 영역의 children을 교체할 수 있습니다. 패널, 카드, 윈도우, 사이드바 등 컨테이너 스타일 컴포넌트에 적합합니다.
+
+### slot 속성
+
+Frame 노드에 `slot` 속성을 설정합니다:
+
+```typescript
+interface Frame {
+  // ...
+  slot?: false | string[];  // false = slot 아님, string[] = 추천 컴포넌트 ID 배열
+}
+```
+
+| 값 | 설명 |
+| --- | --- |
+| `false` | slot이 아님 (기본값) |
+| `string[]` | slot으로 지정. 배열 항목은 추천 reusable 컴포넌트의 ID |
+
+### slot 사용 예시
+
+컴포넌트 정의 시 slot 지정:
+
+```typescript
+{
+  "id": "sidebar",
+  "type": "frame",
+  "reusable": true,
+  "children": [
+    { "id": "header", "type": "frame", "fill": "#FF0000" },
+    {
+      "id": "content",
+      "type": "frame",
+      "fill": "#00FF00",
+      "slot": ["round-button", "icon-button"]  // 추천 컴포넌트 ID
+    },
+    { "id": "footer", "type": "frame", "fill": "#0000FF" }
+  ]
+}
+```
+
+### children 교체 메커니즘
+
+인스턴스에서 `descendants` 속성의 `children` 키로 slot 영역의 자식을 교체합니다:
+
+```typescript
+{
+  "id": "menu-sidebar",
+  "type": "ref",
+  "ref": "sidebar",
+  "descendants": {
+    "content": {
+      "children": [  // content slot의 children을 새 객체로 교체
+        { "id": "home-button", "type": "ref", "ref": "round-button",
+          "descendants": { "label": { "text": "Home" } } },
+        { "id": "settings-button", "type": "ref", "ref": "round-button",
+          "descendants": { "label": { "text": "Settings" } } }
+      ]
+    }
+  }
+}
+```
+
+> Pencil은 slot으로 표시된 영역에 특수한 시각 효과를 표시하며, 추천 컴포넌트(`slot` 배열에 지정된 ID)의 인스턴스를 한 번의 클릭으로 삽입할 수 있습니다.
