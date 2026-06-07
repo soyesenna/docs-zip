@@ -141,7 +141,7 @@ env:
 
 ### OIDC 인증 (권장)
 
-저장된 정적 토큰을 완전히 제거할 수 있다. GitHub Actions가 워크플로우 job에 대해 단기 OIDC 토큰을 발급하면, `pulumi/auth-actions` 액션이 이를 단기 Pulumi access token으로 교환한다. 장기 비밀이 저장소 secret으로 저장될 필요가 없다.
+저장된 정적 토큰을 완전히 제거할 수 있다. GitHub Actions를 Pulumi Cloud의 신뢰할 수 있는 OIDC 발급자로 등록하면, 워크플로우 job에 대해 발급된 단기 OIDC 토큰을 `pulumi/auth-actions` 액션이 단기 Pulumi access token으로 교환한다. 장기 비밀이 저장소 secret으로 저장될 필요가 없다.
 
 `pulumi/esc-action`과 함께 사용하면 클라우드 자격 증명, 시크릿, 구성을 ESC 환경에서 가져올 수 있다. 이 방식이 권장되며, 다음과 같은 이점이 있다.
 
@@ -150,6 +150,8 @@ env:
 | **Provider-agnostic** | AWS, Azure, Google Cloud 등 동일한 패턴으로 모든 클라우드에 작동 |
 | **Portable** | 동일한 ESC 환경이 로컬 및 모든 CI/CD 시스템에서 작동 |
 | **Centralized** | 자격 증명 구성이 ESC에 집중되고 개별 워크플로우에 흩어지지 않음 |
+
+> **Note:** ESC 없이 개별 클라우드 프로바이더의 OIDC를 직접 설정할 수도 있다 (예: `aws-actions/configure-aws-credentials` + `role-to-assume`). 단, 이 방식은 프로바이더별로 신뢰 관계를 각각 설정해야 하며, ESC는 신뢰를 한 번만 설정하고 어디서나 재사용할 수 있다.
 
 OIDC를 사용하려면 `id-token: write` 권한이 필요하다. PR 코멘트 작성 시 `pull-requests: write`도 추가한다.
 
@@ -560,7 +562,7 @@ push 트리거 배포의 경우 `comment-on-summary: true`로 workflow run summa
 
 ### Stack Outputs
 
-`pulumi/actions` 단계에 `id`를 부여하면 stack output을 후속 단계에서 사용할 수 있다.
+`pulumi/actions` 단계에 `id`를 부여하면 stack output을 후속 단계에서 사용할 수 있다. 각 stack output은 `steps.<id>.outputs.<name>` 형식으로 접근한다.
 
 ```yaml
 - name: Deploy
@@ -576,9 +578,39 @@ push 트리거 배포의 경우 `comment-on-summary: true`로 workflow run summa
   run: echo "Deployed to ${{ steps.pulumi.outputs.url }}"
 ```
 
+**Downstream job으로 전달하려면** `needs`와 `outputs`를 사용한다.
+
+```yaml
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    outputs:
+      url: ${{ steps.pulumi.outputs.url }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: pulumi
+        uses: pulumi/actions@v7
+        with:
+          command: up
+          stack-name: acme/website/staging
+          work-dir: infra
+        env:
+          PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
+
+  integration-test:
+    runs-on: ubuntu-latest
+    needs: deploy
+    steps:
+      - run: ./run-tests.sh
+        env:
+          SERVICE_URL: ${{ needs.deploy.outputs.url }}
+```
+
 > **Warning:** Stack output에 민감한 값이 포함될 수 있다. `suppress-outputs: true`로 출력 값을 워크플로우 로그에서 숨기고, 시크릿은 stack output 대신 encrypted secrets에 저장하라.
 
 ### 캐시로 속도 향상
+
+GitHub Actions는 매 실행마다 깨끗한 runner에서 시작하므로 Pulumi가 매번 플러그인과 policy pack을 다시 다운로드한다. `actions/cache`로 `~/.pulumi/plugins`와 `~/.pulumi/policies`를 캐시하면 이를 방지할 수 있다. 캐시 키에는 종속성 매니페스트의 해시를 포함하여 종속성이 변경될 때 캐시가 갱신되도록 한다.
 
 ```yaml
 - name: Cache Pulumi plugins and policy packs
@@ -591,6 +623,8 @@ push 트리거 배포의 경우 `comment-on-summary: true`로 workflow run summa
     restore-keys: |
       ${{ runner.os }}-pulumi-
 ```
+
+> **Note:** 언어에 따라 적절한 매니페스트 파일을 사용하라: `package.json`(TypeScript/JavaScript), `requirements.txt`(Python), `go.sum`(Go), `.csproj`(.NET), `pom.xml`(Java).
 
 ### 동시 실행 제어
 
@@ -651,7 +685,7 @@ Pulumi는 CLI와 언어 런타임이 사전 설치된 공식 컨테이너 이미
 
 ### OIDC 인증
 
-GitLab의 `id_tokens` 키워드로 OIDC 토큰을 요청하고 `pulumi login --oidc-token`으로 교환한다.
+GitLab의 `id_tokens` 키워드로 OIDC 토큰을 요청하고 `pulumi login --oidc-token`으로 교환한다. 신뢰 흐름은 인바운드이다: GitLab이 `id_token`을 발급하고, `pulumi login --oidc-token`이 이를 Pulumi Cloud에 전달하여 access token으로 교환한다.
 
 ```yaml
 variables:
@@ -666,6 +700,8 @@ variables:
     - cd infra
     - npm ci
 ```
+
+OIDC를 사용하면 `PULUMI_ACCESS_TOKEN` CI/CD 변수가 필요 없다. 발급자 등록과 어떤 프로젝트 및 브랜치가 토큰 교환을 허용할지 제어하는 인가 정책 작성에 대해서는 [Configuring OpenID Connect for GitLab](https://www.pulumi.com/docs/administration/access-identity/oidc-issuers/gitlab/)과 [OIDC issuers 참조](https://www.pulumi.com/docs/administration/access-identity/oidc-issuers/)를 참조하라.
 
 ### Trunk-based 워크플로우 (TypeScript)
 
@@ -1011,15 +1047,13 @@ Pulumi ESC를 사용하면 클라우드 자격 증명, 시크릿, 구성을 파�
 
 ### 프로그램 종속성 설치 (pulumi install)
 
-`pulumi/login` 명령은 Pulumi CLI를 설치하지만, 프로그램의 언어 종속성은 설치하지 않는다. preview 또는 update 단계 전에 `pulumi install`을 실행하는 step을 추가해야 한다.
+`pulumi/login` 명령은 Pulumi CLI를 설치하지만, 프로그램의 언어 종속성은 설치하지 않는다. preview 또는 update 단계 전에 `pulumi install`을 실행하는 step을 추가해야 한다. `pulumi install`은 프로그램의 언어 종속성과 필수 플러그인을 함께 설치하므로, 어떤 언어로 작성된 Pulumi 프로그램에도 동일한 step이 작동한다. CircleCI executor 이미지에 프로그램 언어의 런타임이 포함되어야 한다(예: TypeScript/JavaScript는 `cimg/node`, Python은 `cimg/python`). CircleCI convenience images 목록에서 사용 가능한 이미지를 확인할 수 있다.
 
 ```yaml
 - run:
     name: Install dependencies
     command: pulumi install --cwd infra/
 ```
-
-`pulumi install`은 프로그램의 언어 종속성과 필수 플러그인을 함께 설치하므로, 어떤 언어로 작성된 Pulumi 프로그램에도 동일한 step이 작동한다. CircleCI executor 이미지에 프로그램 언어의 런타임이 포함되어야 한다(예: TypeScript/JavaScript는 `cimg/node`, Python은 `cimg/python`).
 
 ### Trunk-based 워크플로우
 
@@ -1095,7 +1129,7 @@ workflows:
 
 | 명령어 | 설명 | 주요 파라미터 |
 |--------|------|-------------|
-| `pulumi/login` | Pulumi CLI 설치 및 로그인 | `version`, `cloud-url`, `access-token` |
+| `pulumi/login` | Pulumi CLI 설치 및 로그인 | `version` (기본값: latest), `cloud-url`, `access-token` (기본값: `${PULUMI_ACCESS_TOKEN}`) |
 | `pulumi/preview` | `pulumi preview` 실행 | `stack` |
 | `pulumi/update` | `pulumi up` 실행 | `stack`, `skip-preview` |
 | `pulumi/refresh` | `pulumi refresh` 실행 | `stack`, `expect_no_changes`, `skip-preview` |
@@ -1103,6 +1137,8 @@ workflows:
 | `pulumi/stack_init` | 신규 스택 생성 | `stack`, `secrets_provider`, `copy` |
 | `pulumi/stack_rm` | 스택 제거 | `stack`, `force` |
 | `pulumi/stack_output` | Stack output을 환경 변수로 읽기 | `stack`, `property_name`, `env_var`, `show_secrets` |
+
+> **Note:** `login`을 제외한 모든 명령어는 `working_directory` 파라미터(기본값 `.`)를 지원하여 하위 디렉터리의 Pulumi 프로그램을 실행할 수 있다. 전체 파라미터 문서는 [orb registry 페이지](https://circleci.com/developer/orbs/orb/pulumi/pulumi)와 [orb 소스](https://github.com/pulumi/pulumi-orb)를 참조하라.
 
 ### 프로덕션 승격
 
@@ -1139,6 +1175,10 @@ pulumi package add terraform-provider mrolla/circleci
 
 Jenkins는 `Jenkinsfile`에 파이프라인을 정의하며, `pulumi/pulumi` 컨테이너 이미지 내에서 Pulumi를 실행한다. 별도 Jenkins 플러그인은 필요하지 않다. `pulumi/pulumi` 컨테이너 이미지가 통합 지점이며, CLI와 모든 언어 런타임이 포함되어 있어 어떤 언어로 작성된 프로그램이든 모든 클라우드 프로바이더에서 작동한다.
 
+### Pulumi가 Jenkins와 작동하는 방식
+
+인프라 변경을 적용하려면 Pulumi가 프로그램을 CLI로 실행한다. Jenkins 파이프라인 stage에서 Docker agent를 사용하면 이 환경을 제공할 수 있다: stage의 step이 선택한 컨테이너 이미지 내에서 실행된다. `pulumi/pulumi` 이미지를 가리키면 해당 stage에서 `install`, `preview`, `up` 등 모든 `pulumi` 명령을 로컬 머신에서와 동일하게 실행할 수 있다.
+
 ### Prerequisites
 
 시작하기 전에 다음이 필요하다.
@@ -1157,11 +1197,13 @@ environment {
 }
 ```
 
-**OIDC token exchange:** Jenkins 자체적으로 OIDC 토큰을 발급하지 않으므로 커뮤니티 [OpenID Connect Provider 플러그인](https://plugins.jenkins.io/oidc-provider/)이 필요하다.
+**OIDC token exchange:** Jenkins 자체적으로 OIDC 토큰을 발급하지 않으므로 커뮤니티 [OpenID Connect Provider 플러그인](https://plugins.jenkins.io/oidc-provider/)이 필요하다. 이 플러그인은 OpenID Connect id token 자격 증명 유형을 추가하여, 파이프라인이 읽을 때마다 새로운 단기 토큰을 발급한다.
 
 ```bash
 pulumi login --oidc-token "$OIDC_TOKEN" --oidc-org "your-org"
 ```
+
+> **Note:** OIDC 토큰은 Jenkins에서 시작되어 Pulumi Cloud로 인바운드 교환된다. Pulumi Cloud가 Jenkins로 OIDC 토큰을 발급하거나 아웃바운드 신뢰 관계를 설정하지는 않는다.
 
 ### 클라우드 자격 증명 제공
 
@@ -1177,6 +1219,8 @@ Jenkins는 `usernamePassword` 쌍이나 `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_
 > **Warning:** 클라우드 자격 증명이나 Pulumi access token을 저장소에 절대 커밋하지 마라. Jenkins credentials store에 보관하여 값이 보호되고 접근이 감사 가능하도록 하라.
 
 ### 기본 파이프라인
+
+아래 선언적 파이프라인은 `pulumi/pulumi` 컨테이너 내에서 스택에 대해 Pulumi를 실행한다. `infra/` 디렉터리에 Pulumi 프로그램이 있다고 가정한다. `pulumi install`은 프로그램의 언어 종속성과 필수 플러그인을 함께 설치하므로, 어떤 언어로 작성된 프로그램에도 동일한 step이 작동한다.
 
 ```groovy
 pipeline {
@@ -1257,6 +1301,8 @@ agent {
     docker { image "your-registry/pulumi-builder" }
 }
 ```
+
+플러그인이 이미지에 포함되어 있으므로 모든 빌드가 웜 캐시로 시작한다. Pulumi가 프로바이더 플러그인을 해석하고 캐시하는 방법에 대한 자세한 내용은 [플러그인 문서](https://www.pulumi.com/docs/iac/using-pulumi/language-independent/plugins/)를 참조하라.
 
 ### PR 결과 보고
 
@@ -1346,7 +1392,13 @@ steps:
 
 `createPrComment: true` 설정 시 빌드 출력을 PR에 게시한다. 이를 위해서는 빌드 서비스 사용자에게 **Contribute to pull requests** 권한이 필요하다.
 
-> **Note:** PR 코멘트는 Azure DevOps 호스팅 저장소에서만 지원된다.
+**권한 설정 방법:**
+
+1. **Project Settings > Repositories**에서 해당 저장소 선택 > **Security** 탭
+2. **Users**에서 빌드 서비스 사용자(`<프로젝트명> Build Service`)를 찾는다
+3. **Contribute to pull requests**를 **Allow**로 설정
+
+> **Note:** PR 코멘트는 Azure DevOps 호스팅 저장소에서만 지원된다. GitHub, GitLab, Bitbucket 저장소에서는 지원되지 않는다.
 
 ### Pulumi@1 태스크 파라미터
 
@@ -1489,7 +1541,7 @@ Pulumi Cloud Bitbucket 버전 관리 통합은 CI/CD 시스템에 관계없이 �
 
 ## Buildkite
 
-Buildkite는 `.buildkite/pipeline.yml`에 파이프라인을 정의하며, 공식 `pulumi` 플러그인으로 CLI를 설치한다. 플러그인이 CLI 명령을 실행하므로 어떤 언어로 작성된 Pulumi 프로그램이든 모든 클라우드 프로바이더에서 작동한다.
+Buildkite는 `.buildkite/pipeline.yml`에 파이프라인을 정의하며, 공식 `pulumi` 플러그인으로 CLI를 설치한다. 플러그인이 CLI 명령을 실행하므로 어떤 언어로 작성된 Pulumi 프로그램이든 모든 클라우드 프로바이더에서 작동한다. Pulumi는 CLI와 언어 런타임이 사전 설치된 공식 컨테이너 이미지를 주간 릴리스 주기로 배포한다. 이 이미지를 직접 사용하거나 `helm`, `kubectl` 등의 도구를 추가한 커스텀 이미지를 파생할 수 있다.
 
 ### Prerequisites
 
@@ -1533,6 +1585,8 @@ plugins:
       use-oidc: true
       audience: "urn:pulumi:org:ACME_ORG"
 ```
+
+Pulumi ESC(Environments, Secrets, and Configuration)는 클라우드 자격 증명, 시크릿, 구성을 파이프라인에 제공한다. ESC는 파이프라인과 개발자 머신 모두에 동일한 방식으로 값을 전달하므로, 클라우드 프로바이더 키를 파이프라인에 별도로 저장할 필요가 없다.
 
 ### Trunk-based 워크플로우
 
@@ -1585,11 +1639,13 @@ plugins:
         - PULUMI_ACCESS_TOKEN
 ```
 
-### Dynamic pipelines
+### Buildkite 주요 기능
+
+#### Dynamic pipelines
 
 Buildkite는 빌드 시간에 파이프라인 단계를 동적으로 생성할 수 있다. 각 Pulumi 스택이나 프로젝트별로 단계를 펼치고 싶을 때 유용하며, 각각을 하드코딩하지 않아도 된다.
 
-### Cache volumes
+#### Cache volumes
 
 호스팅 agent에서 cache volumes는 빌드 간에 디렉터리를 유지한다. `~/.pulumi/plugins`와 언어 패키지(`node_modules` 등)를 캐시하면 실행 속도가 향상된다. Pulumi 플러그인 버전은 이를 사용하는 Pulumi 패키지 버전과 1:1로 연결되므로, 해당 패키지가 변경되지 않는 한 캐시가 올바르게 유지된다.
 
