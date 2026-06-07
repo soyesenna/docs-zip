@@ -70,8 +70,8 @@ Automation API는 Pulumi와 동일하게 여러 언어를 지원하며, 크로�
 | TypeScript | Stable |
 | JavaScript | Stable |
 | Python | Stable |
-| Go | Stable |
 | .NET (C#) | Stable |
+| Go | Stable |
 | Java | Stable |
 
 ---
