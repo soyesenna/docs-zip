@@ -124,7 +124,12 @@ WebGL 1.0 프래그먼트 셰이더로 복잡한 그래픽 효과:
 | `normal` | 기본값 |
 | `darken` | 어두운 색 선택 |
 | `multiply` | 곱하기 |
+| `linearBurn` | 선형 번 (더 어두운 결과) |
+| `colorBurn` | 컬러 번 (대비 강화) |
+| `light` | 밝은 색 선택 |
 | `screen` | 스크린 |
+| `linearDodge` | 선형 닷지 (더 밝은 결과) |
+| `colorDodge` | 컬러 닷지 (하이라이트 강화) |
 | `overlay` | 오버레이 |
 | `softLight` | 부드러운 빛 |
 | `hardLight` | 강한 빛 |
@@ -139,15 +144,41 @@ WebGL 1.0 프래그먼트 셰이더로 복잡한 그래픽 효과:
 
 ## Stroke (스트로크)
 
-Fill과 동일한 타입(Color, Gradient 등)을 스트로크에 적용:
+`stroke` 속성은 `Fills` 타입을 사용합니다. 즉, 단일 `Fill` 또는 `Fill` 배열을 지정할 수 있어 Color는 물론 Gradient, Image, Shader, Mesh Gradient 등 Fill의 모든 타입을 스트로크에 적용할 수 있습니다.
 
 ```javascript
+// 단일 색상 스트로크
 {
   stroke: "#000000",
   strokeWidth: 2,
   strokeLinecap: "round",
   strokeLinejoin: "miter",
   strokeAlignment: "center"
+}
+
+// 그래디언트 스트로크
+{
+  stroke: {
+    type: "gradient",
+    gradientType: "linear",
+    colors: [
+      { color: "#3B82F6", position: 0 },
+      { color: "#8B5CF6", position: 1 }
+    ]
+  },
+  strokeWidth: 2
+}
+
+// 다중 Fill 스트로크 (배열)
+{
+  stroke: [
+    { type: "color", color: "#00000033" },
+    { type: "gradient", gradientType: "linear", colors: [
+      { color: "#FF0000", position: 0 },
+      { color: "#0000FF", position: 1 }
+    ]}
+  ],
+  strokeWidth: 3
 }
 ```
 
@@ -264,27 +295,40 @@ Generate(rect, "stock", "mountain landscape")
 
 ## 아이콘
 
-Icon 노드로 라이브러리 아이콘 표시:
+Icon 노드로 라이브러리 아이콘 표시. 6개 라이브러리를 지원합니다:
 
 ```javascript
 // Lucide 아이콘
 { type: "icon", library: "lucide", icon: "settings", width: 24, height: 24, fill: "$foreground" }
 
-// Material Symbols (weight 지정)
+// Material Symbols Rounded (weight 지정)
 { type: "icon", library: "Material Symbols Rounded", icon: "dashboard", width: 24, height: 24, fill: "$foreground", weight: 400 }
 ```
 
+### 지원 라이브러리
+
+| 라이브러리 | 스타일 | 예시 아이콘 |
+| --- | --- | --- |
+| `lucide` | 라인 아이콘, 균일한 선 두께 | `home`, `settings`, `search`, `plus`, `heart` |
+| `feather` | 라인 아이콘, 심플한 디자인 | `home`, `settings`, `search`, `plus-circle`, `star` |
+| `Material Symbols Outlined` | Google Material, 아웃라인 스타일 | `home`, `settings`, `search`, `add`, `favorite_border` |
+| `Material Symbols Rounded` | Google Material, 둥근 스타일 | `home`, `settings`, `search`, `add`, `favorite` |
+| `Material Symbols Sharp` | Google Material, 날카로운 스타일 | `home`, `settings`, `search`, `add`, `favorite` |
+| `phosphor` | 6가지 변형(Six styles) 지원 | `house`, `gear`, `magnifying-glass`, `plus`, `heart` |
+
+> `weight` 속성(100~700)은 라이브러리가 지원하는 경우에만 사용할 수 있습니다.
+
 ### 자주 쓰는 아이콘
 
-| 액션 | Lucide | Material Symbols |
-| --- | --- | --- |
-| 홈 | `home` | `home` |
-| 설정 | `settings` | `settings` |
-| 검색 | `search` | `search` |
-| 추가 | `plus` | `add` |
-| 닫기 | `x` | `close` |
-| 편집 | `edit`, `pencil` | `edit` |
-| 삭제 | `trash`, `trash-2` | `delete` |
-| 확인 | `check` | `check` |
-| 메뉴 | `menu` | `menu` |
-| 알림 | `bell` | `notifications` |
+| 액션 | Lucide | Feather | Material Symbols | Phosphor |
+| --- | --- | --- | --- | --- |
+| 홈 | `home` | `home` | `home` | `house` |
+| 설정 | `settings` | `settings` | `settings` | `gear` |
+| 검색 | `search` | `search` | `search` | `magnifying-glass` |
+| 추가 | `plus` | `plus` | `add` | `plus` |
+| 닫기 | `x` | `x` | `close` | `x` |
+| 편집 | `edit`, `pencil` | `edit-2` | `edit` | `pencil-simple` |
+| 삭제 | `trash`, `trash-2` | `trash-2` | `delete` | `trash` |
+| 확인 | `check` | `check` | `check` | `check` |
+| 메뉴 | `menu` | `menu` | `menu` | `list` |
+| 알림 | `bell` | `bell` | `notifications` | `bell` |
