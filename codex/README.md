@@ -1,9 +1,9 @@
 # Codex CLI 개발자 문서
 
 > [developers.openai.com/codex](https://developers.openai.com/codex) 및 [github.com/openai/codex](https://github.com/openai/codex)를 기반으로 정리한 한국어 개발자 가이드입니다.
-> 최종 업데이트: 2026-06-06
+> 최종 업데이트: 2026-06-15
 
-OpenAI **Codex CLI**는 로컬 터미널·IDE·데스크톱 앱·클라우드에서 실행되는 에이전트 기반 코딩 도구입니다. Rust 기반(`codex-rs`)으로 작성되어 빠르고 가볍게 동작하며, 코드 작성·이해·리뷰·디버깅·자동화를 지원합니다.
+OpenAI **Codex**는 로컬 터미널·IDE·데스크톱 앱·클라우드에서 실행되는 에이전트 기반 코딩 도구입니다. Rust 기반(`codex-rs`)으로 작성되어 빠르고 가볍게 동작하며, 코드 작성·이해·리뷰·디버깅·자동화를 지원합니다.
 
 ---
 
@@ -16,7 +16,7 @@ OpenAI **Codex CLI**는 로컬 터미널·IDE·데스크톱 앱·클라우드에
 | 00 | [개요 및 빠른 시작](./00-overview.md) | 제품 소개, 실행 환경(App/IDE/CLI/Web), 설치, 핵심 기능, 모델 요약 |
 | 01 | [설치 및 설정](./01-installation.md) | 시스템 요구사항, App/IDE/CLI/Cloud 설치, API 키, 설정 파일, 트러블슈팅 |
 | 17 | [마이그레이션 가이드](./17-migrate.md) | 다른 에이전트 도구(Claude Code, Cursor 등)에서 Codex로 마이그레이션 |
-| 15 | [모델 및 요금](./15-models-pricing.md) | 지원 모델(gpt-5.5/5.4/5.3-codex-spark), Fast mode, 요금제, 크레딧 레이트 |
+| 15 | [모델 및 요금](./15-models-pricing.md) | 지원 모델(gpt-5.4/5.3-codex/5.3-codex-spark), Fast mode, 요금제, 크레딧 레이트 |
 
 ### CLI 참조
 
@@ -44,9 +44,10 @@ OpenAI **Codex CLI**는 로컬 터미널·IDE·데스크톱 앱·클라우드에
 
 | # | 문서 | 설명 |
 | --- | --- | --- |
-| 08 | [플러그인 및 연동](./08-apps.md) | GitHub Code Review, Slack, Linear, Sites(호스팅), Review, Automations, Worktrees |
+| 08 | [플러그인 및 연동](./08-apps.md) | GitHub Code Review, Slack, Linear, Sites(호스팅), Review, Automations, Worktrees, Amazon Bedrock |
 | 14 | [Codex Cloud / Web](./14-cloud-web.md) | chatgpt.com/codex, 환경 설정, 인터넷 접근, Sites, @codex 작업 위임 |
 | 16 | [IDE 확장 프로그램](./16-ide-extension.md) | VS Code, Cursor, Windsurf, JetBrains 지원, 기능, 설정, 명령어 |
+| 18 | [App 고급 기능](./18-app-advanced.md) | Computer Use(macOS/Windows), In-app Browser, Chrome Extension, Appshots |
 
 ### 에이전트 아키텍처
 
@@ -58,7 +59,7 @@ OpenAI **Codex CLI**는 로컬 터미널·IDE·데스크톱 앱·클라우드에
 
 | # | 문서 | 설명 |
 | --- | --- | --- |
-| 09 | [보안 및 샌드박스](./09-security.md) | OS 수준 샌드박스, 승인 정책, Auto-Review, 네트워크 제어, Cyber Safety, Codex Security Plugin/Cloud/FAQ, OTel |
+| 09 | [보안 및 샌드박스](./09-security.md) | OS 수준 샌드박스(Landlock/bwrap), 승인 정책, Auto-Review, 네트워크 제어, Cyber Safety, Codex Security, OTel |
 | 10 | [엔터프라이즈 관리](./10-enterprise.md) | requirements.toml, managed_config.toml, MDM 배포, 인증(원격/헤드리스), Access Tokens, Governance, Bedrock |
 
 ### 모범 사례
@@ -81,7 +82,7 @@ curl -fsSL https://chatgpt.com/codex/install.sh | sh
 npm install -g @openai/codex
 
 # Homebrew
-brew install --cask codex
+brew install codex
 ```
 
 ### 핵심 명령어
@@ -89,9 +90,10 @@ brew install --cask codex
 ```shell
 codex                          # 대화형 모드
 codex exec "작업 설명"          # 비대화형 모드
-codex --full-auto              # 자동 편집 모드
+codex --full-auto              # 자동 편집 모드 (deprecated 호환 플래그)
 codex resume --last            # 세션 재개
 codex --profile readonly       # 프로필 선택
+codex -P workspace-write       # 샌드박스 권한 프로필 (0.139.0+)
 ```
 
 ### 핵심 슬래시 명령어
@@ -106,13 +108,13 @@ codex --profile readonly       # 프로필 선택
 | `/goal` | 목표 설정 |
 | `/skills` | 스킬 탐색 |
 | `/memories` | 메모리 관리 |
-| `/permissions` | 권한 관리 |
+| `/approvals` | 승인 모드 관리 |
 
 ### 주요 설정
 
 ```toml
 # ~/.codex/config.toml
-model = "gpt-5.5"
+model = "gpt-5.4"
 approval_policy = "on-request"
 sandbox_mode = "workspace-write"
 ```
