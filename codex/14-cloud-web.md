@@ -1,8 +1,16 @@
-# Codex CLI - Codex Cloud / Web
+# Codex Cloud / Web
 
 > OpenAI 클라우드 환경에서 실행되는 Codex Web과 Sites 호스팅에 대한 종합 가이드
 
-**참조**: [developers.openai.com/codex/cloud](https://developers.openai.com/codex/cloud/) | [developers.openai.com/codex/cloud/environments](https://developers.openai.com/codex/cloud/environments/) | [developers.openai.com/codex/cloud/internet-access](https://developers.openai.com/codex/cloud/internet-access/) | [developers.openai.com/codex/sites](https://developers.openai.com/codex/sites/) | [developers.openai.com/codex/integrations/github](https://developers.openai.com/codex/integrations/github/)
+> 출처(대조 기준):
+> [developers.openai.com/codex/cloud](https://developers.openai.com/codex/cloud/) |
+> [developers.openai.com/codex/cloud/environments](https://developers.openai.com/codex/cloud/environments/) |
+> [developers.openai.com/codex/cloud/internet-access](https://developers.openai.com/codex/cloud/internet-access/) |
+> [developers.openai.com/codex/sites](https://developers.openai.com/codex/sites/) |
+> [developers.openai.com/codex/integrations/github](https://developers.openai.com/codex/integrations/github/) |
+> [developers.openai.com/codex/import](https://developers.openai.com/codex/import/)
+
+**최종 업데이트**: 2026-06-15
 
 ---
 
@@ -20,19 +28,33 @@
 
 ## 1. Codex Cloud 개요
 
-Codex Cloud는 브라우저 기반의 Codex 환경으로, OpenAI의 클라우드 인프라에서 작업을 실행합니다. Codex가 백그라운드에서(병렬로도 가능) 자체 클라우드 환경을 사용해 작업을 수행할 수 있습니다.
+Codex는 OpenAI의 코딩 에이전트로 코드를 읽고, 수정하고, 실행할 수 있습니다. Codex Cloud는 백그라운드에서(병렬로도 가능), 심지어 사전에(proactively) 자체 클라우드 환경을 사용해 작업을 수행합니다. OpenAI의 클라우드 인프라에서 실행되는 샌드박스 컨테이너를 작업 단위로 프로비저닝합니다.
 
 ### 접근 방법
 
 - **URL**: [chatgpt.com/codex](https://chatgpt.com/codex) (Codex Web 접근)
-- **요금제**: ChatGPT Plus, Pro, Business, Edu, Enterprise 플랜에 Codex 포함
-- **Enterprise**: 일부 워크스페이스는 관리자 설정(admin setup) 후 접근 가능
+- **요금제**: Codex는 **Plus, Pro, Team, Edu, Enterprise** 플랜에 포함됩니다. (포함 내용은 [Pricing](https://developers.openai.com/codex/pricing) 참조)
+- **Enterprise**: 일부 Enterprise 워크스페이스는 관리자 설정(admin setup) 후 접근 가능
 
 ### 초기 설정
 
 1. [chatgpt.com/codex](https://chatgpt.com/codex)에 접속
 2. GitHub 계정 연결 — 리포지토리 코드에 접근하고 작업 결과를 PR로 생성
 3. 환경(Environments) 설정 — 의존성, 도구, 환경 변수 구성
+
+### 클라우드 작업 위임 클라이언트
+
+클라우드 작업은 대부분의 Codex 클라이언트에서 위임할 수 있습니다. 작업을 시작하면 Codex가 해당 작업만을 위한 샌드박스 컨테이너를 프로비저닝하며, 환경(Environment)에서 코드와 의존성을 지정할 수 있습니다. 덕분에 백그라운드에서, 여러 작업을 병렬로, 그리고 폰이나 GitHub 같은 다른 기기/서비스에서도 트리거할 수 있습니다.
+
+| 클라이언트 | 비고 |
+|---|---|
+| Web | [chatgpt.com/codex](https://chatgpt.com/codex) 브라우저 |
+| IDE 확장 | 에디터에서 클라우드 작업 시작, 진행 상황 모니터링, 결과 diff를 로컬에 적용 가능 |
+| iOS 탭 | Codex iOS 앱의 탭 |
+| `@codex` in GitHub | PR 코멘트에서 `@codex` 멘션으로 클라우드 작업/리뷰 트리거 |
+| CLI | **지원 예정(coming soon)** — CLI를 통한 클라우드 작업 위임 |
+
+> 출처: [Codex cloud](https://developers.openai.com/codex/cloud/) — "You can delegate work to Codex from most Codex clients: web, the IDE extension, the Codex tab in iOS, and or even tagging `@codex` in GitHub. (CLI support for cloud delegation is coming soon.)"
 
 ### 주요 특징
 
@@ -43,8 +65,81 @@ Codex Cloud는 브라우저 기반의 Codex 환경으로, OpenAI의 클라우드
 | GitHub 연동 | 리포지토리 연결, PR 생성, 코드 리뷰 |
 | 자동화 | 의존성 자동 설치, 캐싱, 인터넷 접근 제어 |
 | 샌드박스 | 격리된 컨테이너 환경에서 안전하게 실행 |
-| IDE 확장에서 클라우드 작업 위임 | 에디터에서 클라우드 작업을 시작하고, 진행 상황을 모니터링한 뒤 결과 diff를 로컬에 적용 가능 |
-| 공통 워크플로우 패턴 | 작업 위임, 변경 사항 리뷰, 결과를 PR로 전환하는 검증된 패턴 제공 ([Common workflows](https://developers.openai.com/codex/cloud) 참조) |
+| 다중 기기/서비스 트리거 | 폰, GitHub 등 다른 기기·서비스에서 작업 트리거 가능 |
+
+### ask mode vs code mode
+
+클라우드 작업은 두 가지 모드로 구분해 사용합니다.
+
+| 모드 | 목적 | 결과 |
+|---|---|---|
+| **ask mode** | 코드에 대한 조언과 인사이트 획득 | 변경 사항 없음(no changes applied) |
+| **code mode** | 코드를 실제로 수정하고 PR 준비 | 코드 수정 + PR/diff |
+
+#### ask mode 예시 프롬프트 (조언/인사이트)
+
+1. **리팩토링 제안** — 파일 분할, 함수 추출, 문서 정비 등 구조 개선 아이디어.
+
+```
+Take a look at <hairiest file in my codebase>.
+Can you suggest better ways to split it up, test it, and isolate functionality?
+```
+
+2. **Q&A 및 아키텍처 이해** — 코드베이스에 대한 심층 질문 답변 및 다이어그램 생성.
+
+```
+Document and create a mermaidjs diagram of the full request flow from the client
+endpoint to the database.
+```
+
+#### code mode 예시 프롬프트 (코드 수정/PR)
+
+1. **보안 취약점** — 복잡한 로직 감사와 보안 결함 발견.
+
+```
+There's a memory-safety vulnerability in <my package>. Find it and fix it.
+```
+
+2. **코드 리뷰** — PR URL 뒤에 `.diff`를 붙여 프롬프트에 포함하면, Codex가 컨테이너 내에서 패치를 로드합니다.
+
+```
+Please review my code and suggest improvements. The diff is below:
+<diff>
+```
+
+3. **테스트 추가** — 초기 변경 후 타겟팅된 테스트 생성.
+
+```
+From my branch, please add tests for the following files:
+<files>
+```
+
+4. **버그 수정** — 스택 트레이스만으로 위치 파악 및 수정이 가능한 경우가 많습니다.
+
+```
+Find and fix a bug in <my package>.
+```
+
+5. **제품/UI 수정** — Codex는 브라우저를 렌더링할 수는 없지만, 사소한 UI 회귀는 해결할 수 있으며 이미지를 입력으로 제공해 추가 컨텍스트를 줄 수 있습니다.
+
+```
+The modal on our onboarding page isn't centered. Can you fix it?
+```
+
+> 출처: [Codex cloud - Example prompts](https://developers.openai.com/codex/cloud/)
+
+### 계정 보안 요구사항
+
+Codex는 코드베이스에 직접 접근하므로 다른 ChatGPT 기능보다 높은 수준의 계정 보안이 필요합니다.
+
+| 로그인 방식 | MFA 요구사항 |
+|---|---|
+| 소셜 로그인 (Google, Microsoft, Apple) | MFA 필수는 아님. 단, 소셜 로그인 공급자에 MFA 설정을 강력히 권장 |
+| SSO | 조직 SSO 관리자가 모든 사용자에 대해 MFA를 적용하도록 보장 |
+| 이메일 + 비밀번호 | **Codex 접근 전 MFA 설정 필수** |
+| 다중 로그인 (그중 하나가 이메일+비밀번호) | 현재 로그인 방법과 무관하게 **MFA 설정 필수** |
+
+> 소셜 로그인 공급자 MFA 설정 참조: [Google](https://support.google.com/accounts/answer/185839), [Microsoft](https://support.microsoft.com/account-billing), [Apple](https://support.apple.com)
 
 ---
 
@@ -118,7 +213,9 @@ Codex는 새 작업과 후속 작업의 속도를 높이기 위해 최대 12시�
 
 > **캐시 수동 리셋 권장**: 리포지토리가 변경되어 캐시된 상태와 호환되지 않는 경우, 환경 페이지에서 **Reset cache**를 선택하여 수동으로 캐시를 무효화하세요.
 
-> **Business / Enterprise**: 캐시는 환경에 접근 권한이 있는 모든 사용자에게 공유됩니다. 캐시 무효화는 워크스페이스 내 모든 사용자에게 영향을 줍니다.
+> **Teams and Enterprise**: Teams 및 Enterprise 사용자의 경우, 캐시는 해당 환경에 접근 권한이 있는 모든 사용자에게 공유됩니다. 캐시를 무효화하면 워크스페이스 내 해당 환경의 모든 사용자에게 영향을 줍니다.
+
+> 출처: [Cloud environments](https://developers.openai.com/codex/cloud/environments/) — "For Teams and Enterprise users, caches are shared across all users who have access to the environment."
 
 ### 네트워크 프록시 아키텍처
 
@@ -162,6 +259,8 @@ Codex는 새 작업과 후속 작업의 속도를 높이기 위해 최대 12시�
 - 리포지토리에 `AGENTS.md`가 있으면 프로젝트별 린트/테스트 명령을 참조
 
 ### 작업 프롬프트 예시
+
+자세한 ask mode / code mode 예시 프롬프트(7개)는 [1절. ask mode vs code mode](#ask-mode-vs-code-mode)를 참조하세요. 아래는 실행 흐름 관점의 간단한 예시입니다.
 
 ```
 Fix the failing tests in the authentication module and make sure all edge cases are covered.
@@ -323,7 +422,9 @@ yarnpkg.com
 
 ## 5. GitHub PR에서 @codex로 작업 위임
 
-Codex Code Review를 사용하면 GitHub PR에서 `@codex`를 멘션하여 코드 리뷰 및 작업을 요청할 수 있습니다.
+Codex Code Review를 사용하면 GitHub PR에서 `@codex`를 멘션하여 코드 리뷰 및 작업을 요청할 수 있습니다. GitHub를 떠나지 않고 PR을 리뷰할 수 있습니다.
+
+> 출처: [Use Codex in GitHub](https://developers.openai.com/codex/integrations/github/) (통합 페이지). 자동 코드 리뷰 사용 사례의 자세한 흐름은 [use-cases/github-code-reviews](https://developers.openai.com/codex/use-cases/github-code-reviews/)를 참조하세요.
 
 ### 사전 조건
 
@@ -339,25 +440,29 @@ Codex Code Review를 사용하면 GitHub PR에서 `@codex`를 멘션하여 코�
 
 ### 코드 리뷰 요청
 
-PR 댓글에 `@codex review`를 작성합니다.
+PR 댓글에 `@codex review`를 작성하면, Codex가 반응(👀)하고 마치 팀원처럼 PR에 리뷰를 게시합니다.
 
 ```
 @codex review
 ```
 
-Codex가 반응(eyes)하고 리뷰를 게시합니다. GitHub에서 P0(심각) 및 P1(높음) 이슈만 표시하여 리뷰 코멘트가 우선순위가 높은 위험에 집중되도록 합니다.
+> 출처: [Use Codex in GitHub](https://developers.openai.com/codex/integrations/github/) — "Add a pull request comment with `@codex review`, and Codex replies with a standard GitHub code review."
+
+GitHub에서 Codex는 **P0(심각) 및 P1(높음) 이슈만 표시**하여 리뷰 코멘트가 우선순위가 높은 위험에 집중되도록 합니다. 문서 오타 등 더 낮은 심각도를 원하면 `AGENTS.md` 가이드라인으로 덮어씁니다(아래 참조).
 
 ### 자동 리뷰 (Automatic Reviews)
 
-모든 PR에 대해 자동으로 리뷰하도록 설정할 수 있습니다.
+리포지토리에 대해 **Code review**를 켜면, 모든 PR에 대해 자동으로 리뷰하도록 설정할 수 있습니다.
 
 | 설정 | 설명 |
 |---|---|
-| **Automatic reviews** ON | 새 PR이 열릴 때마다 `@codex review` 없이 자동 리뷰 |
+| **Code review** ON (리포지토리) | Codex Settings에서 리포지토리 단위로 코드 리뷰 기능 활성화 |
+| `@codex review` (수동) | PR 코멘트에 직접 멘션하여 리뷰 요청 |
+| 자동 리뷰 | 새 PR이 열릴 때마다 `@codex review` 없이 자동 리뷰 진행 |
 
 ### 리뷰 가이드라인 커스터마이징
 
-`AGENTS.md`에 리뷰 가이드라인을 추가합니다:
+Codex는 리포지토리에서 `AGENTS.md` 파일을 검색하고, 포함된 **Review guidelines** 섹션을 따릅니다. 리포지토리 가이드라인을 설정하려면 최상위 `AGENTS.md`에 다음과 같은 섹션을 추가합니다:
 
 ```markdown
 ## Review guidelines
@@ -366,46 +471,29 @@ Codex가 반응(eyes)하고 리뷰를 게시합니다. GitHub에서 P0(심각) �
 - Verify that authentication middleware wraps every route.
 ```
 
-> Codex는 각 변경 파일에 대해 가장 가까운 `AGENTS.md`의 가이드라인을 적용합니다. 특정 패키지에 추가 검사가 필요한 경우 더 깊은 디렉터리에 구체적인 지침을 배치할 수 있습니다.
+> Codex는 각 변경 파일에 대해 **가장 가까운** `AGENTS.md`의 가이드라인을 적용합니다. 특정 패키지에 추가 검사가 필요한 경우 트리의 더 깊은 곳에 구체적인 지침을 배치할 수 있습니다.
 
-**일회성 포커스**는 PR 댓글에 추가합니다:
+**일회성 포커스**는 PR 댓글에 추가합니다. 예: `@codex review for security regressions`
 
-```
-@codex review for security regressions
-```
+GitHub에서 Codex는 기본적으로 **P0 및 P1 이슈만 표시**합니다. 문서 오타를 P1으로 처리하고 싶다면 `AGENTS.md`에 가이드라인을 추가하세요. 예: `Treat typos in docs as P1.`
 
-**문서 오타 검사**를 원하면 `AGENTS.md`에 다음과 같이 추가:
+### 리뷰 외 작업 요청 (클라우드 작업 시작)
 
-```markdown
-Treat typos in docs as P1.
-```
-
-### 리뷰 결과에 대한 후속 조치
-
-리뷰가 게시된 후, 동일 PR에서 수정을 요청할 수 있습니다:
-
-```
-@codex fix the P1 issue
-```
-
-Codex가 PR을 컨텍스트로 사용하여 클라우드 작업을 시작하고, 권한이 있으면 브랜치에 수정을 푸시합니다.
-
-### 리뷰 외 작업 요청
-
-`@codex` 다음에 `review`가 아닌 다른 내용을 작성하면 일반 클라우드 작업이 시작됩니다:
+`@codex`를 `review`가 아닌 다른 내용과 함께 멘션하면, Codex는 해당 PR을 컨텍스트로 사용해 **클라우드 작업**을 시작합니다.
 
 ```
 @codex fix the CI failures
 ```
 
-### 문제 해결
+### 자동 리뷰/문제 해결
 
 | 문제 | 확인 사항 |
 |---|---|
-| Codex가 반응하지 않음 | 리포지토리에서 Code review 설정 확인 |
+| Codex가 반응하지 않음 | 리포지토리에서 **Code review** 설정이 켜져 있는지 확인 |
 | 리뷰가 게시되지 않음 | PR이 Codex Cloud가 설정된 리포지토리의 것인지 확인 |
 | 트리거 인식 안됨 | 정확히 `@codex review` 사용 |
-| 자동 리뷰 미작동 | Automatic reviews ON 확인, PR 이벤트가 트리거 설정과 일치하는지 확인 |
+| 낮은 심각도 이슈가 누락됨 | GitHub 리뷰는 P0/P1만 표시. 더 낮은 심각도는 `AGENTS.md`의 Review guidelines로 덮어쓰기 |
+| 출처 | [Use Codex in GitHub](https://developers.openai.com/codex/integrations/github/), 자동 리뷰 흐름: [use-cases/github-code-reviews](https://developers.openai.com/codex/use-cases/github-code-reviews/) |
 
 ---
 
@@ -429,10 +517,12 @@ ChatGPT Enterprise를 사용하는 경우, 워크스페이스 관리자에게 Ch
 
 #### 3단계: Sites 작업 실행
 
-스레드에서 생성하거나 게시할 사이트를 설명합니다. 작업이 호스팅된 배포로 끝나야 할 때는 `@Sites`로 플러그인을 명시적으로 지정하는 것이 좋습니다.
+스레드에서 생성하거나 게시할 사이트를 설명합니다. 새 웹사이트, 대시보드, 내부 도구의 경우 대상 사용자, 핵심 경험, 필요한 데이터를 포함하세요. 작업이 호스팅된 배포로 끝나야 할 때는 `@Sites`로 플러그인을 명시적으로 지정하는 것이 좋습니다.
 
 ```
-@Sites Build a project management dashboard with task tracking and team collaboration features.
+@Sites Build a project request dashboard for my operations team. Let team
+members submit requests, see who owns each one, update the status, and filter
+the list.
 ```
 
 #### 4단계: 배포 검토 (Save vs Deploy)
@@ -503,6 +593,8 @@ Sites 게시는 두 개의 독립적인 단계로 이루어집니다:
 
 ### 프롬프트 예시
 
+새 웹사이트/대시보드/내부 도구를 만들 때는 대상 사용자, 핵심 경험, 필요한 데이터를 포함하세요.
+
 **새 웹사이트**:
 ```
 @Sites Build a project request dashboard for my operations team. Let team
@@ -522,6 +614,8 @@ required changes, and give me the deployment URL.
 @Sites Add persistent player scores and avatar uploads to this game. Use
 the appropriate Sites storage and deploy the updated game.
 ```
+
+> 배포된 내부 앱과 생성에 사용된 전체 프롬프트는 Sites 쇼케이스에서 탐색할 수 있습니다.
 
 ### 접근 제어
 
@@ -591,4 +685,4 @@ showing me the current site and confirming the deployment URL.
 | **시크릿 관리** | `.env`, 로컬 파일 | 추가 암호화 레이어로 저장, 작업 실행 시에만 복호화, 에이전트 접근 불가 |
 | **코드 리뷰** | 수동 | `@codex review` 자동/수동 GitHub 리뷰 |
 | **호스팅** | 별도 배포 필요 | Sites 플러그인으로 즉시 배포 |
-| **인증** | API 키, OAuth | ChatGPT 계정 (Plus/Pro/Business/Edu/Enterprise) |
+| **인증** | API 키, OAuth | ChatGPT 계정 (Plus/Pro/Team/Edu/Enterprise) |

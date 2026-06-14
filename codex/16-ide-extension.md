@@ -2,7 +2,9 @@
 
 > VS Code, Cursor, Windsurf, JetBrains IDE에서 Codex를 사용하는 방법에 대한 종합 가이드
 
-**참조**: [developers.openai.com/codex/ide](https://developers.openai.com/codex/ide) | [developers.openai.com/codex/ide/features](https://developers.openai.com/codex/ide/features) | [developers.openai.com/codex/ide/settings](https://developers.openai.com/codex/ide/settings) | [developers.openai.com/codex/ide/commands](https://developers.openai.com/codex/ide/commands) | [developers.openai.com/codex/ide/slash-commands](https://developers.openai.com/codex/ide/slash-commands)
+> 출처: [developers.openai.com/codex/ide](https://developers.openai.com/codex/ide) | [developers.openai.com/codex/ide/features](https://developers.openai.com/codex/ide/features) | [developers.openai.com/codex/ide/settings](https://developers.openai.com/codex/ide/settings) | [developers.openai.com/codex/ide/commands](https://developers.openai.com/codex/ide/commands) | [developers.openai.com/codex/ide/slash-commands](https://developers.openai.com/codex/ide/slash-commands)
+
+**최종 업데이트**: 2026-06-15
 
 ---
 
@@ -14,8 +16,8 @@
 
 | IDE | 다운로드 | 비고 |
 | --- | --- | --- |
-| **Visual Studio Code** | VS Code Marketplace | 기본 지원, 오른쪽 사이드바에 자동 표시 |
-| **Cursor** | 별도 다운로드 | VS Code 포크. 수동으로 오른쪽 사이드바 이동 필요 |
+| **Visual Studio Code** | VS Code Marketplace | 기본 지원. 설치 시 **왼쪽 사이드바(left sidebar)**에 다른 확장 옆에 표시됨. 오른쪽 사이드바로 옮기려면 사용자가 Codex 아이콘을 드래그해야 함(수동, 선택 옵션) |
+| **Cursor** | 별도 다운로드 | VS Code 포크. 액티비티 바가 기본 수평 방향이라 Codex가 숨겨질 수 있음 — 고정(pin) 후 확장 순서 재정렬, 또는 액티비티 바 방향을 일시적으로 전환해 아이콘을 드래그 |
 | **Windsurf** | 별도 다운로드 | VS Code 포크 |
 | **Visual Studio Code Insiders** | 별도 다운로드 | Insiders 빌드 지원 |
 | **JetBrains IDE** (Rider, IntelliJ, PyCharm, WebStorm) | JetBrains Marketplace | ChatGPT 계정, API 키, JetBrains AI 구독으로 로그인 |
@@ -23,8 +25,8 @@
 | 플랫폼 | 지원 여부 | 비고 |
 | --- | --- | --- |
 | **macOS** | 지원 | |
-| **Windows** | 지원 | Windows 샌드박스 네이티브 또는 WSL2 사용 가능 |
 | **Linux** | 지원 | |
+| **Windows** | 지원 (실험적, WSL 권장) | 공식 원문: "macOS and Linux. Windows support is experimental, recommend WSL". 최상의 경험을 위해 WSL 워크스페이스 사용 권장 |
 
 ### 1.2 설치 및 로그인
 
@@ -33,17 +35,26 @@
 3. 사이드바에 Codex가 나타나면 ChatGPT 계정 또는 API 키로 로그인합니다.
 4. ChatGPT 플랜(Plus, Pro, Business, Edu, Enterprise)에 사용 크레딧이 포함되어 있어 별도 설정 없이 사용할 수 있습니다.
 
-> **참고**: Windows에서 `chatgpt.runCodexInWindowsSubsystemForLinux` 설정을 켜면 WSL2 환경에서 실행됩니다. 그렇지 않으면 Windows 샌드박스에서 네이티브로 실행됩니다.
+> **참고 (Windows)**: Windows는 실험적 지원이며 공식적으로 WSL 사용을 권장합니다. `chatgpt.runCodexInWindowsSubsystemForLinux` 설정을 켜면 WSL2 환경에서 실행됩니다. Codex agent 모드는 Windows에서 현재 WSL이 필요하며, WSL 사용 시 샌드박스 보안과 성능이 향상됩니다. 설정 변경 시 VS Code가 리로드되어 적용됩니다.
 
 ### 1.3 Cursor에서 사이드바 설정
 
-Cursor에서는 액티비티 바가 기본적으로 수평 방향으로 표시되어 Codex가 숨겨질 수 있습니다.
+Cursor에서는 액티비티 바가 기본적으로 수평 방향으로 표시되어, 접힌 항목이 Codex를 가릴 수 있습니다. 공식 ide/ 페이지는 두 가지 해결 방법을 제시합니다.
+
+**방법 A — 고정 및 순서 재정렬 (권장)**
+
+1. Codex를 **pin**(고정)합니다.
+2. 확장의 표시 순서를 재정렬하여 Codex가 보이도록 만듭니다.
+
+**방법 B — 액티비티 바 방향 일시 전환 후 드래그**
+
+> 공식 원문은 이 방법을 "some IDEs, like Cursor"에 대한 *일시적(temporarily)* 해결책으로 한정합니다.
 
 1. 에디터 설정에서 `activity bar`를 검색합니다 (Workbench 설정).
 2. 방향을 `vertical`로 변경합니다.
 3. 에디터를 재시작합니다.
-4. Codex 아이콘을 오른쪽 사이드바로 드래그합니다.
-5. 액티비티 바 방향을 `horizontal`로 복원합니다.
+4. Codex 아이콘을 오른쪽 사이드바로 드래그합니다(예: Cursor chat 옆). Codex는 사이드바의 또 다른 탭으로 나타납니다.
+5. 액티비티 바 방향을 `horizontal`로 복원하여 기본 동작을 되돌립니다.
 
 ### 1.4 확장 업데이트
 
@@ -101,6 +112,8 @@ Use @example.tsx as a reference to add a new page named "Resources" to the app t
 
 ### 2.6 웹 검색
 
+> **출처 주의**: 웹 검색은 Codex CLI/에이전트 런타임 기반 기능입니다. 공식 IDE extension features 페이지(ide/features)에는 별도로 기재되어 있지 않으며, IDE 확장이 CLI와 동일한 에이전트·config를 공유하므로 동일하게 동작합니다. 아래 내용은 CLI 공식 문서(Config basics) 기반입니다.
+
 Codex는 자체 웹 검색 도구를 제공합니다.
 
 | 설정 | 동작 |
@@ -110,7 +123,7 @@ Codex는 자체 웹 검색 도구를 제공합니다.
 
 웹 검색 결과는 신뢰할 수 없는(untrusted) 것으로 취급해야 합니다. `web_search` 항목이 트랜스크립트나 `codex exec --json` 출력에 표시됩니다.
 
-웹 검색 비활성화 또는 라이브 결과 전환은 Config basics에서 설정할 수 있습니다.
+웹 검색 비활성화 또는 라이브 결과 전환은 Config basics(`~/.codex/config.toml`)에서 설정할 수 있습니다.
 
 ### 2.7 이미지 첨부
 
@@ -120,12 +133,14 @@ Codex는 자체 웹 검색 도구를 제공합니다.
 
 ### 2.8 이미지 생성
 
+> **출처 주의**: 이미지 생성은 Codex CLI/에이전트 런타임 기반 기능입니다. 공식 IDE extension features 페이지(ide/features)에는 기재되어 있지 않으며, IDE 확장이 CLI와 동일한 에이전트·config를 공유하므로 동일하게 동작합니다. 아래 내용은 Codex CLI 공식 문서 기반입니다.
+
 에디터를 떠나지 않고 이미지를 생성하거나 편집할 수 있습니다.
 
 | 항목 | 설명 |
 | --- | --- |
 | **용도** | UI 에셋, 레이아웃, 일러스트레이션, 스프라이트 시트, 플레이스홀더 등 |
-| **사용 모델** | `gpt-image-2` |
+| **사용 모델** | `gpt-image-2` (출처: Codex 이미지 생성 문서) |
 | **호출 방법** | 자연어로 요청하거나 프롬프트에 `$imagegen` 포함 |
 | **참조 이미지** | 기존 에셋을 변환하거나 확장할 때 프롬프트에 참조 이미지 추가 |
 
@@ -146,21 +161,21 @@ Codex는 자체 웹 검색 도구를 제공합니다.
 
 ### 3.2 IDE 확장 설정
 
-Codex IDE Extension은 Codex CLI를 사용합니다. 기본 모델, 승인, 샌드박스 설정 등은 에디터 설정이 아닌 공유 `~/.codex/config.toml` 파일에서 구성합니다.
-
-확장은 VS Code의 내장 chat font 설정도 Codex 대화 표면에 적용합니다.
+Codex IDE Extension은 Codex CLI를 사용합니다. 기본 모델, 승인, 샌드박스 설정 등은 에디터 설정이 아닌 공유 `~/.codex/config.toml` 파일에서 구성합니다. 자세한 내용은 Basic Config를 참조하세요.
 
 ### 3.3 설정 레퍼런스
 
+> 공식 IDE extension settings 페이지에 기재된 5개 설정만 아래에 정리합니다. 그 외의 동작(기본 모델·승인·샌드박스·웹 검색 등)은 `~/.codex/config.toml`에서 구성합니다.
+
 | 설정 | 설명 |
 | --- | --- |
-| `chat.fontSize` | Codex 사이드바의 채팅 텍스트 크기 (대화 콘텐츠 및 작성기 포함) |
-| `chat.editor.fontSize` | Codex 대화 내 코드 렌더링 크기 (코드 스니펫 및 diff 포함) |
 | `chatgpt.cliExecutable` | 개발 전용: Codex CLI 실행 파일 경로. 활성 개발 중이 아닌 한 설정 불필요. 수동 설정 시 일부 기능이 예상과 다르게 동작할 수 있음 |
 | `chatgpt.commentCodeLensEnabled` | TODO 주석 위에 CodeLens를 표시하여 Codex로 완료할 수 있게 함 |
 | `chatgpt.localeOverride` | Codex UI의 선호 언어. 비워두면 자동 감지 |
 | `chatgpt.openOnStartup` | 확장 시작 완료 시 Codex 사이드바에 포커스 |
-| `chatgpt.runCodexInWindowsSubsystemForLinux` | Windows 전용: WSL 사용 가능 시 WSL에서 Codex 실행. 리포지토리와 도구가 WSL2에 있거나 Linux 네이티브 도구가 필요한 경우 사용. 그 외에는 Windows 샌드박스에서 네이티브 실행. 변경 시 VS Code가 리로드됨 |
+| `chatgpt.runCodexInWindowsSubsystemForLinux` | Windows 전용: WSL 사용 가능 시 WSL에서 Codex 실행. **Codex agent 모드는 Windows에서 현재 WSL이 필요**하며, 샌드박스 보안·성능 향상을 위해 권장됨. 변경 시 VS Code가 리로드되어 적용됨 |
+
+> **참고 (chat font)**: 과거 버전에서 `chat.fontSize` / `chat.editor.fontSize` 설정이 사용된 적이 있으나, 현재 공식 IDE extension settings 페이지에는 포함되어 있지 않습니다. 폰트 크기는 VS Code의 기본 에디터 설정을 따릅니다.
 
 ### 3.4 config.toml 연동
 
@@ -245,7 +260,6 @@ IDE Extension과 CLI는 동일한 Codex 에이전트를 사용하고 `~/.codex/c
 | **Command Palette** | `chatgpt.*` 명령어 + 키보드 단축키 바인딩 | 해당 없음 |
 | **슬래시 명령어** | `/auto-context`, `/cloud`, `/cloud-environment`, `/feedback`, `/local`, `/review`, `/status` | 별도의 CLI 슬래시 명령어 세트 |
 | **스크립팅** | 제한적 | `codex exec` 명령어로 자동화 워크플로우 스크립팅 가능 |
-| **Subagent** | 지원 | `/subagent`로 병렬 작업 수행 |
 | **코드 리뷰** | `/review` 슬래시 명령어 | 별도 에이전트로 로컬 코드 리뷰 수행 |
 | **설정 공유** | `~/.codex/config.toml` 공유 | `~/.codex/config.toml` 공유 |
 | **MCP** | config.toml에서 설정 | config.toml에서 설정 |

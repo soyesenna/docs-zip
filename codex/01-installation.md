@@ -41,6 +41,8 @@ Codex App은 macOS와 Windows에서 사용할 수 있는 데스크톱 애플리�
 | Microsoft Store | Microsoft Store에서 "Codex" 검색 후 설치 |
 | winget | `winget install Codex -s msstore` |
 
+**Windows App 업데이트**: 앱을 업데이트하려면 Microsoft Store를 열고 **Downloads**로 이동한 뒤 **Check for updates**를 클릭합니다. Store가 이후 최신 버전을 설치합니다. (출처: app/windows)
+
 **Windows 엔터프라이즈 배포**: 관리자는 Microsoft Store 앱 배포를 통해 엔터프라이즈 관리 도구로 배포할 수 있습니다.
 
 #### 최초 실행
@@ -90,6 +92,8 @@ git checkout <branch-name>
 ```
 
 ### 방법 4: CLI (공식 설치 스크립트)
+
+> Codex CLI는 macOS, Windows, Linux를 공식적으로 지원합니다. Windows에서는 PowerShell과 Windows 샌드박스로 네이티브 실행하거나, Linux 네이티브 환경이 필요할 때 WSL2를 사용할 수 있습니다. (출처: quickstart, cli)
 
 **macOS / Linux**:
 
@@ -477,5 +481,5 @@ Native macOS 앱을 사용하는 경우 로그는 다음 위치에 저장됩니�
 
 ---
 
-> **최종 업데이트**: 2026-06-06
+> **최종 업데이트**: 2026-06-15
 > **출처**: [developers.openai.com/codex/quickstart](https://developers.openai.com/codex/quickstart), [developers.openai.com/codex/app/windows](https://developers.openai.com/codex/app/windows), [developers.openai.com/codex/app/features](https://developers.openai.com/codex/app/features), [github.com/openai/codex - docs/install.md](https://github.com/openai/codex/blob/main/docs/install.md)

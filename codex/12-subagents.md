@@ -2,8 +2,9 @@
 
 > 서브에이전트 워크플로우로 Codex를 병렬 작업에 활용하는 방법, 커스텀 에이전트 정의, 팀 구성 패턴, 모델 선택 가이드
 
-**원문**: [Subagents – Codex](https://developers.openai.com/codex/subagents) | [Subagent Concepts](https://developers.openai.com/codex/concepts/subagents) | [Multi-agents Concepts](https://developers.openai.com/codex/concepts/multi-agents)
-> **참고**: 원문 중 Building AI Teams 페이지(https://developers.openai.com/codex/building-ai-teams)는 현재 403 Forbidden으로 공개 접근이 불가합니다.
+**원문**: [Subagents – Codex](https://developers.openai.com/codex/subagents/) | [Subagent Concepts](https://developers.openai.com/codex/concepts/subagents/) | [Multi-agents Concepts](https://developers.openai.com/codex/concepts/multi-agents) | [Models – Codex](https://developers.openai.com/codex/models) | [Building an AI-Native Engineering Team](https://developers.openai.com/codex/guides/build-ai-native-engineering-team/)
+
+> **최종 업데이트**: 2026-06-15
 
 ---
 
@@ -46,7 +47,7 @@ Spawn one agent per point, wait for all of them, and summarize the result for ea
 1. Security issue
 2. Code quality
 3. Bugs
-4. Race conditions
+4. Race
 5. Test flakiness
 6. Maintainability of the code
 ```
@@ -195,20 +196,20 @@ nickname_candidates = ["Atlas", "Delta", "Echo"]
 | `gpt-5.3-codex` | 더 강한 추론이 필요한 에이전트 | 코드 리뷰, 보안 분석, 다단계 구현, 모호한 요구사항 작업에 적합 |
 | `gpt-5.3-codex-spark` | 속도를 우선하는 에이전트 | 탐색, 읽기 중심 스캔, 빠른 요약. 병렬 워커에 적합 |
 
-> **API 사용자 참고**: API를 통해 Codex를 사용하는 경우 **GPT-5.2-Codex**를 사용하세요. (근거: [Multi-agents Concepts](https://developers.openai.com/codex/concepts/multi-agents))
+> **API 사용자 참고 (구버전 스냅샷)**: multi-agents 개념 페이지는 API를 통해 Codex를 사용하는 경우 **GPT-5.2-Codex**를 안내합니다. 단 이 페이지는 별도 스냅샷(사이드바 'Latest: GPT-5.4')이며, 현재 Models 페이지에서 `gpt-5.2`와 `gpt-5.3-codex`는 "deprecated in Codex when you sign in with ChatGPT"로 명시됩니다. deprecated 모델 참조 시 최신 모델(`gpt-5.5` 등)로 업데이트하세요. (근거: [Multi-agents Concepts](https://developers.openai.com/codex/concepts/multi-agents), [Models – Codex](https://developers.openai.com/codex/models))
 
 ### 서브에이전트 개념 문서의 모델 가이드
 
-공식 subagents 개념 문서에서 권장하는 모델:
+공식 subagents 개념 문서에서 권장하는 모델 (gpt-5.5 기준):
 
 | 모델 | 용도 |
 | --- | --- |
-| `gpt-5.5` | 대부분의 작업 시작점. 모호하고 다단계적인 작업에 강점 |
-| `gpt-5.4` | GPT-5.4에 고정된 워크플로우. 강력한 코딩, 추론, 도구 사용 |
-| `gpt-5.4-mini` | 속도와 효율성 우선. 탐색, 읽기 중심 스캔, 병렬 워커에 적합 |
-| `gpt-5.3-codex-spark` | 거의 즉각적인 텍스트 전용 반복 (ChatGPT Pro, research preview) |
+| `gpt-5.5` | 대부분의 작업 시작점. 모호하고 다단계적인 작업에 강점. 계획, 도구 사용, 검증, 후속 작업에 뛰어남 |
+| `gpt-5.4` | 워크플로우가 GPT-5.4로 고정된 경우. 강력한 코딩, 추론, 도구 사용, 광범위한 워크플로우 |
+| `gpt-5.4-mini` | 속도와 효율성 우선. 탐색, 읽기 중심 스캔, 대용량 파일 리뷰, 문서 처리. 메인 에이전트에 증류된 결과를 반환하는 병렬 워커에 적합 |
+| `gpt-5.3-codex-spark` | ChatGPT Pro 전용 research preview. 거의 즉각적인 텍스트 전용 반복이 필요하고 지연 시간이 중요할 때 |
 
-> **모델 이름 불일치 안내**: 공식 문서의 subagents 설정 페이지 예시에서는 `gpt-5.3-codex-spark`, `gpt-5.4`, `gpt-5.4-mini`를 사용하고, subagents 개념 페이지는 `gpt-5.5` 시작을 권장하며, multi-agents 개념 페이지는 `gpt-5.3-codex` 시리즈만 언급합니다. 세 문서 간 모델 이름에 차이가 있으므로, 최신 Models 페이지에서 현재 사용 가능한 모델을 확인하는 것을 권장합니다.
+> **자동 모델 선택**: 공식 concepts/subagents 페이지는 "It may favor `gpt-5.4-mini` for fast scans or a higher-effort `gpt-5.5` configuration for more demanding reasoning"라고 명시합니다. (근거: [Subagent Concepts](https://developers.openai.com/codex/concepts/subagents/))
 
 ### 추론 노력 (`model_reasoning_effort`)
 
@@ -225,6 +226,8 @@ nickname_candidates = ["Atlas", "Delta", "Echo"]
 ---
 
 ## 팀 구성 패턴 — Building AI Teams
+
+> **참고 가이드**: [Building an AI-Native Engineering Team](https://developers.openai.com/codex/guides/build-ai-native-engineering-team/) — SDLC 전 단계(계획, 설계, 빌드, 테스트, 리뷰, 배포/유지보수)에서 코딩 에이전트가 팀에 어떻게 기여하는지, 각 단계의 delegate/review/own 분담과 시작 체크리스트를 제공합니다.
 
 최고의 에이전트 정의는 좁고 명확한(opinionated) 것입니다. 각 에이전트에 하나의 명확한 작업, 그 작업에 맞는 도구 표면, 인접 작업으로 번지지 않도록 하는 명령어를 부여합니다.
 
@@ -244,7 +247,7 @@ nickname_candidates = ["Atlas", "Delta", "Echo"]
 # .codex/agents/pr-explorer.toml
 name = "pr_explorer"
 description = "Read-only codebase explorer for gathering evidence before changes are proposed."
-model = "gpt-5.4-mini"
+model = "gpt-5.3-codex-spark"
 model_reasoning_effort = "medium"
 sandbox_mode = "read-only"
 developer_instructions = """
@@ -449,20 +452,22 @@ CLI에서 활성 에이전트 스레드 간 전환하고 진행 중인 스레드
 
 ## 모델 및 추론 설정 가이드
 
-서브에이전트와 멀티 에이전트는 동일한 모델 선택 철학을 공유합니다. **대부분의 Codex 작업은 `gpt-5.5`로 시작하는 것을 권장합니다.** 속도와 비용이 중요한 가벼운 서브에이전트 작업에는 `gpt-5.4-mini`를, ChatGPT Pro에서 거의 즉각적인 텍스트 전용 반복이 필요하면 `gpt-5.3-codex-spark`를 사용하세요.
+서브에이전트와 멀티 에이전트는 동일한 모델 선택 철학을 공유합니다. 공식 Models 페이지와 concepts/subagents 페이지 모두 **"For most tasks in Codex, start with `gpt-5.5`"** 를 명시 권장합니다. `gpt-5.5`는 복잡한 코딩, 컴퓨터 사용, 지식 작업, 연구 워크플로우에 가장 강한 최신 프론티어 모델입니다. 속도와 비용이 중요한 가벼운 서브에이전트 작업에는 `gpt-5.4-mini`를, 병렬 워커나 대용량 파일 리뷰에도 `gpt-5.4-mini`를, ChatGPT Pro에서 거의 즉각적인 텍스트 전용 반복이 필요하면 `gpt-5.3-codex-spark`(research preview)를 사용하세요. (근거: [Models – Codex](https://developers.openai.com/codex/models), [Subagent Concepts](https://developers.openai.com/codex/concepts/subagents/))
 
-> **API 사용자 참고**: API를 통해 Codex를 사용하는 경우 **GPT-5.2-Codex**를 사용하세요. (근거: [Multi-agents Concepts](https://developers.openai.com/codex/concepts/multi-agents))
+> **deprecated 모델 주의**: 공식 Models 페이지는 "The `gpt-5.2` and `gpt-5.3-codex` models are deprecated in Codex when you sign in with ChatGPT"라고 명시합니다. 스크립트, 설정 파일, `codex exec --model` 명령어가 deprecated 모델을 참조하면 최신 모델로 업데이트하세요. 단 multi-agents 개념 페이지(별도 스냅샷, 사이드바 'Latest: GPT-5.4')는 여전히 `gpt-5.3-codex`를 추천하지만, Models 페이지와 subagents/concepts 페이지 기준으로는 deprecated입니다. (근거: [Models – Codex](https://developers.openai.com/codex/models))
 
 모델이나 `model_reasoning_effort`를 고정하지 않으면 Codex가 작업에 맞게 균형을 잡아 선택합니다. 예를 들어 빠른 스캔에는 `gpt-5.4-mini`를 선호하고, 더 까다로운 추론에는 더 높은 노력의 `gpt-5.5` 구성을 선택할 수 있습니다. 더 세밀한 제어가 필요하면 프롬프트에서 직접 지시하거나 에이전트 파일에서 `model`과 `model_reasoning_effort`를 설정하세요.
 
 ### 모델 선택
 
+공식 Models 페이지의 추천 모델 4종과 concepts/subagents 가이드:
+
 | 모델 | 용도 | 특징 |
 | --- | --- | --- |
-| `gpt-5.5` | 가장 까다로운 에이전트에 사용 | 모호하고 다단계적인 작업에 강점. 계획, 도구 사용, 검증, 후속 작업에 뛰어남 |
-| `gpt-5.4` | GPT-5.4에 고정된 워크플로우 | 강력한 코딩, 추론, 도구 사용 |
-| `gpt-5.4-mini` | 속도와 효율성 우선 | 탐색, 읽기 중심 스캔, 대용량 파일 리뷰, 문서 처리. 병렬 워커에 적합 |
-| `gpt-5.3-codex-spark` | 거의 즉각적인 텍스트 전용 반복 | ChatGPT Pro 필요 (research preview). 지연 시간이 중요할 때 사용 |
+| `gpt-5.5` | 가장 까다로운 에이전트 (시작점) | 최신 프론티어 모델. 모호하고 다단계적인 작업에 강점. 계획, 도구 사용, 검증, 후속 작업에 뛰어남 |
+| `gpt-5.4` | 워크플로우가 GPT-5.4로 고정된 경우 | flagship 프론티어 모델. 강력한 코딩, 추론, 도구 사용, 광범위한 워크플로우 |
+| `gpt-5.4-mini` | 속도와 효율성 우선, 병렬 워커 | 빠르고 효율적인 미니 모델. 탐색, 읽기 중심 스캔, 대용량 파일 리뷰, 문서 처리에 적합 |
+| `gpt-5.3-codex-spark` | 거의 즉각적인 텍스트 전용 반복 | ChatGPT Pro 전용 research preview. 지연 시간이 중요한 실시간 코딩 반복에 최적화 |
 
 ### 추론 노력 (`model_reasoning_effort`)
 
@@ -476,7 +481,7 @@ CLI에서 활성 에이전트 스레드 간 전환하고 진행 중인 스레드
 
 ### 자동 모델 선택
 
-모델이나 `model_reasoning_effort`를 명시적으로 고정하지 않으면, Codex가 작업 특성에 맞춰 **지능, 속도, 가격의 균형**을 자동으로 잡아 모델과 추론 노력을 선택합니다. 예를 들어:
+모델이나 `model_reasoning_effort`를 명시적으로 고정하지 않으면, Codex가 작업 특성에 맞춰 **지능, 속도, 가격의 균형**을 자동으로 잡아 모델과 추론 노력을 선택합니다. 공식 concepts/subagents 페이지 원문은 "It may favor `gpt-5.4-mini` for fast scans or a higher-effort `gpt-5.5` configuration for more demanding reasoning"라고 명시합니다. 예를 들어:
 
 - 빠른 코드 스캔이나 읽기 중심 작업에는 자동으로 `gpt-5.4-mini`를 선호
 - 복잡한 추론이나 다단계 계획이 필요한 작업에는 자동으로 더 높은 추론 노력의 `gpt-5.5` 구성을 선택
@@ -489,10 +494,10 @@ CLI에서 활성 에이전트 스레드 간 전환하고 진행 중인 스레드
 
 | 작업 유형 | 추천 모델 | 추론 노력 | sandbox_mode |
 | --- | --- | --- | --- |
-| 코드 리뷰 / 보안 분석 | `gpt-5.5` 또는 `gpt-5.4` | `high` | `read-only` |
+| 코드 리뷰 / 보안 분석 | `gpt-5.5` | `high` | `read-only` |
 | 코드베이스 탐색 | `gpt-5.4-mini` | `medium` | `read-only` |
 | 문서 확인 (MCP) | `gpt-5.4-mini` | `medium` | `read-only` |
-| 구현 / 수정 | `gpt-5.4` | `medium` | `workspace-write` |
+| 구현 / 수정 | `gpt-5.5` | `medium` | `workspace-write` |
 | 빠른 요약 / 분류 | `gpt-5.4-mini` | `low` | `read-only` |
 | 장시간 모니터링 | `gpt-5.4-mini` | `low` | 기본 상속 |
 
@@ -564,10 +569,10 @@ the findings by category with file references.
 | 빌트인 에이전트 | `default`, `worker`, `explorer` | 동일 |
 | CLI 명령어 | `/agent` | 동일 |
 | UI 지원 | Codex App + CLI (IDE는 예정) | 동일 |
-| 권장 모델 | `gpt-5.5` 시작, `gpt-5.4-mini` (경량), `gpt-5.3-codex-spark` (저지연) | `gpt-5.3-codex` (강한 추론), `gpt-5.3-codex-spark` (속도) |
+| 권장 모델 | `gpt-5.5` 시작, `gpt-5.4-mini` (경량/병렬 워커, 빠른 스캔), `gpt-5.3-codex-spark` (Pro 저지연 research preview) | `gpt-5.3-codex` (강한 추론), `gpt-5.3-codex-spark` (속도) — 구버전 스냅샷 기준 |
 
 > **주의**: 이전 버전에서 두 기능을 별개의 것으로 비교하며 `monitor` 역할, `wait` 도구, `/experimental` 명령어, `[agents.<name>]` 역할 스키마 등을 멀티 에이전트 전용 기능으로 문서화했으나, 이 내용은 공식 문서에서 확인되지 않았습니다.
 >
 > **실험적 특성**: 서브에이전트 워크플로우는 공식 문서에서 "experimental and may change as subagent support evolves"라고 명시되어 있습니다. (근거: [Subagents – Codex](https://developers.openai.com/codex/subagents))
 >
-> **API 대체 모델**: API를 통해 Codex를 사용하는 경우 GPT-5.2-Codex를 사용하세요. (근거: [Multi-agents Concepts](https://developers.openai.com/codex/concepts/multi-agents))
+> **API 대체 모델 (구버전 안내)**: multi-agents 개념 페이지(별도 스냅샷)는 API를 통해 Codex를 사용하는 경우 GPT-5.2-Codex를 안내하지만, 현재 Models 페이지에서 `gpt-5.2`는 "deprecated in Codex when you sign in with ChatGPT"로 명시됩니다. deprecated 모델 참조 시 최신 모델(`gpt-5.5` 등)로 업데이트하세요. (근거: [Multi-agents Concepts](https://developers.openai.com/codex/concepts/multi-agents), [Models – Codex](https://developers.openai.com/codex/models))

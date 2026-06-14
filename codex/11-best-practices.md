@@ -2,12 +2,14 @@
 
 > Codex를 효과적으로 사용하기 위한 핵심 습관과 검증된 실무 가이드입니다.
 
-**참조**:
-- <https://developers.openai.com/codex/learn/best-practices>
-- <https://developers.openai.com/codex/concepts/customization>
-- <https://developers.openai.com/codex/concepts/sandboxing>
-- <https://developers.openai.com/codex/concepts/subagents>
-- <https://developers.openai.com/codex/use-cases>
+**출처**:
+- <https://developers.openai.com/codex/learn/best-practices/>
+- <https://developers.openai.com/codex/prompting/>
+- <https://developers.openai.com/codex/concepts/customization/>
+- <https://developers.openai.com/codex/workflows/>
+- <https://developers.openai.com/codex/custom-prompts/>
+
+**최종 업데이트**: 2026-06-15
 
 ---
 
@@ -26,16 +28,50 @@
 
 ---
 
+## 프롬프트 실무 조언
+
+공식 Prompting 가이드에서 강조하는 핵심 습관입니다.
+
+### 명확한 식별자와 풍부한 컨텍스트 제공
+
+| 권장 | 이유 |
+| --- | --- |
+| **greppable identifiers** (검색 가능한 식별자) 사용 | Codex가 코드베이스에서 정확한 위치를 빠르게 찾을 수 있음 |
+| **전체 스택 트레이스** 붙여넣기 | 에러의 근본 원인을 놓치지 않음 |
+| **풍부한 코드 스니펫** 제공 | 단순히 "@auth.ts 참조"보다 구체적인 코드가 더 정확한 결과를 보장 |
+
+### 접근법과 도구 사용법 알려주기
+
+Codex에게 작업에 접근하는 방법이나 특정 도구 사용 규칙을 명시하면 일관성이 크게 향상됩니다.
+
+| 지시 예시 | 효과 |
+| --- | --- |
+| "특정 커밋을 참조용(reference)으로 사용" | 재현 가능한 기준점 제공 |
+| "실패한 명령을 로깅해라" | 디버깅 추적성 확보 |
+| "특정 실행파일(예: legacy binary)을 회피해라" | 알려진 위험 회피 |
+| "PR 메시지는 이 템플릿을 따라라" | 팀 컨벤션 자동 적용 |
+| "특정 파일을 AGENTS.md로 취급해라" | 컨텍스트 주입 제어 |
+| "작업을 마치기 전 ASCII art로 먼저 구조를 그려라" | 계획 가시화 |
+
+### 버그 발생 시 첫 단계
+
+버그나 예상치 못한 동작이 발생하면, **상세 로그나 에러 트레이스를 첫 번째 디버깅 단계로 Codex에 붙여넣으세요.** 고수준 설명보다 원시 로그가 더 정확한 진단으로 이어집니다.
+
+### Open-ended 작업 요청
+
+Codex에 open-ended 작업을 적극적으로 요청하세요. 코드 정리, 버그 찾기, 아이디어 브레인스토밍, 큰 작업 분할, 상세 문서 작성 등은 Codex가 특히 잘 수행하는 영역입니다.
+
+---
+
 ## 추론 수준 선택
 
-작업 복잡도에 따라 적절한 추론 수준을 선택하세요.
+작업 복잡도에 따라 적절한 추론 수준을 선택하세요. 사용자와 작업마다 가장 잘 맞는 설정이 다르므로, 자신의 워크플로우에서 무엇이 가장 효과적인지 테스트해 보세요.
 
-| 수준 | 적합한 작업 | 특징 |
-| --- | --- | --- |
-| **Low** | 빠르고 잘 정의된 작업 | 속도 우선 |
-| **Medium** | 일반적인 복잡도의 변경 | 균형잡힌 추론 |
-| **High** | 복잡한 변경, 디버깅 | 심층 분석 |
-| **Extra High** | 긴 에이전트적 작업, 심층 추론 필요 | 최대 추론 |
+| 수준 | 적합한 작업 |
+| --- | --- |
+| **Low** | 빠르고 잘 정의된(scoped) 작업 |
+| **Medium or High** | 더 복잡한 변경이나 디버깅 |
+| **Extra High** | 길고 에이전트적이며 추론이 많이 필요한 작업 |
 
 ---
 
@@ -102,7 +138,7 @@
 | **반복되는 실수** | 에이전트가 같은 실수를 반복하면 규칙을 추가 |
 | **과도한 파일 읽기** | 올바른 파일을 찾지만 너무 많은 문서를 읽으면 라우팅 가이드 추가 (우선순위 디렉토리/파일 명시) |
 | **반복되는 PR 피드백** | 같은 피드백을 두 번 이상 남기면 규칙으로 명문화 |
-| **GitHub에서** | PR 댓글에서 `@codex`를 태그하여 업데이트 위임 (예: `@codex add this to AGENTS.md`) |
+| **GitHub에서** | PR 댓글에서 `@codex`를 태그하여 업데이트를 **cloud task에 위임** (예: `@codex add this to AGENTS.md`) |
 | **드리프트 체크 자동화** | automations를 사용하여 일일 반복 검증을 실행, 가이드가 비어있는 부분을 찾아 `AGENTS.md`에 추가할 항목을 제안 |
 
 > 에이전트가 코드베이스에 대해 잘못된 가정을 하면 `AGENTS.md`에서 수정하고, 에이전트에게 `AGENTS.md`를 업데이트하도록 지시하세요. 이것을 **피드백 루프**로 활용하세요.
@@ -280,6 +316,49 @@ codex --sandbox workspace-write --ask-for-approval on-request
 
 ---
 
+## 서피스 선택 가이드 (Surface)
+
+공식 Workflows 페이지에 따르면, Codex는 작업 유형에 따라 가장 적합한 서피스(IDE 확장 / CLI / Cloud)가 다릅니다. 각 워크플로우는 언제 사용할지, 어떤 서피스가 맞는지, 컨텍스트를 어떻게 전달할지, 결과를 어떻게 검증할지를 명시합니다.
+
+### 서피스별 컨텍스트 동작 차이 (핵심)
+
+| 서피스 | 열린 파일 / 컨텍스트 처리 | 파일 첨부 방법 |
+| --- | --- | --- |
+| **IDE 확장** | 현재 열린 파일을 **자동으로** 컨텍스트에 포함. "Add to Codex Thread"로 선택 영역(라인 범위) 추가 가능 | 열어두기만 하면 됨 |
+| **CLI** | 열린 파일 개념이 없음. 경로를 **명시적으로** 지정하거나 첨부해야 함 | `@` 경로 자동완성, `/mention` 명령어로 파일 첨부 |
+| **Cloud** | 클라우드 환경의 전체 리포지토리에 접근. 로컬 스레드 컨텍스트를 클라우드로 전달 가능 | 클라우드 환경 설정 + 스레드 컨텍스트 연속 |
+
+> 핵심 노트: IDE 확장은 열린 파일을 자동으로 보지만, CLI에서는 경로를 명시하거나 `/mention`과 `@` 자동완성으로 파일을 직접 첨부해야 합니다.
+
+### 작업별 추천 서피스
+
+| 워크플로우 | 추천 서피스 | 이유 |
+| --- | --- | --- |
+| **코드 이해 / 온보딩** | IDE 확장 (가장 빠른 로컬 탐색) 또는 CLI (트랜스크립트 + 셸 명령 필요 시) | 열린 파일 기반 빠른 질문 |
+| **버그 재현 및 수정** | CLI (재현 + 검증 타이트 루프) | 셸에서 재현 단계 실행 후 패치 |
+| **테스트 생성** | IDE 확장 (선택 영역 기반) | 함수 본문 선택 후 "Add to Codex Thread" |
+| **이미지 → 프로토타입** | CLI (이미지 드래그) 또는 IDE 확장 (드래그 앤 드롭) | 스크린샷 + 제약조건 결합 |
+| **디자인 반복 루프** | CLI (Vite 실행 + 작은 프롬프트 반복) | 브라우저 라이브 리뷰 |
+| **로컬 계획 → 클라우드 위임** | IDE → Cloud (병렬 장기 실행) | 로컬에서 계획, 클라우드에서 구현 |
+| **PR 리뷰 (로컬)** | CLI (`/review`) | 워킹 트리 기반 |
+| **PR 리뷰 (GitHub)** | Cloud (`@codex review`) | 브랜치 풀 필요 없음 |
+| **문서 업데이트** | IDE 또는 CLI (로컬 편집 + 로컬 검증) | 링크 유효성 등 즉시 확인 |
+
+### 워크플로우 공통 구조
+
+공식 워크플로우 레시피는 각각 네 가지 요소를 포함합니다:
+
+| 요소 | 설명 |
+| --- | --- |
+| **When to use** | 언제 이 워크플로우가 적합한지 |
+| **Steps** | 단계별 예시 사용자 프롬프트 |
+| **Context notes** | Codex가 자동으로 보는 컨텍스트 vs 사용자가 첨부해야 할 컨텍스트 |
+| **Verification** | 출력을 확인하는 방법 |
+
+> 자세한 단계별 예시 프롬프트는 공식 Workflows 페이지를 참조하세요.
+
+---
+
 ## 검증 루프
 
 Codex에게 단순히 코드를 생성하는 것에 그치지 말고, **테스트, 검증, 리뷰**까지 요청하세요. Codex가 "좋은 결과"가 무엇인지 알면 이 루프를 자동으로 수행할 수 있습니다. 해당 가이드는 프롬프트나 `AGENTS.md`에서 제공할 수 있습니다.
@@ -298,11 +377,16 @@ Codex App에서 **diff 패널**을 토글하여 로컬 변경사항을 직접 �
 
 ### /review 명령어
 
-```bash
-/review              # 베이스 브랜치 대비 PR 스타일 리뷰
-/review uncommitted  # 커밋되지 않은 변경 리뷰
-/review commit       # 특정 커밋 리뷰
-```
+`/review` 슬래시 명령어는 코드를 리뷰하는 네 가지 방식을 제공합니다.
+
+| 방식 | 설명 | 예시 |
+| --- | --- | --- |
+| **베이스 브랜치 대비 PR 스타일** | 베이스 브랜치 기준으로 PR 스타일 리뷰 | `/review` |
+| **커밋되지 않은 변경** | 작업 트리의 커밋되지 않은 변경 리뷰 | `/review uncommitted` |
+| **특정 커밋** | 지정한 커밋 리뷰 | `/review commit` |
+| **커스텀 리뷰 지시** | 리뷰 초점을 텍스트로 직접 지정 | `/review Focus on edge cases and security issues` |
+
+검증: 리뷰 피드백을 바탕으로 수정을 적용한 뒤, 문제가 해결되었는지 확인하기 위해 `/review`를 다시 실행합니다.
 
 > `AGENTS.md`에서 `code_review.md`를 참조하면 팀의 리뷰 가이드라인을 리뷰 시 자동 적용할 수 있습니다. 이 패턴은 팀 간에 리뷰 동작을 일관되게 유지하는 강력한 방법입니다.
 
@@ -313,7 +397,7 @@ GitHub Cloud를 사용하는 경우, Codex를 설정하여 PR에 대한 코드 �
 | 리뷰 방식 | 설명 |
 | --- | --- |
 | **자동 리뷰** | PR이 생성/업데이트될 때마다 Codex가 자동으로 리뷰 실행 |
-| **반응형 리뷰** | PR 댓글에서 `@Codex`를 태그하면 Codex가 반응하여 리뷰 수행 |
+| **반응형 리뷰** | PR 댓글에서 `@codex`를 태그하면 Codex가 반응하여 리뷰 수행 (예: `@codex review`, `@codex review for security vulnerabilities and security concerns`) |
 
 ---
 
@@ -477,7 +561,7 @@ Codex는 스킬에 대해 **점진적 공개**를 사용합니다:
 
 ### 스킬 생성
 
-`$skill-creator` 스킬을 사용하여 첫 버전을 스캐폴드합니다. 로컬에서 반복한 후 준비되면 플러그인으로 패키지화합니다.
+`$skill-creator` 스킬을 사용하여 첫 버전을 스캐폴드하고, `$skill-installer` 스킬로 로컬에 설치합니다. 로컬에서 반복한 후 준비되면 플러그인으로 패키지화합니다.
 
 > 같은 프롬프트를 반복 사용하거나 같은 워크플로우를 반복 수정하고 있다면, 그것은 스킬이 되어야 합니다.
 
@@ -489,6 +573,70 @@ Codex는 스킬에 대해 **점진적 공개**를 사용합니다:
 - 마이그레이션 계획
 - 텔레메트리 또는 인시던트 요약
 - 표준 디버깅 플로우
+
+---
+
+## Custom Prompts
+
+Custom Prompts는 Markdown 파일을 재사용 가능한 프롬프트로 변환하여 Codex CLI와 IDE 확장에서 slash command로 호출할 수 있는 커스터마이제이션 기능입니다.
+
+### Custom Prompts vs Skills
+
+| 구분 | Custom Prompts | Skills |
+| --- | --- | --- |
+| **호출 방식** | 명시적 호출 전용 (`/prompts:<name>`) | 암시적 호출 + 명시적 호출 모두 지원 |
+| **저장/공유** | 로컬 전용 (`~/.codex`에 저장, 리포지토리로 공유 불가) | 리포지토리 공유 가능 (`.agents/skills/`) |
+| **복잡도** | 단일 Markdown 파일, 단순 프롬프트 | `SKILL.md` + 스크립트/참조/에셋, 풍부한 워크플로우 |
+
+> 공유하거나 암시적 호출이 필요하면 Skills를 사용하세요. Custom Prompts는 개인 로컬 전용 단순 명령에 적합합니다.
+
+### Custom Prompt 생성
+
+```bash
+# 1. 프롬프트 디렉토리 생성
+mkdir -p ~/.codex/prompts
+```
+
+`~/.codex/prompts/draftpr.md` 예시:
+
+```markdown
+---
+description: Prep a branch, commit, and open a draft PR
+argument-hint: [FILES=<paths>] [PR_TITLE="<title>"]
+---
+
+Create a branch named `dev/<feature_name>` for this work.
+If files are specified, stage them first: $FILES.
+Commit the staged changes with a clear message.
+Open a draft PR on the same branch. Use $PR_TITLE when supplied;
+otherwise write a concise summary yourself.
+```
+
+> 생성 후 **Codex를 재시작**해야 새 프롬프트가 로드됩니다 (CLI 세션 재시작, IDE 확장은 다시 로드).
+
+### Custom Prompt 호출
+
+```
+/prompts:draftpr FILES="src/pages/index.astro src/lib/api.ts" PR_TITLE="Add hero animation"
+```
+
+### Frontmatter 필드
+
+| 필드 | 설명 |
+| --- | --- |
+| `description` | 팝업에서 명령명 아래에 표시되는 설명 |
+| `argument-hint` | 예상 파라미터 문서화 (`KEY=<value>` 형식) |
+
+### Placeholder (자리표시자)
+
+| Placeholder | 설명 |
+| --- | --- |
+| `$1` ~ `$9` | 명령 뒤의 공백 분리 인자에서 확장되는 positional placeholder |
+| `$ARGUMENTS` | 모든 인자를 포함 |
+| `$FILE`, `$TICKET_ID` | named placeholder (`KEY=value`로 값 제공, 공백 포함 시 따옴표) |
+| `$$` | 확장된 프롬프트에서 리터럴 `$` 기호 출력 |
+
+> Codex는 프롬프트 디렉토리의 **최상위 Markdown 파일만** 스캔합니다. 하위 디렉토리가 아닌 `~/.codex/prompts/` 바로 아래에 배치하세요. 프롬프트 파일 편집 후에는 Codex를 재시작하거나 새 채팅을 열어야 업데이트가 로드됩니다.
 
 ---
 
@@ -563,10 +711,6 @@ Codex App의 UI는 스레드 관리를 가장 쉽게 만들어줍니다. 스레�
 ### Chat 모드
 
 Codex App에서는 대화형 모드로 전환하여 에이전트와 실시간으로 소통할 수 있습니다. 이 모드에서는 파일 컨텍스트, 명령 실행, 검증이 모두 가능합니다.
-
-### Goal 모드 (`/goal`)
-
-장기 실행 작업에 Codex에 **내구성 있는 목표**를 부여할 수 있습니다. Goal 모드는 장기 실행 작업에서 Codex가 목표를 유지하도록 돕습니다.
 
 ### Side Chats
 
@@ -659,10 +803,12 @@ the findings by category with file references.
 
 | 모델 | 적합한 용도 | 특징 |
 | --- | --- | --- |
-| `gpt-5.5` | 요구가 높은 에이전트의 시작점 | 모호한 다단계 작업에 가장 강력 |
-| `gpt-5.4` | 워크플로우가 GPT-5.4에 고정된 경우 | 강력한 코딩, 추론, 도구 사용 |
-| `gpt-5.4-mini` | 탐색, 읽기 위주 스캔, 대형 파일 리뷰 | 속도와 효율성 우선 |
+| `gpt-5.5` | 요구가 높은 에이전트의 시작점 | 모호한 다단계 작업에 가장 강력한 flagship |
+| `gpt-5.4` | 워크플로우가 GPT-5.4에 고정(pinned)된 경우 | 강력한 코딩, 추론, 도구 사용, 광범위 워크플로우 |
+| `gpt-5.4-mini` | 탐색, 읽기 위주 스캔, 대형 파일 리뷰 | 속도와 효율성 우선, 병렬 워커에 적합 |
 | `gpt-5.3-codex-spark` | ChatGPT Pro 사용자의 즉각적인 텍스트 반복 | research preview, 레이턴시가 중요한 경우 |
+
+> 공식 subagents 개념 페이지 기준: "For most tasks in Codex, start with gpt-5.5." gpt-5.4는 워크플로우가 GPT-5.4에 고정된 경우에 사용하며, gpt-5.4-mini는 더 빠르고 저렴한 옵션이 필요한 가벼운 서브에이전트 작업에 사용합니다.
 
 ### 추론 노력 (model_reasoning_effort)
 

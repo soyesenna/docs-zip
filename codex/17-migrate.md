@@ -1,13 +1,15 @@
 # 17. 다른 에이전트에서 Codex로 마이그레이션
 
+> **최종 업데이트**: 2026-06-15
+
 > **출처**
-> - [Migrate to Codex](https://developers.openai.com/codex/migrate) — 마이그레이션 개요, import flow, 항목별 매핑
-> - [Configuration Reference](https://developers.openai.com/codex/config-reference) — `config.toml` / `requirements.toml` 전체 스키마
-> - [MCP](https://developers.openai.com/codex/mcp) — MCP 서버 설정
-> - [Hooks](https://developers.openai.com/codex/hooks) — 훅 설정 이전
-> - [Skills](https://developers.openai.com/codex/skills) — 스킬 변환
-> - [Subagents](https://developers.openai.com/codex/subagents) — 서브에이전트 / 커스텀 에이전트 설정
-> - [Rules](https://developers.openai.com/codex/rules) — 명령 규칙 설정
+> - [Import to Codex](https://developers.openai.com/codex/import/) — import flow, 항목별 매핑, Finish setup after importing
+> - [Configuration Reference](https://developers.openai.com/codex/config-reference/) — `config.toml` / `requirements.toml` 전체 스키마
+> - [MCP](https://developers.openai.com/codex/mcp/) — MCP 서버 설정
+> - [Hooks](https://developers.openai.com/codex/hooks/) — 훅 설정 이전
+> - [Skills](https://developers.openai.com/codex/skills/) — 스킬 변환
+> - [Subagents](https://developers.openai.com/codex/subagents/) — 서브에이전트 / 커스텀 에이전트 설정
+> - [Rules](https://developers.openai.com/codex/rules/) — 명령 규칙 설정
 
 ---
 
@@ -20,20 +22,31 @@ Codex는 다른 에이전트 도구(Claude Code, Cursor, GitHub Copilot 등)에�
 
 ### 마이그레이션 실행 절차
 
+공식 import flow는 다음 7단계로 진행된다.
+
 1. Codex 앱에서 **Settings** 열기
-2. **General** 페이지에서 **Import other agent setup** 찾기
-3. **Import** 또는 **Import again** 선택
-4. Codex가 감지한 항목을 검토 후 가져올 항목 선택 → **Import**
-5. 완료 후 **View imported files**로 결과 확인
+2. **General** 섹션에서 **Import other agent setup** 찾기
+3. **Import** 선택
+4. 가져올 에이전트(agents) 선택 후 **Continue**
+5. **Select items to import** 화면에서 **Continue**(전체 가져오기) 또는 **Customize**(항목 선택) 선택
+6. **Customize**를 선택한 경우 가져올 항목을 선택한 뒤 **Confirm**
+7. import 완료 후 가져온 프로젝트 또는 스레드를 열어 작업 계속
 
 ### 마이그레이션 동작 흐름
 
+import 시 Codex는 다음 작업을 수행한다.
+
 | 단계 | 설명 |
 |------|------|
-| 1 | 사용자 및 프로젝트의 기존 설정을 자동 감지 |
-| 2 | 선택한 항목을 Codex 형식으로 직접 변환 (1:1 매핑 가능 항목) |
-| 3 | import 완료 후 다시 한 번 미변환 항목이 있는지 확인 |
-| 4 | 남은 항목은 `migrate-to-codex` 스킬이 포함된 새 스레드에서 후속 작업 제안 |
+| 1 | 지원되는 설정과 최근 작업을 자동 감지(Detects supported setup and recent work) |
+| 2 | 선택한 항목을 Codex 형식으로 가져옴(Imports the items you select) |
+| 3 | 기존 에이전트 설정은 변경하지 않음(Leaves your existing agent setup unchanged) |
+| 4 | 가져온 플러그인/연결이 추가 설정이 필요한지 확인(Checks whether imported plugins or connections still need setup) |
+| 5 | 후속 작업이 필요하면 상태 카드 표시(Shows a status card when follow-up is required) |
+
+### Finish setup after importing
+
+import가 완료되면 Codex가 화면 좌측 하단에 상태 카드(status card)를 표시한다. 가져온 플러그인이나 연결이 여전히 설정이 필요하면 해당 카드가 이를 알려준다. Codex가 주의가 필요한 항목을 표시하면 **Finish**를 선택하고 안내에 따라 설정을 완료한다.
 
 ---
 
@@ -46,7 +59,9 @@ Codex는 다른 에이전트 도구(Claude Code, Cursor, GitHub Copilot 등)에�
 | Instruction files | `AGENTS.md` | `CLAUDE.md`, `.cursorrules`, `.github/copilot-instructions.md` 등 |
 | `settings.json` | `config.toml` | `~/.codex/config.toml` (사용자) / `.codex/config.toml` (프로젝트) |
 | Skills | Codex skills | `.agents/skills/` 디렉터리에 `SKILL.md` 기반 스킬 생성 |
-| 최근 30일 세션 | Codex threads & projects | 세션 기록을 Codex 스레드로 가져옴 |
+| Plugins | Codex plugins | 플러그인을 Codex 플러그인으로 가져옴 |
+| Existing project folders | Codex projects | 동일한 폴더를 사용하는 Codex 프로젝트로 가져옴 |
+| Chat sessions from last 30 days | Codex threads | 최근 30일 채팅 세션을 Codex 스레드로 가져옴 |
 | MCP server 설정 | Codex MCP configuration | `config.toml`의 `[mcp_servers.*]` 테이블로 변환 |
 | Hooks | Codex hooks | `hooks.json` 또는 `config.toml` 인라인 `[hooks]` |
 | Slash commands | Codex skills | 슬래시 명령어를 스킬로 변환 |
@@ -73,6 +88,7 @@ Codex는 다른 에이전트 도구(Claude Code, Cursor, GitHub Copilot 등)에�
 | 대체 파일명 | `config.toml`의 `project_doc_fallback_filenames`로 대체 파일명 지정 가능 |
 | 대체 지시 파일 | `config.toml`의 `model_instructions_file` 키로 `AGENTS.md` 대신 다른 파일 경로 지정 가능 |
 | 최대 크기 제한 | `project_doc_max_bytes`로 `AGENTS.md` 최대 읽기 크기 제한 가능 |
+| 원격/symlink 로딩 | 0.138.0부터 원격 URL과 심볼릭 링크 형태의 `AGENTS.md` 로딩을 지원한다. `AGENTS.md`를 symlink로 두어 공통 지시 파일을 여러 프로젝트에서 참조할 수 있다. |
 
 ### 수동 변환 예시
 
@@ -124,7 +140,7 @@ model_instructions_file = ".codex/instructions.md"
 
 | 원본 (`settings.json`) | Codex (`config.toml`) | 타입 / 값 | 설명 |
 |---|---|---|---|
-| `model` | `model` | `string` | 예: `model = "gpt-5.5"` |
+| `model` | `model` | `string` | 예: `model = "gpt-5.4"` |
 | `permissions.allow` | `approval_policy` | `untrusted \| on-request \| never \| { granular = {...} }` | 명령 실행 전 승인 여부 |
 | `sandbox` | `sandbox_mode` | `read-only \| workspace-write \| danger-full-access` | 파일시스템/네트워크 접근 제어 |
 | `theme` | `tui.theme` | `string` (kebab-case) | TUI 테마 |
@@ -136,9 +152,10 @@ model_instructions_file = ".codex/instructions.md"
 | N/A | `model_reasoning_effort` | `minimal \| low \| medium \| high \| xhigh` | 추론 노력 조정 |
 | N/A | `features.hooks` | `boolean` | 훅 활성화 (기본값: 활성) |
 | N/A | `features.memories` | `boolean` | Memories 기능 (기본값: 비활성) |
-| N/A | `features.multi_agent` | `boolean` | 멀티 에이전트 협업 (기본값: 활성) |
+| N/A | `features.multi_agent` | `boolean` | 멀티 에이전트 협업 도구(`spawn_agent`, `send_input`, `resume_agent`, `wait`, `close_agent`, `spawn_agents_on_csv`) (experimental, 기본값: 비활성) |
 | N/A | `features.codex_git_commit` | `boolean` | Codex 생성 git 커밋 활성화 |
 | N/A | `commit_attribution` | `string` | 커밋 co-author 트레일러 (기본값: `Codex <noreply@openai.com>`) |
+| N/A | `service_tier` | `flex \| fast` | 새 턴의 서비스 티어 선호. `fast`는 `features.fast_mode` 게이트가 활성화된 경우에만 적용된다. |
 
 > `on-failure`는 deprecated이며, 대화형 실행에는 `on-request`를, 비대화형 실행에는 `never`를 사용하라.
 
@@ -147,16 +164,18 @@ model_instructions_file = ".codex/instructions.md"
 ```toml
 #:schema https://developers.openai.com/codex/config-schema.json
 
-model = "gpt-5.5"
+model = "gpt-5.4"
 sandbox_mode = "workspace-write"
 web_search = "cached"
 file_opener = "vscode"
+service_tier = "fast"   # fast는 features.fast_mode가 활성화된 경우에만 적용
 
 [features]
 hooks = true
 memories = false
-multi_agent = true
+multi_agent = false     # experimental, 기본값 off
 codex_git_commit = true
+fast_mode = true        # service_tier = "fast" 경로 활성화
 
 [sandbox_workspace_write]
 network_access = true
@@ -229,6 +248,10 @@ description: 이 스킬이 언제 트리거되고 무엇을 하는지 정확히 
 | `USER` | `$HOME/.agents/skills` | 사용자 전역 |
 | `ADMIN` | `/etc/codex/skills` | 머신 전체 관리자 스킬 |
 | `SYSTEM` | Codex 번들 | OpenAI 제공 기본 스킬 |
+
+### 심볼릭 링크 지원
+
+Codex는 symlink된 스킬 폴더를 지원하며, 위 검색 경로들을 스캔할 때 symlink 대상(target)을 따라간다. 이를 통해 공통 스킬 저장소를 symlink로 연결해 여러 프로젝트/사용자 위치에서 동일한 스킬을 참조할 수 있다.
 
 ### 스킬 활성화 방식
 
@@ -493,9 +516,9 @@ statusMessage = "Reviewing Bash output"
 | 이벤트 | `matcher` 필터 대상 | 설명 |
 |---|---|---|
 | `SessionStart` | `startup \| resume \| clear \| compact` | 세션 시작 시 |
-| `PreToolUse` | 도구 이름 (`Bash`, `apply_patch`, MCP 도구명) | 도구 실행 전 차단/재작성 가능 |
-| `PermissionRequest` | 도구 이름 | 승인 전 자동 허용/거부 가능 |
-| `PostToolUse` | 도구 이름 | 툴 실행 후 컨텍스트 추가 가능 |
+| `PreToolUse` | 도구 이름 (`Bash`, `apply_patch`, MCP 도구명) | 도구 실행 전 차단/재작성 가능. `apply_patch` matcher는 `Edit`, `Write` 별칭도 허용(입력의 `tool_name`은 여전히 `apply_patch`) |
+| `PermissionRequest` | 도구 이름 (`Bash`, `apply_patch`, MCP 도구명) | 승인 전 자동 허용/거부 가능. `apply_patch` matcher는 `Edit`, `Write` 별칭도 허용 |
+| `PostToolUse` | 도구 이름 (`Bash`, `apply_patch`, MCP 도구명) | 툴 실행 후 컨텍스트 추가 가능. `apply_patch` matcher는 `Edit`, `Write` 별칭도 허용 |
 | `PreCompact` | `manual \| auto` | 컴팩션 전 (중단 가능) |
 | `PostCompact` | `manual \| auto` | 컴팩션 후 |
 | `UserPromptSubmit` | 미지원 | 사용자 프롬프트 제출 시 |
@@ -519,11 +542,13 @@ statusMessage = "Reviewing Bash output"
 
 | 필드 | 타입 | 의미 |
 |------|------|------|
-| `session_id` | `string` | 현재 세션 ID |
+| `session_id` | `string` | 현재 세션 ID. 서브에이전트 훅은 부모 세션 ID 사용 |
 | `transcript_path` | `string \| null` | 세션 트랜스크립트 파일 경로 |
 | `cwd` | `string` | 작업 디렉터리 |
 | `hook_event_name` | `string` | 현재 훅 이벤트명 |
-| `model` | `string` | 활성 모델 슬러그 |
+| `model` | `string` | 활성 모델 슬러그 (Codex 확장) |
+| `turn_id` | `string` | 활성 Codex 턴 ID (Codex 확장). 턴 스코프 이벤트의 이벤트별 표에 개별적으로도 표기됨 |
+| `permission_mode` | `string` | 현재 권한 모드: `default` \| `acceptEdits` \| `plan` \| `dontAsk` \| `bypassPermissions`. `SessionStart`, `PreToolUse`, `PermissionRequest`, `PostToolUse`, `UserPromptSubmit`, `SubagentStart`, `SubagentStop`, `Stop`에 포함 |
 
 **공통 출력 필드**:
 
@@ -655,7 +680,7 @@ nickname_candidates = ["Atlas", "Delta", "Echo"]
 ```toml
 name = "docs_researcher"
 description = "Documentation specialist that uses the docs MCP server to verify APIs and framework behavior."
-model = "gpt-5.4-mini"
+model = "gpt-5.3-codex-spark"
 model_reasoning_effort = "medium"
 sandbox_mode = "read-only"
 developer_instructions = """

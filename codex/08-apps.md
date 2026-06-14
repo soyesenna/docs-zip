@@ -2,7 +2,9 @@
 
 > Codex의 플러그인 시스템, 외부 서비스 연동, Sites 호스팅, 그리고 앱 내 기능(Review, Automations, Worktrees)에 대해 설명합니다.
 
-**참조**: <https://developers.openai.com/codex/integrations/github>, <https://developers.openai.com/codex/integrations/slack>, <https://developers.openai.com/codex/integrations/linear>, <https://developers.openai.com/codex/sites>, <https://developers.openai.com/codex/app/review>, <https://developers.openai.com/codex/app/automations>, <https://developers.openai.com/codex/app/worktrees>
+**참조**: <https://developers.openai.com/codex/integrations/github>, <https://developers.openai.com/codex/integrations/slack>, <https://developers.openai.com/codex/integrations/linear>, <https://developers.openai.com/codex/sites>, <https://developers.openai.com/codex/app/review>, <https://developers.openai.com/codex/app/automations>, <https://developers.openai.com/codex/app/worktrees>, <https://developers.openai.com/codex/amazon-bedrock>
+
+> 최종 업데이트: 2026-06-15
 
 ---
 
@@ -93,19 +95,12 @@ enabled = false
 
 ## GitHub Code Review
 
-Codex를 사용하면 GitHub Pull Request에 대한 고품질 코드 리뷰를 수행할 수 있습니다. Codex는 PR diff를 검토하고, 리포지토리 가이드라인을 따르며, 심각한 이슈에 집중한 표준 GitHub 코드 리뷰를 게시합니다.
-
-### 사전 준비
-
-- 리뷰할 리포지토리에 대해 Codex Cloud가 설정되어 있어야 합니다.
-- Codex code review 설정에 접근할 수 있어야 합니다.
-- 리포지토리별 리뷰 가이드라인을 원하는 경우 `AGENTS.md` 파일이 필요합니다.
+GitHub를 떠나지 않고 Codex로 Pull Request를 리뷰할 수 있습니다. PR 코멘트에 `@codex review`를 추가하면 Codex가 표준 GitHub 코드 리뷰로 답장합니다. Codex는 리포지토리의 `AGENTS.md`에서 __Review guidelines__를 검색하여 따릅니다.
 
 ### 설정
 
 1. Codex Cloud를 설정합니다.
-2. Codex 설정으로 이동합니다.
-3. 해당 리포지토리의 **Code review** 토글을 켭니다.
+2. Codex 설정으로 이동하여 해당 리포지토리의 __Code review__를 켭니다.
 
 ### 리뷰 요청
 
@@ -115,11 +110,7 @@ PR 코멘트에서 `@codex review`를 멘션합니다.
 @codex review
 ```
 
-Codex는 팀원처럼 PR에 리뷰를 게시하며, **P0 및 P1 이슈**만 플래그하여 리뷰 코멘트가 우선순위가 높은 위험에 집중되도록 합니다.
-
-### 자동 리뷰
-
-**Automatic Reviews**를 활성화하면 누군가 새 PR을 열 때 `@codex review` 코멘트 없이도 자동으로 리뷰가 게시됩니다.
+Codex는 👀으로 반응한 후 팀원처럼 PR에 리뷰를 게시합니다. GitHub에서 Codex는 **P0 및 P1 이슈**만 플래그하여 리뷰가 우선순위가 높은 위험에 집중되도록 합니다.
 
 ### 커스터마이징
 
@@ -171,7 +162,7 @@ Codex가 반응하지 않거나 리뷰를 게시하지 않는 경우:
 - Codex 설정에서 해당 리포지토리에 **Code review**가 활성화되어 있는지 확인
 - PR이 Codex Cloud가 설정된 리포지토리에 속해 있는지 확인
 - PR 코멘트에 정확한 트리거 `@codex review`를 사용했는지 확인
-- 자동 리뷰의 경우 **Automatic Reviews**가 활성화되어 있고 PR 이벤트가 리뷰 트리거 설정과 일치하는지 확인
+- `@codex`를 다른 명령과 함께 사용하면 리뷰가 아닌 클라우드 작업이 시작됨에 유의
 
 ---
 
@@ -469,6 +460,76 @@ Automation은 Codex에서 사용 가능한 동일한 plugin과 skill을 사용�
 
 Automation 내에서 skill을 명시적으로 트리거하려면 `$skill-name`을 사용합니다.
 
+### Automation 예시
+
+#### 자동으로 새 skill 생성
+
+최근 세션을 스캔하여 반복적으로 어려움을 겪는 작업을 찾고, 이를 skill로 저장하도록 자동화할 수 있습니다.
+
+```
+Scan all of the `~/.codex/sessions` files from the past day and if there have
+been any issues using particular skills, update the skills to be more helpful.
+Personal skills only, no repo skills.
+
+If there's anything we've been doing often and struggle with that we should
+save as a skill to speed up future work, let's do it.
+
+Definitely don't feel like you need to update any- only if there's a good reason!
+
+Let me know if you make any.
+```
+
+#### 프로젝트 최신화 유지
+
+최근 24시간 커밋을 요약한 exec brief를 작성하여 팀의 컨텍스트를 유지합니다.
+
+```
+Look at the latest remote origin/master or origin/main. Then produce an exec
+briefing for the last 24 hours of commits that touch <DIRECTORY>
+
+Formatting + structure:
+- Use rich Markdown (H1 workstream sections, italics for the subtitle,
+  horizontal rules as needed).
+- Group by workstream rather than listing each commit. Workstream titles
+  should be H1.
+- Write a short narrative per workstream that explains the changes in plain
+  language.
+- Include PR links inline (e.g., [#123](...)) without a "PRs:" label.
+
+Scope rules:
+- Only include changes within the current cwd (or main checkout equivalent)
+- Only include the last 24h of commits.
+- Use `gh` to fetch PR titles and descriptions if it helps.
+```
+
+#### 최근 커밋의 버그 자동 수정 (`$recent-code-bugfix`)
+
+`recent-code-bugfix` skill을 생성하여 작성자 본인의 최근 변경이 원인인 버그를 찾아 수정합니다. skill을 personal skills에 저장한 뒤, 아래 automation으로 매일 실행합니다.
+
+skill 정의(`~/.codex/skills/recent-code-bugfix/SKILL.md`):
+
+```markdown
+---
+name: recent-code-bugfix
+description: Find and fix a bug introduced by the current author within the
+  last week in the current working directory. Use when a user wants a proactive
+  bugfix from their recent changes, when the prompt is empty, or when asked to
+  triage/fix issues caused by their recent commits. Root cause must map directly
+  to the author's own changes.
+---
+
+# Recent Code Bugfix
+
+## Workflow
+
+1. `git config user.name`/`user.email`로 작성자를 식별하고 `git log --since=1.week --author=<author>`로 최근 커밋과 파일을 나열.
+2. 편집된 파일에 가장 작은 검증(단일 테스트, 파일 수준 lint, 타겟 재현)을 실행하여 작성자 변경에 직접 기인하는 결함을 찾음.
+3. 프로젝트 관례에 맞는 최소 수정을 적용 (불필요한 방어 코드/리팩터 금지).
+4. 가능한 경우 검증 후 원인, 수정, 검증 내용을 보고.
+```
+
+연결할 automation:
+
 ```
 Check my commits from the last 24h and submit a $recent-code-bugfix.
 ```
@@ -495,69 +556,67 @@ Git 리포지토리에서 worktree를 선택한 경우, 빈번한 스케줄은 �
 
 ## Worktrees (워크트리)
 
-Codex 앱에서 worktree를 사용하면 Codex가 동일한 프로젝트에서 여러 독립 작업을 서로 간섭 없이 병렬로 실행할 수 있습니다. Git 리포지토리의 경우 automation은 전용 백그라운드 worktree에서 실행되어 진행 중인 작업과 충돌하지 않습니다. 비 버전 관리 프로젝트에서는 automation이 프로젝트 디렉토리에서 직접 실행됩니다.
-
-Worktree는 스레드를 수동으로 worktree에서 시작할 수도 있고, Handoff를 사용하여 스레드를 Local과 Worktree 사이에서 이동할 수도 있습니다.
+Codex 앱에서 worktree를 사용하면 Codex가 동일한 프로젝트에서 여러 독립 작업을 서로 간섭 없이 병렬로 실행할 수 있습니다. Git 리포지토리의 경우 automation은 전용 백그라운드 worktree에서 실행되어 진행 중인 작업과 충돌하지 않습니다. 비 버전 관리 프로젝트에서는 automation이 프로젝트 디렉토리에서 직접 실행됩니다. 스레드를 worktree에서 수동으로 시작할 수도 있습니다.
 
 ### 개념
 
-Worktree는 Git 리포지토리의 일부인 프로젝트에서만 작동합니다. Worktree를 사용하면 리포지토리의 두 번째 복사본("checkout")을 생성할 수 있습니다. 각 worktree는 리포의 모든 파일 복사본을 가지지만 모두 동일한 메타데이터(`.git` 폴더)를 공유합니다. 이를 통해 여러 브랜치를 병렬로 checkout하고 작업할 수 있습니다.
+Worktree는 Git 리포지토리의 일부인 프로젝트에서만 작동합니다(내부적으로 Git worktree를 사용하기 때문). Worktree를 사용하면 리포지토리의 두 번째 복사본("checkout")을 생성할 수 있습니다. 각 worktree는 리포의 모든 파일 복사본을 가지지만 모두 동일한 메타데이터(`.git` 폴더 — 커밋, 브랜치 등)를 공유합니다. 이를 통해 여러 브랜치를 병렬로 checkout하고 작업할 수 있습니다.
 
 | 용어 | 설명 |
 | --- | --- |
 | **Local checkout** | 사용자가 생성한 리포지토리. Codex 앱에서는 단순히 **Local**로 표시되기도 함 |
 | **Worktree** | Local checkout에서 Codex 앱 내에 생성된 Git worktree |
-| **Handoff** | 스레드를 Local과 Worktree 사이에서 이동하는 흐름. Codex가 작업을 안전하게 이동하는 데 필요한 Git 작업을 처리 |
 
 ### 이점
 
-1. 현재 Local 설정을 방해하지 않고 Codex와 병렬로 작업
-2. 전경에 집중하는 동안 백그라운드 작업을 대기열에 추가
-3. 나중에 검사, 테스트, 또는 더 직접적인 협업을 위해 스레드를 Local로 이동
+1. 현재 작업을 방해하지 않고 Codex와 병렬로 작업
+2. 현재 작업과 무관한 스레드 시작 — Codex가 시작하길 원하지만 아직 테스트할 준비가 안 된 작업을 대기열에 추가하는 staging area 역할
+
+> Worktree는 Git 리포지토리가 필요합니다. 선택한 프로젝트가 Git 리포지토리에 포함되어 있는지 확인하십시오.
 
 ### Worktree 시작하기
 
 1. **"Worktree" 선택**: 새 스레드 뷰에서 composer 아래의 **Worktree**를 선택합니다. 선택적으로 worktree에 대해 setup script를 실행할 로컬 환경을 선택합니다.
 2. **시작 브랜치 선택**: Composer 아래에서 worktree의 기반이 될 Git 브랜치를 선택합니다. `main`/`master` 브랜치, feature 브랜치, 또는 unstaged local 변경 사항이 있는 현재 브랜치 중 선택할 수 있습니다.
-3. **프롬프트 제출**: 작업을 제출하면 Codex가 선택한 브랜치를 기반으로 Git worktree를 생성합니다. 기본적으로 Codex는 "detached HEAD" 상태에서 작업합니다.
-4. **작업 위치 선택**: 준비되면 worktree에서 계속 작업하거나 스레드를 local checkout으로 handoff할 수 있습니다.
+3. **프롬프트 제출**: 작업을 제출하면 Codex가 선택한 브랜치를 기반으로 Git worktree를 생성합니다. 기본적으로 Codex는 "detached HEAD"에서 작업합니다.
+4. **변경 사항 검증**: 준비되면 프로젝트와 흐름에 따라 아래 두 경로 중 하나를 따릅니다.
 
-### Handoff 흐름
+Worktree는 Local checkout과 외관과 느낌이 거의 같습니다. 하지만 **Git은 브랜치가 한 번에 한 곳에서만 checkout될 수 있습니다**. Worktree에서 브랜치를 checkout하면 local checkout에서 동시에 checkout할 수 없으며, 그 반대도 마찬가지입니다.
 
-Worktree는 Local checkout과 외관과 느낌이 거의 같습니다. 차이점은 워크플로에서의 위치입니다. Local은 전경, Worktree는 배경으로 생각할 수 있습니다. Handoff를 사용하면 스레드를 그 사이에서 이동할 수 있습니다.
-
-내부적으로 Handoff는 두 checkout 사이에서 작업을 안전하게 이동하는 데 필요한 Git 작업을 처리합니다. 이것이 중요한 이유는 **Git은 브랜치가 한 번에 한 곳에서만 checkout될 수 있기 때문**입니다. Worktree에서 브랜치를 checkout하면 local checkout에서 동시에 checkout할 수 없으며, 그 반대도 마찬가지입니다.
+이 때문에 worktree에서 Codex가 만든 변경 사항을 어떻게 검증하고 커밋할지 선택해야 합니다.
 
 #### 옵션 1: Worktree에서 작업
 
-Worktree에서 배타적으로 작업하려면 스레드 헤더의 **Create branch here** 버튼을 사용하여 worktree를 브랜치로 전환합니다.
+Worktree에서 배타적으로 작업하려면(예: 로컬 환경 setup script로 종속성과 도구를 설치한 경우) 스레드 헤더의 **Create branch here** 버튼을 사용하여 worktree를 브랜치로 전환합니다.
 
 이후 변경 사항을 커밋하고, 브랜치를 remote 리포지토리에 push하고, GitHub에서 PR을 열 수 있습니다.
 
 헤더의 "Open" 버튼을 사용하여 IDE를 worktree로 열거나, 통합 터미널을 사용하거나 worktree 디렉토리에서 필요한 다른 작업을 수행할 수 있습니다.
 
-> Worktree에서 브랜치를 생성하면 다른 worktree(local checkout 포함)에서 해당 브랜치를 checkout할 수 없습니다.
+> Worktree에서 브랜치를 생성하면 local checkout을 포함한 다른 worktree에서 해당 브랜치를 checkout할 수 없습니다.
 
-#### 옵션 2: 스레드를 Local로 Handoff
+이 브랜치에서 계속 작업할 계획이라면 사이드바에 추가할 수 있습니다. 그렇지 않으면 작업이 끝난 후 스레드를 보관하여 worktree가 삭제되도록 합니다.
 
-스레드를 전경으로 가져오려면 스레드 헤더에서 **Hand off**를 클릭하고 **Local**로 이동합니다.
+#### 옵션 2: Local checkout에서 작업
 
-이 경로는 일반적인 IDE 창에서 변경 사항을 읽으려고 하거나, 기존 개발 서버를 실행하거나, 일상적으로 사용하는 환경에서 작업을 검증하려는 경우에 적합합니다.
+Worktree에서 직접 변경 사항을 검증하지 않고 local checkout에서 확인하려면(예: 앱 인스턴스를 하나만 실행할 수 있는 경우) 스레드 헤더에서 **Sync with local**을 클릭합니다.
 
-Codex가 worktree와 local checkout 사이에서 스레드를 안전하게 이동하는 데 필요한 Git 단계를 처리합니다.
+새 브랜치를 생성할지 기존 브랜치에 동기화할지 선택하는 옵션이 표시됩니다.
 
-각 스레드는 시간이 지나도 동일한 연결된 worktree를 유지합니다. 나중에 스레드를 다시 worktree로 handoff하면 Codex는 동일한 배경 환경으로 반환하여 중단한 곳에서 계속할 수 있습니다.
+언제든지 다시 동기화할 수 있습니다. 헤더에서 **Sync with local**을 다시 클릭하면 동기화 방향(to local 또는 from local)과 동기화 방식을 선택할 수 있습니다.
 
-반대 방향도 가능합니다. 이미 Local에서 작업 중이고 전경을 비우고 싶다면 **Hand off**를 사용하여 스레드를 worktree로 이동합니다. 이는 Codex가 백그라운드에서 계속 작업하는 동안 주의를 다른 로컬 작업으로 전환할 때 유용합니다.
-
-> Handoff는 Git 작업을 사용하므로 `.gitignore` 파일에 포함된 파일은 스레드와 함께 이동하지 않습니다.
-
-### Codex-managed와 Permanent Worktree
-
-| 유형 | 설명 |
+| 방식 | 동작 |
 | --- | --- |
-| **Codex-managed worktree** | (기본값) 가볍고 일회용으로 설계. 일반적으로 하나의 스레드에 전용. 나중에 handback하면 동일한 worktree로 반환 |
-| **Permanent worktree** | 사이드바의 프로젝트三点 메뉴에서 생성. 자체 프로젝트로 새 permanent worktree가 생성됨. 자동 삭제되지 않으며, 동일한 worktree에서 여러 스레드를 시작할 수 있음 |
+| **Overwrite** | 목적지 checkout이 소스 checkout의 파일과 커밋 히스토리와 일치하도록 만듦 |
+| **Apply** | 가장 가까운 공유 커밋 이후의 소스 변경 사항을 계산하여 그 패치를 목적지 checkout에 적용. 목적지의 커밋 히스토리를 보존하면서 소스의 코드 변경(소스 커밋이 아닌)을 가져옴 |
+
+여러 worktree를 생성하여 동일한 feature 브랜치에 동기화하고, 작업을 병렬 스레드로 분할할 수 있습니다.
+
+경우에 따라 worktree의 변경 사항이 local checkout의 변경 사항과 충돌할 수 있습니다(예: 이전 worktree를 테스트한 결과). 이 경우 **Overwrite local** 옵션을 사용하여 이전 변경 사항을 재설정하고 worktree 변경 사항을 깔끔하게 적용할 수 있습니다.
+
+> 이 과정은 Git 작업을 사용하므로 `.gitignore` 파일에 포함된 파일은 동기화 중에 전송되지 않습니다.
+
+옵션 1(worktree에서 작업)을 선택한 경우, worktree에 브랜치를 생성하면 헤더에 worktree를 사이드바에 추가하는 옵션이 나타납니다. 이렇게 하면 worktree가 permanent home으로 승격됩니다. 이렇게 하면 자동으로 삭제되지 않으며, 동일한 worktree에서 새 스레드를 시작할 수도 있습니다.
 
 ### Codex가 Worktree를 관리하는 방법
 
@@ -575,7 +634,7 @@ fatal: 'feature/a' is already used by worktree at '<WORKTREE_PATH>'
 
 해결하려면 worktree에서 `feature/a` 대신 다른 브랜치를 checkout해야 합니다.
 
-로컬에서 브랜치를 checkout할 계획이라면, 양쪽에서 같은 브랜치를 checkout하려 시도하는 대신 **Handoff**를 사용하여 스레드를 Local로 이동하십시오.
+로컬에서 브랜치를 checkout할 계획이라면 Workflow 2(Sync with local)를 사용하십시오.
 
 **왜 이 제한이 존재하는가**: Git은 브랜치가 단일 가변 참조(`refs/heads/<name>`)이며, 그 의미가 working tree의 "현재 checkout된 상태"를 나타내기 때문에, 동일한 브랜치가 둘 이상의 worktree에서 동시에 checkout되는 것을 방지합니다. 브랜치가 checkout되면 Git은 해당 HEAD를 해당 worktree가 소유한 것으로 처리하고, commit, reset, rebase, merge 등의 작업이 해당 참조를 잘 정의된 직렬화된 방식으로 진행하도록 기대합니다.
 
@@ -583,34 +642,172 @@ fatal: 'feature/a' is already used by worktree at '<WORKTREE_PATH>'
 
 one-branch-per-worktree 규칙을 적용함으로써 Git은 각 브랜치가 단일 권한 있는 working copy를 갖도록 보장하면서, 다른 worktree가 detached HEAD나 별도의 브랜치를 통해 동일한 커밋을 안전하게 참조할 수 있도록 합니다.
 
+### Permanent Worktree 생성
+
+Permanent worktree는 자동 삭제되지 않으며, 동일한 worktree에서 여러 스레드를 시작할 수 있습니다. 생성 방법:
+
+1. 스레드 헤더의 삼점 메뉴(⋯)를 열어 **Create branch here**로 브랜치를 생성합니다.
+2. 브랜치 생성 후 헤더에 나타나는 **add the worktree to the sidebar** 옵션을 선택합니다.
+
+이렇게 하면 worktree가 사이드바의 permanent home으로 승격되며, 자동 삭제 대상에서 제외됩니다.
+
 ### Worktree 정리
 
 Worktree는 많은 디스크 공간을 차지할 수 있습니다. 각 worktree에는 고유한 리포지토리 파일, 종속성, 빌드 캐시 등의 세트가 있습니다. 따라서 Codex 앱은 worktree 수를 합리적인 한도로 유지하려고 합니다.
 
-기본적으로 Codex는 가장 최근의 **15개** Codex-managed worktree를 유지합니다. 이 한도는 설정에서 변경하거나, 직접 디스크 사용량을 관리하려면 자동 삭제를 끌 수 있습니다.
-
-**자동 삭제되지 않는 Codex-managed worktree**:
+**자동 삭제되지 않는 worktree**:
 
 - Pinned conversation이 연결된 경우
-- 스레드가 아직 진행 중인 경우
-- Permanent worktree인 경우
+- 사이드바에 추가된 worktree (위 참조)
 
-**자동 삭제되는 경우**:
+**정리 대상이 되는 조건**:
 
-- 연결된 스레드를 보관할 때
-- 구성된 한도를 유지하기 위해 오래된 worktree를 삭제해야 할 때
+- **4일 이상** 경과한 경우
+- worktree가 **10개 초과**인 경우
 
-Codex-managed worktree를 삭제하기 전에 Codex는 해당 work의 스냅샷을 저장합니다. worktree가 삭제된 후 대화를 열면 복원 옵션이 표시됩니다.
+두 조건 중 하나라도 충족되면, Codex는 스레드를 보관할 때 또는 앱 시작 시 연결된 스레드가 없는 worktree를 발견한 경우 자동으로 정리합니다.
 
-Permanent worktree는 스레드를 보관해도 자동으로 삭제되지 않습니다.
+worktree를 정리하기 전에 Codex는 해당 작업의 스냅샷을 저장하며, 새 worktree에서 언제든지 복원할 수 있습니다. worktree가 정리된 후 대화를 열면 복원 옵션이 표시됩니다.
 
 ### FAQ
 
 | 질문 | 답변 |
 | --- | --- |
-| Worktree가 생성되는 위치를 제어할 수 있는가? | 현재는 불가능. Codex는 `$CODEX_HOME/worktrees` 아래에 worktree를 생성하여 일관되게 관리 |
-| 스레드를 Local과 Worktree 사이에서 이동할 수 있는가? | 가능. 스레드 헤더의 **Hand off**를 사용. 나중에 다시 worktree로 handoff하면 동일한 연결 worktree로 반환 |
-| Worktree가 삭제되면 스레드는 어떻게 되는가? | 기본 worktree 디렉토리가 삭제되어도 스레드는 기록에 남음. Codex-managed worktree의 경우 삭제 전 스냅샷을 저장하며, 연결된 스레드를 다시 열면 복원 옵션 제공 |
+| Worktree가 생성되는 위치를 제어할 수 있는가? | 현재는 불가능. Codex는 일관되게 관리하기 위해 `$CODEX_HOME/worktrees` 아래에 worktree를 생성 |
+| 세션을 worktree 간 이동할 수 있는가? | 불가능. 환경을 변경해야 하는 경우 대상 환경에서 새 스레드를 시작하고 프롬프트를 다시 작성해야 함. composer에서 화살표 위 키(up arrow)를 사용하여 이전 프롬프트를 복구할 수 있음 |
+| Worktree가 삭제되면 스레드는 어떻게 되는가? | 기본 worktree 디렉토리가 정리되어도 스레드는 기록에 남음. 단, Codex는 정리 전 worktree의 스냅샷을 저장하며, 연결된 스레드를 다시 열면 복원 옵션을 제공 |
+
+---
+
+## Amazon Bedrock (배포 옵션)
+
+> <https://developers.openai.com/codex/amazon-bedrock>
+
+Codex를 Amazon Bedrock 모델 제공자로 구성하면, OpenAI 호스팅 Responses API는 요청 경로에 있지 않습니다. Codex는 모델 요청을 Amazon Bedrock으로 보내고, Bedrock이 지원되는 OpenAI 모델에 대해 OpenAI 호환 Responses API 구현을 제공합니다. 이 설정에서 Codex는 로컬에서 실행되며 AWS 관리 인증과 접근 제어를 사용해 Bedrock으로 모델 요청을 보냅니다.
+
+인증은 AWS 네이티브입니다. 사용자는 Bedrock API 키 또는 AWS IAM 자격 증명으로 인증하며, 이 제공자에서는 ChatGPT 로그인이나 `OPENAI_API_KEY`를 사용하지 않습니다.
+
+> 이 가이드는 지원되는 상용 AWS 리전의 Amazon Bedrock Mantle 경로를 다룹니다. Codex는 AWS GovCloud 리전의 Bedrock Mantle 엔드포인트를 지원하지 않습니다. (2026-06-01 기준)
+
+### 사전 준비
+
+- Amazon Bedrock에서 지원되는 OpenAI 모델에 대한 접근 권한
+- 선택한 모델이 사용 가능한 AWS 리전
+- AWS 계정에 구성된 Amazon Bedrock Mantle 경로 인증
+
+### Codex 구성
+
+`~/.codex/config.toml`에 `amazon-bedrock` 모델 제공자를 추가합니다. 모델 지정은 선택 사항이며, 필요할 때 지원 모델을 명시적으로 선택합니다.
+
+```toml
+model_provider = "amazon-bedrock"
+```
+
+### 인증 옵션
+
+Codex는 두 가지 Bedrock 인증 경로를 지원하며, 다음 순서로 확인합니다.
+
+1. Bedrock API 키
+2. AWS SDK 자격 증명 체인
+
+#### 옵션 1: Bedrock API 키
+
+API 키 인증 사용 시 리전을 반드시 지정해야 합니다.
+
+```bash
+export AWS_BEARER_TOKEN_BEDROCK=<your-bedrock-api-key>
+export AWS_REGION=us-east-2
+```
+
+#### 옵션 2: AWS SDK 자격 증명
+
+조직이 AWS SDK 자격 증명 체인으로 Bedrock 접근을 관리할 때 사용합니다. Codex는 표준 AWS SDK 자격 증명 소스를 사용할 수 있습니다.
+
+| 소스 | 명령 |
+| --- | --- |
+| 공유 AWS `config`/`credentials` 파일 | `aws configure` |
+| 환경 변수 | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_SESSION_TOKEN` |
+| AWS Management Console | `aws login` |
+| AWS SSO / named profile | `aws sso login --profile codex-bedrock` 후 `export AWS_PROFILE=codex-bedrock` |
+| Federated identity (`credential_process`) | 회사 SSO/OIDC 페더레이션은 AWS 프로필 외부에서 구성하고 AWS SDK가 자격 증명을 해결하도록 둠 |
+
+### 데스크톱 앱 및 VS Code 확장
+
+데스크톱 앱과 IDE 확장은 셸의 환경 변수를 상속하지 않을 수 있습니다. 필수 값을 `~/.codex/.env`에 넣고 앱이나 확장을 재시작합니다.
+
+```bash
+export AWS_BEARER_TOKEN_BEDROCK=<your-bedrock-api-key>
+export AWS_REGION=us-east-2
+```
+
+### 설정 확인
+
+- Codex CLI에서 `/status`를 열어 `amazon-bedrock` 모델 제공자를 사용 중인지 확인
+- 데스크톱 앱/VS Code 확장에서는 앱 재시작 후 새 세션 시작
+- 선택한 모델이 구성된 AWS 리전에서 사용 가능하며, AWS 자격 증명에 접근 권한이 있는지 확인
+
+### 지원 모델
+
+정확한 모델 ID를 사용합니다. 모델 가용성은 AWS 리전에 따라 다릅니다.
+
+| 모델 ID |
+| --- |
+| `openai.gpt-5.5` |
+| `openai.gpt-5.4` |
+
+> 모델 선택 전 AWS 리전별 모델 지원을 확인하십시오. 일반 작업에서는 `gpt-5.4`를 기본 시작점으로 사용하십시오. `gpt-5.5`는 공식 Bedrock 페이지가 지원 모델 ID로 명시하므로 위 표에 포함했으나, Codex 전반의 권장 플래그십은 아닙니다(자세한 내용은 [Models](./09-models.md) 참조).
+
+### Fast Mode 미지원
+
+Fast Mode는 Amazon Bedrock에서 사용할 수 없습니다. Fast Mode는 priority processing을 사용하지만, 초기 Amazon Bedrock 제공은 on-demand 추론만 지원합니다.
+
+### Feature availability (기능 가용성)
+
+이 구성은 로컬 Codex 워크플로를 지원합니다. OpenAI 호스팅 클라우드 서비스, 호스팅 도구, 또는 클라우드 관리 디스커버리에 의존하는 일부 기능은 현재 사용할 수 없습니다.
+
+| 기능 영역 | 세부 기능 | Amazon Bedrock |
+| --- | --- | --- |
+| **접근 및 서피스** | Codex web | — |
+| | Codex app for local tasks / Codex CLI / IDE extension | 지원 |
+| | Codex SDK, `codex exec`, scriptable workflows | 지원 |
+| **모델 및 멀티모달** | Bedrock-backed inference (지원 OpenAI 모델) | 지원 |
+| | Fast mode / 이미지 생성·편집 / 음성 받아쓰기 / 웹 검색 | — |
+| **로컬 기능** | `/review` 로컬 코드 리뷰 / 승인 요청 auto-review | 지원 |
+| | 샌드박싱 및 권한 제어 / 프로젝트·standalone app automations | 지원 |
+| | Automations / Worktrees 및 내장 Git 도구 | 지원 |
+| | 로컬 환경 및 반복 액션 / Appshots | 지원 |
+| **브라우저 및 원격 제어** | 인앱 브라우저 미리보기 및 코멘트 / SSH 원격 연결 | 지원 |
+| | Browser Use / Chrome 확장 브라우저 제어 / Computer Use | 제한* |
+| | 모바일 원격 제어 | — |
+| **커스터마이징 및 확장** | `AGENTS.md` 커스텀 지침 / Skills / MCP / Subagents 및 커스텀 에이전트 | 지원 |
+| | Plugins | 제한† |
+| | Plugin 공유 / App connectors | — |
+| | Memories | 제한* |
+| | Chronicle | — |
+| **클라우드 및 연동** | Codex cloud tasks / Sites | — |
+| | GitHub 이슈·PR 위임(`@codex`) / GitHub 코드 리뷰·자동 PR 리뷰 | — |
+| | Slack / Linear 클라우드 연동 | — |
+| **관리·보안·분석** | `requirements.toml` 관리 구성 / 기본적으로 API/비즈니스 데이터 학습 안 함 | 지원 |
+| | SAML SSO, MFA / 클라우드 관리 구성 정책 / Codex RBAC / SCIM·EKM / 엔터프라이즈 보존·거주지 제어 / 분석 대시보드·API / 컴플라이언스 API·감사 로그 / 연결된 GitHub 리포지토리에 대한 Codex Security | — |
+
+\* 특정 리전으로만 제한되는 기능. 개별 기능 문서에서 지역 제약 확인.
+† ChatGPT 인증이 필요하지 않은 기능을 가진 로컬 플러그인 번들은 지원. OpenAI 큐레이션 플러그인 디스커버리와 app connectors 또는 클라우드 호스팅 공유에 의존하는 기능은 사용 불가.
+
+### Troubleshooting
+
+설정이 실패하는 경우 다음을 확인합니다.
+
+- 모델 ID가 지원 모델과 정확히 일치
+- 모델이 사용 가능한 AWS 리전을 지정
+- Bedrock API 키 또는 AWS 자격 증명이 유효하고 만료되지 않음
+- AWS 자격 증명이 선택한 Bedrock 모델에 대한 접근 권한을 가짐
+- `AWS_BEARER_TOKEN_BEDROCK`이 만료되거나 의도하지 않은 키로 설정되지 않음
+- 데스크톱 앱/VS Code 확장 사용 시 필수 환경 변수가 `~/.codex/.env`에 있음
+
+### 지원 경계
+
+- **OpenAI Support**: Codex 클라이언트 설정, 구성, 로컬 CLI 동작, 데스크톱 앱 동작, IDE 확장 동작, 로컬 Codex 제품 경험
+- **AWS 관리자 / AWS Support**: AWS 자격 증명, IAM 권한, Bedrock 모델 접근, 할당량, 빌링, 리전 가용성, Bedrock 요청 실패, AWS 서비스 로그, Bedrock 서비스 동작
 
 ---
 
@@ -768,6 +965,7 @@ Codex 앱 사이드바에서 **Sites**를 열고 프로젝트를 선택하여 Si
 | Sites 배포 | `@Sites`로 사이트 생성 후 save > deploy |
 | Review pane | 앱 내에서 변경 사항 검토, 인라인 코멘트, PR 리뷰 |
 | Automations | Standalone/Thread automation으로 반복 작업 자동화 |
-| Worktrees | Local과 Worktree 사이에서 병렬 작업, Handoff로 이동 |
+| Worktrees | Local과 Worktree 사이에서 병렬 작업, **Sync with local**로 이동 (Overwrite/Apply) |
+| Amazon Bedrock | `model_provider = "amazon-bedrock"`로 로컬 실행 + AWS 관리 인증 |
 | 앱 설정 | `~/.codex/config.toml`의 `[apps]` 섹션 |
 | 플러그인 비활성화 | `~/.codex/config.toml`에서 `enabled = false` 설정 |

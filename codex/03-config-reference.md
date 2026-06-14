@@ -1,8 +1,8 @@
 # Codex CLI - config.toml 설정 전체
 
-> 설정 파일 계층, config.toml 기본 구조, 주요 섹션, 세분화된 승인 정책, 인증, 환경 변수, 권한 프로필, 실행 규칙, 빠른 모드
+> 설정 파일 계층, config.toml 기본 구조, 주요 섹션, 승인 정책(reject), 인증, 환경 변수, 권한 프로필, 실행 규칙, 빠른 모드
 
-**참조**: [Config Basics](https://developers.openai.com/codex/config-basics) | [Advanced Config](https://developers.openai.com/codex/advanced-config) | [Config Reference](https://developers.openai.com/codex/config-reference) | [Environment Variables](https://developers.openai.com/codex/environment-variables) | [Sample Config](https://developers.openai.com/codex/sample-config) | [Permissions](https://developers.openai.com/codex/permissions) | [Rules](https://developers.openai.com/codex/rules) | [Speed](https://developers.openai.com/codex/speed) | [Hooks](https://developers.openai.com/codex/hooks)
+**참조**: [Config Basics](https://developers.openai.com/codex/config-basic) | [Advanced Config](https://developers.openai.com/codex/config-advanced) | [Config Reference](https://developers.openai.com/codex/config-reference) | [Environment Variables](https://developers.openai.com/codex/environment-variables) | [Sample Config](https://developers.openai.com/codex/config-sample) | [Permissions](https://developers.openai.com/codex/permissions) | [Rules](https://developers.openai.com/codex/rules) | [Speed](https://developers.openai.com/codex/speed) | [Hooks](https://developers.openai.com/codex/hooks) | [Remote Connections](https://developers.openai.com/codex/remote-connections)
 
 ---
 
@@ -44,7 +44,7 @@ Codex는 여러 계층의 설정 파일을 지원하며, 높은 우선순위의 
 ```toml
 # ~/.codex/config.toml 예시
 
-# 모델 설정
+# 모델 설정 (최신 권장: gpt-5.5)
 model = "gpt-5.5"
 
 # 승인 정책
@@ -69,7 +69,7 @@ review_model = "gpt-5.5"
 모델 선택 및 동작을 제어합니다.
 
 ```toml
-# 모델 슬러그
+# 모델 슬러그 (최신 권장: gpt-5.5)
 model = "gpt-5.5"
 
 # Reasoning effort (reasoning 모델에만 적용)
@@ -91,7 +91,7 @@ model_verbosity = "medium"
 review_model = "gpt-5.5"
 
 # 서비스 티어
-# 값: "flex" | "fast" 등 (catalog-provided tier ID도 사용 가능)
+# 값: "flex" | "fast" (fast는 features.fast_mode 게이트가 켜져 있을 때만 적용)
 service_tier = "flex"
 
 # 컨텍스트 윈도우 크기 (토큰 수)
@@ -105,25 +105,30 @@ model_catalog_json = "/path/to/catalog.json"
 
 # 모델 지시 파일 경로
 model_instructions_file = "/path/to/instructions.md"
+
+# Plan 모드 전용 reasoning effort 오버라이드
+# 미설정 시 Plan 모드는 자체 preset 기본값 사용
+# plan_mode_reasoning_effort = "high"
 ```
 
 | 파라미터 | 값 | 설명 |
 | --- | --- | --- |
 | `model` | 모델 슬러그 문자열 | 사용할 모델 (예: `"gpt-5.5"`, `"gpt-5.4"`) |
-| `model_reasoning_effort` | 문자열 | Reasoning 모델의 추론 강도 |
+| `model_reasoning_effort` | `minimal`, `low`, `medium`, `high`, `xhigh` | Reasoning 모델의 추론 강도 (Responses API 전용, `xhigh`는 모델 의존) |
 | `model_reasoning_summary` | `auto`, `concise`, `detailed`, `none` | Reasoning 요약 생성 모드 |
 | `model_supports_reasoning_summaries` | 불리언 | Reasoning 요약 강제 활성화 오버라이드 |
-| `model_verbosity` | `low`, `medium`, `high` | GPT-5 모델 출력의 상세도 |
-| `review_model` | 모델 슬러그 문자열 | `/review` 기능에 사용할 모델 |
-| `service_tier` | 문자열 | 서비스 티어. 빌트인 값은 `flex`, `fast`. legacy `fast` 설정은 요청값 `priority`에 매핑됨. catalog 제공 tier ID도 저장 가능 |
+| `model_verbosity` | `low`, `medium`, `high` | GPT-5 Responses API 모델 출력의 상세도 (Chat Completions 제공자는 무시) |
+| `review_model` | 모델 슬러그 문자열 | `/review` 기능에 사용할 모델 (미설정 시 현재 세션 모델) |
+| `service_tier` | `flex`, `fast` (또는 카탈로그 tier ID) | 서비스 티어. `fast`는 `features.fast_mode` 게이트가 활성화된 경우에만 적용. legacy `fast` config은 요청 값 `priority`로 매핑 |
+| `plan_mode_reasoning_effort` | `none`, `minimal`, `low`, `medium`, `high`, `xhigh` | Plan 모드 전용 reasoning 오버라이드. 미설정 시 Plan 모드의 built-in preset 기본값 사용 |
 | `model_context_window` | 정수 | 컨텍스트 윈도우 크기 (토큰) |
 | `model_auto_compact_token_limit` | 정수 | 자동 압축을 트리거하는 토큰 사용량 임계값 |
-| `model_catalog_json` | 경로 | JSON 모델 카탈로그 경로 |
-| `model_instructions_file` | 경로 | 모델 지시 파일 경로 |
+| `model_catalog_json` | 경로 | JSON 모델 카탈로그 경로. 선택된 프로필 파일이 이 값을 프로필별로 오버라이드 |
+| `model_instructions_file` | 경로 | `AGENTS.md` 대신 사용할 built-in 지시 파일 경로 |
 
 ### model_providers - 모델 제공자 설정
 
-`model_provider` 단일 문자열 대신 `model_providers` 테이블로 여러 제공자를 정의할 수 있습니다. 빌트인 ID는 오버라이드할 수 없습니다.
+최상위 `model_provider`(기본값 `openai`)로 활성 제공자를 선택합니다. `model_provider` 단일 문자열 대신 `model_providers` 테이블로 여러 제공자를 정의할 수 있습니다. 빌트인 ID(`openai`, `ollama`, `lmstudio`)는 오버라이드할 수 없습니다.
 
 ```toml
 # 기본 제공자 선택
@@ -163,11 +168,12 @@ refresh_interval_ms = 300000
 
 | 필드 | 타입 | 설명 |
 | --- | --- | --- |
+| `model_provider` | 문자열 | 활성 제공자 ID (기본값 `openai`). `[model_providers]`에 정의된 커스텀 제공자 또는 빌트인 제공자 선택 |
 | `model_providers.<id>.name` | 문자열 | 표시 이름 |
 | `model_providers.<id>.base_url` | 문자열 | 제공자 API 엔드포인트 URL |
 | `model_providers.<id>.env_key` | 문자열 | API 키를 공급하는 환경 변수명 |
 | `model_providers.<id>.env_key_instructions` | 문자열 | 환경 변수 설정 안내 |
-| `model_providers.<id>.wire_api` | `"responses"` | 제공자가 사용하는 통신 프로토콜 |
+| `model_providers.<id>.wire_api` | `responses` | 제공자가 사용하는 통신 프로토콜. config-reference 기준 `responses`가 유일하게 지원되는 값이며 생략 시 기본값. (Chat Completions API 지원은 deprecated되어 향후 제거 예정) |
 | `model_providers.<id>.requires_openai_auth` | 불리언 | OpenAI 인증 필요 여부 (기본값 `false`) |
 | `model_providers.<id>.http_headers` | 테이블 | 요청에 포함할 추가 HTTP 헤더 (키-값) |
 | `model_providers.<id>.env_http_headers` | 테이블 | 환경 변수에서 읽어올 HTTP 헤더 (키: 헤더명, 값: 환경 변수명) |
@@ -213,11 +219,32 @@ sandbox_mode = "workspace-write"
 | `workspace-write` | 작업 디렉토리 내에서 수정 및 실행 허용 |
 | `danger-full-access` | 전체 시스템 접근 허용 |
 
+#### sandbox_workspace_write - workspace-write 상세 설정
+
+`sandbox_mode = "workspace-write"`일 때만 적용되는 추가 설정입니다.
+
+```toml
+[sandbox_workspace_write]
+exclude_tmpdir_env_var = false   # $TMPDIR을 쓰기 가능 루트에서 제외
+exclude_slash_tmp = false        # /tmp를 쓰기 가능 루트에서 제외
+writable_roots = ["/Users/YOU/.pyenv/shims"]  # 작업공간 외 추가 쓰기 루트
+network_access = false           # 샌드박스 내 아웃바운드 네트워크 허용
+```
+
+| 필드 | 타입 | 기본값 | 설명 |
+| --- | --- | --- | --- |
+| `sandbox_workspace_write.exclude_tmpdir_env_var` | 불리언 | `false` | workspace-write 모드에서 `$TMPDIR`을 쓰기 가능 루트에서 제외 |
+| `sandbox_workspace_write.exclude_slash_tmp` | 불리언 | `false` | workspace-write 모드에서 `/tmp`를 쓰기 가능 루트에서 제외 |
+| `sandbox_workspace_write.network_access` | 불리언 | `false` | workspace-write 샌드박스 내 아웃바운드 네트워크 접근 허용 |
+| `sandbox_workspace_write.writable_roots` | 문자열 배열 | `[]` | `sandbox_mode = "workspace-write"`일 때 추가 쓰기 루트 |
+
+> `sandbox_mode`/`[sandbox_workspace_write]`는 beta 권한 프로필(`[permissions.<name>]` + `default_permissions`)으로 마이그레이션 중입니다. 한 세션에서 두 시스템을 혼용할 수 없습니다.
+
 ### approval_policy - 승인 정책
 
 ```toml
 # 승인 정책
-# 값: "untrusted" | "on-request" | "never" | { granular = { ... } }
+# 값: "untrusted" | "on-request" | "never" | { reject = { ... } }
 approval_policy = "on-request"
 ```
 
@@ -226,42 +253,33 @@ approval_policy = "on-request"
 | `untrusted` | "안전한 것으로 알려진" 읽기 전용 명령만 자동 승인. 나머지는 모두 사용자 승인 필요 |
 | `on-request` | 모델이 필요할 때만 승인 요청 |
 | `never` | 승인 없이 자동 실행. 실패 시 사용자에게 에스컬레이션하지 않음 |
-| `{ granular = { ... } }` | 개별 승인 플로우에 대한 세분화된 제어 |
+| `{ reject = { ... } }` | 특정 승인 카테고리를 자동 거부하면서 나머지는 대화형으로 유지 |
 
-> **참고**: `on-failure`는 **DEPRECATED**입니다. 대화형 실행에는 `on-request`를, 비대화형 실행에는 `never`를 사용하세요.
+> **참고**: `on-failure`는 **DEPRECATED**입니다. 대화형 실행에는 `on-request`를, 비대화형 실행에는 `never`를 사용하세요. (config-reference canonical 기준. config-advanced의 승인 예시는 `untrusted`, `on-request`, `never`만 나열하며 `on-failure`를 옵션에서 제외합니다.)
 
 #### granular 객체
 
-`approval_policy`를 `{ granular = { ... } }` 형태로 설정하면 특정 승인 카테고리를 개별적으로 제어할 수 있습니다.
+`approval_policy`를 `{ granular = { ... } }` 형태로 설정하면 특정 승인 카테고리를 자동 거부(auto-reject)하면서 다른 프롬프트는 대화형으로 유지할 수 있습니다. (config-reference canonical 표기. config-advanced 예시는 동일 의미로 `{ reject = { ... } }` 표기를 함께 사용합니다.)
 
 ```toml
-[approval_policy]
-# granular 승인 정책
-
-[approval_policy.granular]
-# 샌드박스 승격 승인 요청 거부 (필수 필드)
-sandbox_approval = true
-
-# execpolicy prompt 규칙에 의해 트리거된 승인 거부 (필수 필드)
-rules = true
-
-# MCP elicitation 프롬프트 거부 (필수 필드)
-mcp_elicitations = true
-
-# request_permissions 도구로 인한 승인 프롬프트 거부
-request_permissions = false
-
-# 스킬 스크립트 실행 승인 프롬프트 거부
-skill_approval = false
+# 샌드박스 승격, 규칙 기반 승인, MCP elicitation은 사용자에게 표시,
+# request_permissions와 skill-script 승인은 자동 거부(fail closed)
+approval_policy = { granular = {
+  sandbox_approval = true,
+  rules = true,
+  mcp_elicitations = true,
+  request_permissions = false,
+  skill_approval = false
+} }
 ```
 
-| granular 필드 | 타입 | 기본값 | 필수 | 설명 |
-| --- | --- | --- | --- | --- |
-| `sandbox_approval` | 불리언 | 없음 | 예 | `true` 시 샌드박스 승격 승인 프롬프트를 자동 거부. `with_additional_permissions` 및 `require_escalated` 요청 포함 |
-| `rules` | 불리언 | 없음 | 예 | `true` 시 execpolicy `prompt` 규칙에 의한 승인을 자동 거부 |
-| `mcp_elicitations` | 불리언 | 없음 | 예 | `true` 시 MCP elicitation 프롬프트를 자동 거부 |
-| `request_permissions` | 불리언 | `false` | 아니요 | `true` 시 `request_permissions` 도구로 트리거된 승인 프롬프트 자동 거부 |
-| `skill_approval` | 불리언 | `false` | 아니요 | `true` 시 스킬 스크립트 실행 승인 프롬프트 자동 거부 |
+| granular 필드 | 타입 | 설명 |
+| --- | --- | --- |
+| `sandbox_approval` | 불리언 | `true` 시 샌드박스 승격(escalation) 승인 프롬프트를 표시. `false` 시 자동 거부 |
+| `rules` | 불리언 | `true` 시 execpolicy `prompt` 규칙에 의해 트리거된 승인을 표시. `false` 시 자동 거부 |
+| `mcp_elicitations` | 불리언 | `true` 시 MCP elicitation 프롬프트를 표시. `false` 시 자동 거부 |
+| `request_permissions` | 불리언 | `true` 시 `request_permissions` 도구 프롬프트를 표시. `false` 시 자동 거부 |
+| `skill_approval` | 불리언 | `true` 시 skill-script 승인 프롬프트를 표시. `false` 시 자동 거부 |
 
 ### approvals_reviewer - 승인 검토자
 
@@ -289,76 +307,63 @@ policy = "샌드박스 외부 명령은 읽기 전용만 승인합니다"
 
 ### features - 기능 토글
 
-중앙화된 기능 플래그입니다. 개별 토글 대신 이 섹션을 사용하세요. `codex features list`로 확인할 수 있습니다.
+중앙화된 기능 플래그입니다. 개별 토글 대신 이 섹션을 사용하세요. config-basic에서 자주 쓰는 기능만 빠르게 켜려면 아래 예시를, 전체 canonical 키는 표를 참조하세요.
 
 ```toml
 [features]
-# --- 핵심 기능 ---
-# 통합 실행기
-unified_exec = true
-
-# 셸 스냅샷
-shell_snapshot = true
-
-# 셸 도구
-shell_tool = true
-
-# 실행 취소 (턴별 git ghost 스냅샷)
-undo = true
-
-# 훅 활성화 (기본 활성화)
-hooks = true
-
-# --- 웹 검색 (deprecated, 최상위 web_search 설정 사용 권장) ---
-web_search = true
-web_search_request = true
-web_search_cached = true
-
-# --- 앱 / 커넥터 ---
-apps = true
-
-# --- 에이전트 ---
-multi_agent = true
-codex_git_commit = true
-
-# --- 메모리 ---
-memories = true
-
-# --- 빠른 모드 ---
-fast_mode = true
-
-# --- 압축 ---
-enable_request_compression = true
-
-# --- 기타 ---
-prevent_idle_sleep = true
-skill_mcp_dependency_install = false
-personality = true
+shell_snapshot = true           # 반복 명령 속도 향상
+web_search_request = true       # 모델이 웹 검색 요청 허용 (legacy)
+unified_exec = true             # 통합 PTY 실행 도구
 ```
 
-| 플래그 | 타입 | 설명 |
-| --- | --- | --- |
-| `apps` | 불리언 | ChatGPT Apps/커넥터 지원 활성화 (실험적) |
-| `codex_git_commit` | 불리언 | Codex 자동 git 커밋. 활성화 시 `commit_attribution`으로 `Co-authored-by:` 트레일러 추가 |
-| `enable_request_compression` | 불리언 | 지원 시 zstd로 스트리밍 요청 본문 압축 (안정, 기본 활성화) |
-| `fast_mode` | 불리언 | TUI에서 모델 카탈로그 서비스 티어 선택 활성화, Fast-tier 명령 포함 (안정, 기본 활성화) |
-| `hooks` | 불리언 | 훅 활성화. `codex_hooks`는 deprecated alias (안정, 기본 활성화) |
-| `memories` | 불리언 | 메모리 서브시스템 (기본 비활성화) |
-| `multi_agent` | 불리언 | 멀티 에이전트 협업 도구 활성화 (안정, 기본 활성화) |
-| `network_proxy` | 불리언 또는 테이블 | 샌드박스 네트워킹 활성화. 테이블 형태로 `domains` 등 네트워크 정책 설정 가능 (실험적, 기본 비활성화) |
-| `personality` | 불리언 | 모델 성격 설정 활성화 (안정, 기본 활성화) |
-| `prevent_idle_sleep` | 불리언 | 턴 실행 중 시스템 유휴 수면 방지 (실험적, 기본 비활성화) |
-| `shell_snapshot` | 불리언 | 셸 환경 스냅샷으로 반복 명령 속도 향상 (안정, 기본 활성화) |
-| `shell_tool` | 불리언 | 기본 `shell` 도구 활성화 (안정, 기본 활성화) |
-| `skill_mcp_dependency_install` | 불리언 | 스킬 MCP 의존성 자동 설치 (안정, 기본 활성화) |
-| `undo` | 불리언 | 턴별 git ghost 스냅샷으로 undo 활성화 (안정, 기본 비활성화) |
-| `unified_exec` | 불리언 | 통합 PTY 기반 실행 도구 (안정, Windows 제외 기본 활성화) |
-| `web_search` | 불리언 | (Deprecated) 웹 검색 활성화. 최상위 `web_search` 설정 사용 권장 |
-| `web_search_cached` | 불리언 | (Deprecated) `web_search` 미설정 시 `true`면 `web_search = "cached"`에 매핑 |
-| `web_search_request` | 불리언 | (Deprecated) `web_search` 미설정 시 `true`면 `web_search = "live"`에 매핑 |
+> 활성화: `config.toml`의 `[features]`에 `feature_name = true` 추가, 또는 CLI에서 `codex --enable feature_name`.
+> 비활성화: 해당 키를 `false`로 설정. 생략한 키는 기본값을 유지합니다.
 
-> 생략한 기능 키는 기본값을 유지합니다.
-> `config.toml`의 `[features]`에 `feature_name = true`를 추가하거나, CLI에서 `codex --enable feature_name`으로 활성화할 수 있습니다.
+#### 전체 features 표 (config-reference canonical 기준)
+
+> 아래 표의 기본값·Maturity 라벨은 config-reference(현재 canonical)를 기준으로 합니다. config-basic의 표는 자주 쓰는 키만 발췌하며 동일한 canonical 키를 사용하지만, 일부 항목의 기본값/성숙도 표기가 과거 세대 기준일 수 있으므로 두 페이지 간 차이가 있을 수 있습니다.
+
+| 키 | 기본값 | Maturity | 설명 |
+| --- | --- | --- | --- |
+| `apps` | `false` | 실험적 | ChatGPT Apps/커넥터 지원 활성화 |
+| `apps_mcp_gateway` | `false` | 실험적 | Apps MCP 호출을 OpenAI connectors MCP 게이트웨이(`https://api.openai.com/v1/connectors/mcp/`)로 라우팅 (legacy 라우팅 대신) |
+| `artifact` | `false` | 개발 중 | 슬라이드·스프레드시트 등 네이티브 아티팩트 도구 활성화 |
+| `child_agents_md` | `false` | 실험적 | AGENTS.md가 없어도 scope/precedence 가이던스를 추가 |
+| `codex_git_commit` | `false` | 실험적 | Codex가 생성하는 git 커밋 및 커밋 attribution trailer(`Co-authored-by:`) 활성화. trailer는 최상위 `commit_attribution`으로 제어 |
+| `collaboration_modes` | - | Legacy | collaboration modes 토글. 현재 빌드는 Plan/default 모드를 이 키 없이 제공 |
+| `default_mode_request_user_input` | `false` | 개발 중 | default collaboration 모드에서 `request_user_input` 허용 |
+| `elevated_windows_sandbox` | - | Legacy | 이전 elevated Windows sandbox 롤아웃 토글. 현재 빌드는 사용 안 함 |
+| `enable_request_compression` | `true` | 안정 | 지원 시 zstd로 스트리밍 요청 본문 압축 |
+| `experimental_windows_sandbox` | - | Legacy | 이전 Windows sandbox 롤아웃 토글. 현재 빌드는 사용 안 함 |
+| `fast_mode` | `true` | 안정 | Fast mode 선택 및 `service_tier = "fast"` 경로 활성화 |
+| `hooks` | `true` | 안정 | `hooks.json` 또는 인라인 `[hooks]`에서 lifecycle hooks 로드. `features.codex_hooks`는 deprecated alias |
+| `image_detail_original` | `false` | 개발 중 | 지원 모델에서 `detail = "original"` 이미지 출력 허용 |
+| `image_generation` | `false` | 개발 중 | 빌트인 이미지 생성 도구 활성화 |
+| `memories` | `false` | 안정 | Memories 활성화 |
+| `multi_agent` | `false` | 실험적 | 멀티 에이전트 협업 도구(`spawn_agent`, `send_input`, `resume_agent`, `wait`, `close_agent`, `spawn_agents_on_csv`) 활성화 |
+| `personality` | `true` | 안정 | 모델 성격 설정 컨트롤 활성화 |
+| `powershell_utf8` | (Windows) `true` | - | PowerShell UTF-8 출력 강제. Windows에서 기본 활성화, 그 외 비활성화 |
+| `prevent_idle_sleep` | `false` | 실험적 | 턴 실행 중 시스템 유휴 수면 방지 |
+| `remote_models` | - | Legacy | 이전 remote-model readiness 흐름 토글. 현재 빌드는 사용 안 함 |
+| `request_rule` | - | Legacy | Smart approvals 토글. 현재 빌드는 기본 포함이므로 대부분 unset 권장 |
+| `responses_websockets` | `false` | 개발 중 | 지원 제공자에 대해 Responses API WebSocket 전송 선호 |
+| `responses_websockets_v2` | `false` | 개발 중 | Responses API WebSocket v2 모드 활성화 |
+| `runtime_metrics` | `false` | 실험적 | TUI 턴 구분자에 런타임 메트릭 요약 표시 |
+| `search_tool` | - | Legacy | 이전 Apps discovery 흐름 토글. 현재 빌드는 사용 안 함 |
+| `shell_snapshot` | `false` (basic) / `true` (ref) | 안정 | 셸 환경 스냅샷으로 반복 명령 속도 향상 |
+| `shell_tool` | `true` | 안정 | 기본 `shell` 도구 활성화 |
+| `skill_env_var_dependency_prompt` | `false` | 개발 중 | 누락된 스킬 환경 변수 의존성 프롬프트 |
+| `skill_mcp_dependency_install` | `true` | 안정 | 스킬의 누락된 MCP 의존성 프롬프트 및 설치 허용 |
+| `sqlite` | `true` | 안정 | SQLite 기반 상태 지속성 활성화 |
+| `steer` | - | Legacy | 이전 Enter/Tab steering 롤아웃 토글. 현재 빌드는 항상 현재 steering 동작 사용 |
+| `undo` | `false` | 안정 | 턴별 git ghost 스냅샷으로 undo 지원 |
+| `unified_exec` | (Windows 외) `true` | 안정 | 통합 PTY 기반 실행 도구 사용 |
+| `use_linux_sandbox_bwrap` | `false` | 실험적 | bubblewrap 기반 Linux sandbox 파이프라인 사용 |
+| `web_search` | - | Deprecated | legacy 토글. 최상위 `web_search` 설정 사용 권장 |
+| `web_search_cached` | - | Deprecated | legacy 토글. `web_search` 미설정 시 `true`면 `web_search = "cached"` 매핑 |
+| `web_search_request` | - | Deprecated | legacy 토글. `web_search` 미설정 시 `true`면 `web_search = "live"` 매핑 |
+
+> Maturity 라벨(Experimental / Beta / Stable / 개발 중 / Legacy / Deprecated)은 공식 문서 표기 기준입니다.
 
 ### personality - 성격 설정
 
@@ -429,7 +434,7 @@ nickname_candidates = ["tester", "qa"]
 | `max_depth` | 정수 | `1` | 에이전트 스레드의 최대 중첩 깊이 (루트 세션은 depth 0에서 시작) |
 | `max_threads` | 정수 | `6` | 동시에 열 수 있는 최대 에이전트 스레드 수. 미설정 시 기본값 `6` |
 
-#### 에이전트 역할 정의
+#### 에이전트 역할 정의 (config-reference 기준)
 
 | 필드 | 타입 | 설명 |
 | --- | --- | --- |
@@ -890,14 +895,9 @@ enabled = true
 
 ---
 
-## 세분화된 승인 정책 (GranularApprovalConfig)
+## 승인 정책 granular 객체
 
-`approval_policy`를 `{ granular = { ... } }` 형태로 설정하면 특정 승인 카테고리를 개별적으로 제어하면서 나머지는 대화형으로 유지할 수 있습니다.
-
-```toml
-# 샌드박스 승격 및 규칙 기반 승인은 자동 거부, MCP elicitation은 사용자에게 표시
-approval_policy = { granular = { sandbox_approval = true, rules = true, mcp_elicitations = false } }
-```
+`approval_policy`의 `{ granular = { ... } }` 형태는 위 [approval_policy - 승인 정책](#approval_policy---승인-정책) 섹션의 granular 객체를 참조하세요. config-reference canonical 키는 `sandbox_approval`, `rules`, `mcp_elicitations`, `request_permissions`, `skill_approval`입니다. (config-advanced 예시는 동일 의미로 `{ reject = { ... } }` 표기를 함께 사용합니다.)
 
 ---
 
@@ -1020,6 +1020,7 @@ enabled = true
 | `permissions.<name>.network.allow_upstream_proxy` | 불리언 | `true` | 상위 `HTTP(S)_PROXY`/`ALL_PROXY` 설정 존중 |
 | `permissions.<name>.network.allow_local_binding` | 불리언 | `false` | 로컬/사설망 가드 비활성화 |
 | `permissions.<name>.network.dangerously_allow_non_loopback_proxy` | 불리언 | `false` | 프록시 리스너의 non-loopback 바인딩 허용 |
+| `permissions.<name>.network.dangerously_allow_non_loopback_admin` | 불리언 | `false` | admin 리스너(`admin_url`)의 non-loopback 바인딩 허용 |
 | `permissions.<name>.network.dangerously_allow_all_unix_sockets` | 불리언 | `false` | Unix 소켓 허용 리스트 우회 |
 | `[permissions.<name>.network.unix_sockets]` | 테이블 | 없음 | Unix 소켓 허용 리스트 오버라이드 (Docker 등) |
 | `permissions.<name>.network.unix_sockets."<path>"` | `allow`, `deny` | 없음 | Unix 소켓 경로 허용/거부 |
@@ -1041,6 +1042,17 @@ enabled = true
 ### 권한 프로필 마이그레이션
 
 권한 프로필은 이전 `sandbox_mode` + `sandbox_workspace_write` 조합을 대체합니다. 한 세션에서 두 시스템을 혼용할 수 없습니다. `sandbox_mode`가 활성 설정 레이어에 나타나면 기존 샌드박스 설정이 대신 사용됩니다.
+
+#### managed `allowed_permission_profiles` (0.138.0+)
+
+엔터프라이즈 관리자는 `requirements.toml`의 `allowed_permission_profiles`로 사용자가 선택할 수 있는 프로필을 제한할 수 있습니다. 이 키가 한 번이라도 나타나면, 명시되지 않은 프로필은 모두 거부됩니다(미래 Codex 버전에서 추가되는 빌트인 프로필 및 누락된 빌트인 포함).
+
+```toml
+# requirements.toml — 허용할 권한 프로필 allowlist
+allowed_permission_profiles = [":read-only", ":workspace", "project-edit"]
+```
+
+> **혼합 버전 롤아웃**: 관리 `allowed_permission_profiles`는 Codex가 권한 프로필을 사용하도록 만드는 예외입니다. managed 프로필 allowlist를 배포하기 전에 `sandbox_mode` 및 `[sandbox_workspace_write]` 같은 이전 설정을 제거하세요. 모든 클라이언트가 Codex 0.138.0 이상을 실행할 때까지 임시 호환 제약으로 `allowed_sandbox_modes` 요구사항을 유지할 수 있습니다.
 
 ---
 
@@ -1118,20 +1130,24 @@ codex execpolicy check --pretty \
 
 ### Fast mode
 
-지원 모델의 속도를 1.5배 향상시키는 기능입니다. 크레딧 소비율이 표준 모드보다 높습니다.
+Fast mode는 모델 속도를 높이는 대신 크레딧 소비를 증가시킵니다.
 
-| 모델 | 속도 향상 | 크레딧 소비율 |
-| --- | --- | --- |
-| GPT-5.5 | 1.5x | 표준의 2.5배 |
-| GPT-5.4 | 1.5x | 표준의 2배 |
+| 항목 | 값 |
+| --- | --- |
+| 지원 모델 | GPT-5.5, GPT-5.4 |
+| 속도 향상 | 1.5x |
+| 크레딧 소비율 | 표준의 2.5x (GPT-5.5) / 2x (GPT-5.4) |
 
-CLI에서 설정:
+CLI에서 토글:
 
 ```shell
-/fast on      # 활성화
-/fast off     # 비활성화
-/fast status  # 현재 상태 확인
+/fast on        # Fast mode 켜기
+/fast off       # Fast mode 끄기
+/fast status    # 현재 상태 확인
 ```
+
+> Fast mode는 Codex IDE 확장, CLI, 앱에서 ChatGPT 로그인 시 사용할 수 있습니다.
+> API 키 인증 시에는 표준 API 요금이 적용되며 `/fast`를 사용할 수 없습니다.
 
 config.toml에서 영구 설정:
 
@@ -1139,15 +1155,14 @@ config.toml에서 영구 설정:
 service_tier = "fast"
 
 [features]
-fast_mode = true
+fast_mode = true   # Fast mode 선택 및 service_tier="fast" 경로 게이트 (안정, 기본 활성화)
 ```
 
-> API 키 인증 시에는 표준 API 요금이 적용되며 Fast mode 크레딧을 사용할 수 없습니다.
-> Fast mode는 Codex IDE 확장, CLI, 앱에서 ChatGPT 로그인 시 사용 가능합니다.
+> `service_tier = "fast"`는 `features.fast_mode` 게이트가 활성화된 경우에만 적용됩니다.
 
 ### Codex-Spark
 
-GPT-5.3-Codex-Spark는 빠르고 가벼운 전용 코덱스 모델입니다. Fast mode와 달리 별도의 모델 선택이며 자체 사용량 제한이 있습니다.
+GPT-5.3-Codex-Spark는 Fast mode와 달리 속도를 높이는 토글이 아니라 별도의 빠르고 가벼운 전용 코덱스 모델입니다. near-instant 실시간 코딩 반복에 최적화되어 있으며, 자체 사용량 한도를 가집니다.
 
 - Research preview 기간 동안 ChatGPT Pro 구독자에게만 제공됩니다.
 
@@ -1175,7 +1190,9 @@ cli_auth_credentials_store = "auto"
 
 ## 프로필 (Profiles)
 
-설정 프로필 파일은 `config.toml` 옆에 `$CODEX_HOME/profile-name.config.toml` 형태로 별도 파일로 존재합니다. CLI에서 `--profile` / `-p`로 선택할 수 있습니다.
+설정 프로필 파일은 `config.toml` 옆에 `$CODEX_HOME/profile-name.config.toml` 형태로 별도 파일로 존재합니다. CLI에서 `--profile` / `-p`로 선택하면, Codex가 `~/.codex/config.toml`을 로드한 뒤 해당 프로필 파일을 오버레이합니다.
+
+> Codex 0.134.0+ 부터는 `config.toml` 내 인라인 `[profiles.<name>]` 테이블과 최상위 `profile = "profile-name"` 선택자가 더 이상 지원되지 않습니다. 기존 인라인 프로필 설정은 `~/.codex/profile-name.config.toml` 별도 파일로 옮긴 뒤, `config.toml`에서 `[profiles.<name>]` 테이블과 `profile = "profile-name"` 선택자를 제거하세요.
 
 ```shell
 # 프로필 사용
@@ -1265,13 +1282,15 @@ $env:CODEX_NON_INTERACTIVE=1; irm https://chatgpt.com/codex/install.ps1 | iex
 
 | 환경 변수 | 사용 주체 | 설명 |
 | --- | --- | --- |
-| `RUST_LOG` | CLI 및 app-server | Rust 로그 필터링 및 상세도 제어. `codex exec`는 더 상세한 값을 설정하지 않는 한 `error` 출력이 기본 |
+| `RUST_LOG` | CLI 및 app-server | Rust 로그 필터링 및 상세도 제어. `error`, `warn`, `info`, `debug`, `trace` 값을 받으며, `codex exec`는 더 상세한 값을 설정하지 않는 한 `error` 출력이 기본 |
 
 ```shell
 # 디버그 로깅 예시
 RUST_LOG=debug codex -c log_dir=./.codex-log
 tail -F ./.codex-log/codex-tui.log
 ```
+
+> plaintext TUI 로그(`codex-tui.log`)는 opt-in이며, `log_dir`을 명시적으로 설정해야 해당 디렉토리에 활성화됩니다. `log_dir` 미설정 시 기본값은 `$CODEX_HOME/log`입니다.
 
 ### 환경 변수 사용 예시
 
@@ -1339,7 +1358,7 @@ codex -c model=gpt-4.1-mini
 ```toml
 # ~/.codex/config.toml - 전체 예시
 
-# 모델 설정
+# 모델 설정 (최신 권장: gpt-5.5)
 model = "gpt-5.5"
 model_reasoning_effort = "medium"
 model_reasoning_summary = "auto"
@@ -1453,17 +1472,18 @@ enabled = true
 ```toml
 # requirements.toml
 
-# 허용되는 승인 정책 목록
+# 허용되는 승인 정책 목록 (예: untrusted, on-request, never, reject)
 allowed_approval_policies = ["on-request", "untrusted"]
-
-# 허용되는 승인 검토자 목록
-allowed_approvals_reviewers = ["user", "auto_review"]
 
 # 허용되는 샌드박스 모드 목록
 allowed_sandbox_modes = ["read-only", "workspace-write"]
 
-# 허용되는 웹 검색 모드
+# 허용되는 웹 검색 모드 (disabled는 항상 허용)
 allowed_web_search_modes = ["cached"]
+
+# 허용되는 권한 프로필 allowlist (0.138.0+)
+# 이 키가 나타나면 명시되지 않은 프로필(미래 빌트인 포함)은 모두 거부됨
+allowed_permission_profiles = [":read-only", ":workspace", "project-edit"]
 
 # 관리 훅만 허용 (사용자/프로젝트/세션/플러그인 훅 건너뜀)
 allow_managed_hooks_only = true
@@ -1471,6 +1491,10 @@ allow_managed_hooks_only = true
 # MCP 서버 (identity 기반 허용 목록)
 [mcp_servers.approved-server]
 identity.command = "npx"
+
+# 피처 플래그 강제 (config.toml의 canonical 키와 동일)
+[features]
+sqlite = true
 
 # 규칙 (접두사 기반, prompt/forbidden만 허용)
 [rules]
@@ -1480,22 +1504,28 @@ justification = "파일 삭제 금지"
 
 [[rules.prefix_rules.pattern]]
 token = "rm"
-
-# 피처 플래그 강제
-[features]
-browser_use = false
-computer_use = false
-
-# Guardian 자동 검토 정책
-guardian_policy_config = "승인 전 보안 검사 수행"
-
-# 관리 훅 디렉토리
-hooks.managed_dir = "/etc/codex/hooks"
 ```
+
+| 키 | 타입 / 값 | 설명 |
+| --- | --- | --- |
+| `allowed_approval_policies` | 문자열 배열 | `approval_policy`에 허용되는 값 (예: `untrusted`, `on-request`, `never`, `reject`) |
+| `allowed_sandbox_modes` | 문자열 배열 | `sandbox_mode`에 허용되는 값 |
+| `allowed_web_search_modes` | 문자열 배열 | `web_search`에 허용되는 값 (`disabled`, `cached`, `live`). `disabled`는 항상 허용 |
+| `allowed_permission_profiles` | 문자열 배열 | 허용되는 권한 프로필 allowlist (0.138.0+). 한 번 나타나면 누락된 프로필은 모두 거부 |
+| `features` / `features.<name>` | 테이블 / 불리언 | config.toml의 canonical feature 키로 특정 기능을 고정(pinned). 생략한 키는 제약 없음 |
+| `mcp_servers.<id>.identity` | 테이블 | MCP 서버 identity 규칙. `command`(stdio) 또는 `url`(streamable HTTP) 중 하나 |
+| `mcp_servers.<id>.identity.command` | 문자열 | MCP stdio 서버의 `command`가 이 값과 일치할 때 허용 |
+| `mcp_servers.<id>.identity.url` | 문자열 | MCP streamable HTTP 서버의 `url`이 이 값과 일치할 때 허용 |
+| `rules` | 테이블 | `.rules` 파일과 병합되는 관리자 명령 규칙. requirements 규칙은 제한적이어야 함 |
+| `rules.prefix_rules[]` | 테이블 배열 | 접두사 규칙 목록. 각 규칙은 `pattern`과 `decision` 포함 |
+| `rules.prefix_rules[].decision` | `prompt`, `forbidden` | requirements 규칙은 `prompt` 또는 `forbidden`만 가능 (`allow` 불가) |
+| `rules.prefix_rules[].pattern` | 토큰 배열 | 명령어 접두사. 각 토큰은 `token` 또는 `any_of` |
+| `rules.prefix_rules[].pattern[].token` | 문자열 | 해당 위치의 단일 리터럴 토큰 |
+| `rules.prefix_rules[].pattern[].any_of` | 문자열 배열 | 해당 위치에서 허용되는 대안 토큰 리스트 |
 
 > `requirements.toml`의 설정은 사용자가 재정의할 수 없습니다. ChatGPT Business/Enterprise의 경우 클라우드에서 가져온 requirements도 적용됩니다.
 
 ---
 
-> **최종 업데이트**: 2026-06-06
-> **출처**: [Config Basics](https://developers.openai.com/codex/config-basics), [Advanced Config](https://developers.openai.com/codex/advanced-config), [Config Reference](https://developers.openai.com/codex/config-reference), [Environment Variables](https://developers.openai.com/codex/environment-variables), [Sample Config](https://developers.openai.com/codex/sample-config), [Permissions](https://developers.openai.com/codex/permissions), [Rules](https://developers.openai.com/codex/rules), [Speed](https://developers.openai.com/codex/speed), [Hooks](https://developers.openai.com/codex/hooks), [GitHub: codex-rs/core/config.schema.json](https://github.com/openai/codex/blob/main/codex-rs/core/config.schema.json)
+> **최종 업데이트**: 2026-06-15
+> **출처**: [Config Basics](https://developers.openai.com/codex/config-basic), [Advanced Config](https://developers.openai.com/codex/config-advanced), [Config Reference](https://developers.openai.com/codex/config-reference), [Environment Variables](https://developers.openai.com/codex/environment-variables), [Sample Config](https://developers.openai.com/codex/config-sample), [Permissions](https://developers.openai.com/codex/permissions), [Rules](https://developers.openai.com/codex/rules), [Speed](https://developers.openai.com/codex/speed), [Hooks](https://developers.openai.com/codex/hooks), [Remote Connections](https://developers.openai.com/codex/remote-connections), [Models](https://developers.openai.com/codex/models), [GitHub: codex-rs/core/config.schema.json](https://github.com/openai/codex/blob/main/codex-rs/core/config.schema.json)

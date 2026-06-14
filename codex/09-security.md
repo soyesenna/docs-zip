@@ -1,13 +1,18 @@
 # 보안 및 샌드박스
 
-> <https://developers.openai.com/codex/agent-approvals-security>
-> <https://developers.openai.com/codex/concepts/sandboxing>
-> <https://developers.openai.com/codex/concepts/sandboxing/auto-review>
-> <https://developers.openai.com/codex/concepts/cyber-safety>
-> <https://developers.openai.com/codex/security>
-> <https://developers.openai.com/codex/security/plugin>
-> <https://developers.openai.com/codex/security/setup>
-> <https://developers.openai.com/codex/security/faq>
+> <https://developers.openai.com/codex/agent-approvals-security/>
+> <https://developers.openai.com/codex/concepts/sandboxing/>
+> <https://developers.openai.com/codex/concepts/sandboxing/auto-review/>
+> <https://developers.openai.com/codex/concepts/cyber-safety/>
+> <https://developers.openai.com/codex/security/>
+> <https://developers.openai.com/codex/security/plugin/>
+> <https://developers.openai.com/codex/security/setup/>
+> <https://developers.openai.com/codex/security/threat-model/>
+> <https://developers.openai.com/codex/security/faq/>
+> <https://developers.openai.com/codex/auth/>
+> <https://developers.openai.com/codex/app/windows/>
+
+_최종 업데이트: 2026-06-15_
 
 ---
 
@@ -193,12 +198,14 @@ Codex Security는 다음 4단계 파이프라인을 따릅니다:
 
 ### 플랫폼별 샌드박스 메커니즘
 
+> <https://developers.openai.com/codex/agent-approvals-security/#test-the-sandbox-locally>
+
 | 플랫폼 | 메커니즘 | 설명 |
 | --- | --- | --- |
-| **macOS 12+** | Apple Seatbelt (`sandbox-exec`) | 선택한 `--sandbox` 모드에 해당하는 프로필로 파일 시스템 및 네트워크 접근 제한 |
-| **Linux / WSL2** | `bwrap` + `seccomp` | `bubblewrap` 패키지 설치 필요. 첫 번째 `bwrap` 실행 파일을 사용하며, 없으면 번들 헬퍼로 폴백 (비특권 사용자 네임스페이스 필요) |
-| **Windows (WSL2)** | Linux 샌드박스 (`bwrap` + `seccomp`) | WSL2에서 실행 시 Linux 샌드박스와 동일. WSL1은 Codex `0.114`까지만 지원되었으며, `0.115`부터 `bwrap` 기반으로 전환되어 WSL1 지원이 중단됨 |
-| **Windows (네이티브)** | 네이티브 Windows 샌드박스 | PowerShell 등 네이티브 환경에서 실행 시 Windows 자체 샌드박스 사용. `config.toml`에서 `unelevated` / `elevated` 모드 선택 가능 |
+| **macOS** | Apple Seatbelt (`sandbox-exec`) | 선택한 `--sandbox` 모드에 해당하는 프로필(`-p`)로 파일 시스템 및 네트워크 접근 제한. 제한된 읽기 접근이 플랫폼 기본값을 활성화하면 `/System` 전체 허용 대신 선별된 macOS 플랫폼 정책을 추가하여 일반 도구 호환성 유지 |
+| **Linux / WSL2** | **bwrap + seccomp (기본)** | Linux의 기본 샌드박스 파이프라인. `bubblewrap` 패키지 설치가 필요하며, Codex는 `PATH`의 첫 번째 `bwrap` 실행 파일을 사용. `bwrap`이 없으면 번들 헬퍼로 폴백하지만, 해당 헬퍼는 unprivileged user namespace 생성을 지원해야 함 |
+| **Windows (WSL2)** | Linux 샌드박스 (bwrap + seccomp) | WSL2에서 실행 시 Linux 샌드박스 구현을 상속. Codex IDE 확장은 WSL2를 직접 지원. WSL1은 Codex `0.114`까지 지원되었으며, `0.115`부터 Linux 샌드박스가 `bwrap`으로 전환되어 **WSL1은 더 이상 지원되지 않음** |
+| **Windows (네이티브)** | 네이티브 Windows 샌드박스 | 네이티브 Windows에서 Codex는 Windows 샌드박스 구현을 사용. `config.toml`의 `[windows]`에서 `unelevated` / `elevated` 모드 선택 |
 
 ### 샌드박스 정책 (`--sandbox` 플래그)
 
@@ -218,6 +225,8 @@ Codex Security는 다음 4단계 파이프라인을 따릅니다:
 
 ### 샌드박스 테스트
 
+명령이 Codex 샌드박스 하에서 어떻게 동작하는지 확인하려면 다음 CLI 명령을 사용합니다.
+
 ```bash
 # macOS
 codex sandbox macos [--permissions-profile <name>] [--log-denials] [COMMAND]...
@@ -231,19 +240,32 @@ codex sandbox windows [--permissions-profile <name>] [COMMAND]...
 
 > `sandbox` 명령은 `codex debug`로도 사용 가능하며, 플랫폼 헬퍼별 alias도 제공됩니다 (예: `codex sandbox seatbelt`, `codex sandbox landlock`).
 
-### Linux / WSL2 필수 패키지
+#### `/debug-config`로 실효 샌드박스 모드 확인 (0.139.0+)
 
-Linux 및 WSL2에서는 `bubblewrap` 패키지를 설치해야 합니다.
+Codex CLI `0.139.0`부터 `/debug-config effective` 슬래시 명령으로 현재 세션에 **실제로 적용된(effective)** 샌드박스 및 승인 모드를 점검할 수 있습니다. CLI 플래그·`config.toml`·managed configuration이 합쳐진 최종 결과를 보여주므로, 의도한 경계가 활성화되어 있는지 테스트 시 확인하세요.
+
+```text
+/debug-config effective
+```
+
+이 출력은 위 `codex sandbox ...` 테스트와 함께 사용하여 — 실행하려는 명령에 적용될 샌드박스 모드(`read-only` / `workspace-write` / `danger-full-access`)와 승인 정책이 기대와 일치하는지 검증합니다.
+
+### Linux / WSL2 패키지 요구사항
+
+Linux와 WSL2의 **기본 샌드박스는 bwrap + seccomp**이므로 `bubblewrap` 패키지 설치가 필요합니다. Codex는 `PATH`의 첫 번째 `bwrap` 실행 파일을 사용합니다.
 
 ```bash
 sudo apt install bubblewrap
 ```
 
-Codex는 `PATH`에서 첫 번째 `bwrap` 실행 파일을 찾습니다. `bwrap`이 없으면 번들 헬퍼로 폴백하지만, 이 헬퍼는 비특권 사용자 네임스페이스 생성이 필요합니다. 배포 패키지로 설치하는 것이 가장 안정적입니다.
+> `bwrap`이 없으면 Codex는 번들 헬퍼로 폴백하지만, 해당 헬퍼는 unprivileged user namespace 생성을 지원해야 합니다. 배포판 패키지로 `bwrap`을 설치하면 이 설정이 안정적으로 유지됩니다.
 
-`bwrap`이 누락되거나 필요한 사용자 네임스페이스를 생성할 수 없는 경우 Codex는 시작 시 경고를 표시합니다.
+`bwrap`이 누락되었거나 헬퍼가 필요한 사용자 네임스페이스를 생성할 수 없으면 Codex는 시작 시 경고를 표시합니다. 이 제한을 restrict하는 배포판에서는 `bwrap` AppArmor 프로필을 로드하여 전역적으로 제한을 비활성화하지 않고도 `bwrap`이 계속 동작하도록 하는 것을 권장합니다.
 
-**Ubuntu AppArmor 참고**: Ubuntu 25.04에서는 `bubblewrap` 패키지만 설치하면 추가 AppArmor 설정 없이 동작합니다. `bwrap-userns-restrict` 프로필이 `apparmor` 패키지의 `/etc/apparmor.d/bwrap-userns-restrict`에 포함되어 있습니다. Ubuntu 24.04에서는 추가 프로필 로드가 필요할 수 있습니다:
+#### Ubuntu AppArmor 참고
+
+- **Ubuntu 25.04**: Ubuntu 패키지 저장소에서 `bubblewrap`을 설치하면 추가 AppArmor 설정 없이 동작. `bwrap-userns-restrict` 프로필이 `apparmor` 패키지의 `/etc/apparmor.d/bwrap-userns-restrict`에 포함되어 제공됨
+- **Ubuntu 24.04**: `bubblewrap` 설치 후에도 필요한 user namespace를 생성할 수 없다는 경고가 발생할 수 있음. 다음 추가 프로필을 복사하여 로드:
 
 ```bash
 sudo apt update
@@ -254,39 +276,53 @@ sudo install -m 0644 \
 sudo apparmor_parser -r /etc/apparmor.d/bwrap-userns-restrict
 ```
 
-`apparmor_parser -r`는 재부팅 없이 커널에 프로필을 로드합니다. 모든 AppArmor 프로필을 다시 로드할 수도 있습니다:
+`apparmor_parser -r`는 재부팅 없이 프로필을 커널에 로드합니다. 모든 AppArmor 프로필을 다시 로드하려면:
 
 ```bash
 sudo systemctl reload apparmor.service
 ```
 
-해당 프로필을 사용할 수 없거나 문제가 해결되지 않으면 AppArmor 비특권 사용자 네임스페이스 제한을 비활성화할 수도 있습니다:
+해당 프로필을 사용할 수 없거나 문제가 해결되지 않으면 AppArmor unprivileged user namespace 제한을 비활성화할 수 있습니다:
 
 ```bash
 sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
 ```
 
+> Docker 등 컨테이너 환경에서 Linux를 실행할 때, 호스트나 컨테이너 설정이 필요한 user namespace, setuid `bwrap`, `seccomp` 연산을 지원하지 않으면 샌드박스가 동작하지 않을 수 있습니다. 이 경우 컨테이너 자체를 격리 경계로 사용하고 `--sandbox danger-full-access`(또는 `--dangerously-bypass-approvals-and-sandbox`)로 실행하세요.
+
 ### Windows 설정
 
-**WSL2**에서 실행 시 Linux 샌드박스(`bwrap` + `seccomp`)가 사용됩니다. IDE 확장에서 WSL2를 직접 사용하려면 VS Code 설정에 다음을 추가합니다:
+**WSL2**에서 실행 시 Linux 샌드박스(bwrap + seccomp) 구현이 사용됩니다. IDE 확장에서 WSL2를 직접 사용하려면 VS Code 설정에 다음을 추가합니다.
+
+> 공식 문서의 두 페이지가 서로 다른 설정 키를 안내합니다. 두 키 모두 유효하며, 사용 중인 Codex 버전과 IDE 확장에 따라 적용되는 키가 다를 수 있으므로 두 페이지를 모두 참조하세요.
 
 ```json
+// Codex security guide 기준
+{
+  "chatgpt.preferWsl": true
+}
+```
+
+```json
+// Agent approvals & security 페이지 기준
 {
   "chatgpt.runCodexInWindowsSubsystemForLinux": true
 }
 ```
 
-이렇게 하면 호스트 OS가 Windows여도 IDE 확장이 명령, 승인, 파일 시스템 접근에 Linux 샌드박스 의미 체계를 상속합니다.
+이렇게 하면 호스트 OS가 Windows여도 IDE 확장이 명령, 승인, 파일 시스템 접근에 Linux 샌드박스 의미 체계를 상속합니다. 자세한 내용은 Windows 설정 가이드를 참조하세요.
 
-**네이티브 Windows**에서는 `config.toml`로 샌드박스 모드를 선택합니다:
+> WSL1은 Codex `0.114`까지만 지원되었습니다. `0.115`부터 Linux 샌드박스가 `bwrap`으로 전환되어 WSL1은 더 이상 지원되지 않습니다. WSL2를 사용하세요.
+
+**네이티브 Windows**에서는 `config.toml`로 네이티브 샌드박스 모드를 선택합니다:
 
 ```toml
 [windows]
-sandbox = "unelevated"     # 또는 "elevated"
-# sandbox_private_desktop = true   # 기본값; 호환성 문제 시에만 false
+sandbox = "unelevated"               # 또는 "elevated"
+# sandbox_private_desktop = true     # 기본값; 호환성이 필요한 경우에만 false로 설정
 ```
 
-> Docker 등 컨테이너 환경에서 Linux를 실행하는 경우, 호스트나 컨테이너 설정이 네임스페이스·setuid `bwrap`·seccomp 작업을 차단하면 샌드박스가 동작하지 않을 수 있습니다. 이 경우 컨테이너 자체를 격리 경계로 사용하고 `--sandbox danger-full-access`로 실행하세요.
+> `sandbox_private_desktop`은 기본적으로 `true`이며, 호환성 문제가 있는 경우에만 `false`로 설정합니다.
 
 ---
 
@@ -309,28 +345,38 @@ Codex는 부작용을 표시하는 앱(커넥터) 도구 호출에 대해서도 
 
 | 목적 | 플래그 | 효과 |
 | --- | --- | --- |
-| Auto (프리셋) | _플래그 불필요_ 또는 `--sandbox workspace-write --ask-for-approval on-request` | 워크스페이스 내 읽기/편집/명령 자동. 외부 편집이나 네트워크 접근 시 승인 요청 |
-| 안전한 읽기 전용 | `--sandbox read-only --ask-for-approval on-request` | 읽기만 가능, 승인 필요 |
-| CI용 비대화형 | `--sandbox read-only --ask-for-approval never` | 읽기만, 승인 요청 없음 |
+| Auto (프리셋) | _플래그 불필요_ 또는 `--full-auto` (`--sandbox workspace-write --ask-for-approval on-request`의 편의 alias) | 워크스페이스 내 읽기/편집/명령 자동. 외부 편집이나 네트워크 접근 시 승인 요청 |
+| 안전한 읽기 전용 브라우징 | `--sandbox read-only --ask-for-approval on-request` | 읽기 및 질문 답변만 가능. 편집·명령 실행·네트워크 접근 시 승인 요청 |
+| CI용 비대화형 읽기 전용 | `--sandbox read-only --ask-for-approval never` | 읽기만, 승인 요청 없음 |
 | 편집 자동 + 비신뢰 명령 승인 | `--sandbox workspace-write --ask-for-approval untrusted` | 파일 읽기/편집 가능. 비신뢰 명령 실행 전 승인 요청 |
 | Auto-review 모드 | `--sandbox workspace-write --ask-for-approval on-request -c approvals_reviewer=auto_review` | 표준 on-request와 동일한 샌드박스 경계, 승인 요청을 리뷰어 에이전트가 평가 |
-| YOLO (비권장) | `--dangerously-bypass-approvals-and-sandbox` (`--yolo`) | 샌드박스 없음 + 승인 없음. `--ask-for-approval never`와 달리 샌드박스 자체도 비활성화됨 |
+| 위험한 전체 접근 | `--dangerously-bypass-approvals-and-sandbox` (alias: `--yolo`) | 샌드박스 없음 + 승인 없음 (비권장). `--ask-for-approval never`와 달리 샌드박스 자체도 비활성화됨 |
 
-> **참고**: `codex exec --full-auto`는 **deprecated**입니다. 하위 호환 경로로 유지되며 실행 시 경고가 출력됩니다. 대신 `codex exec --sandbox workspace-write`를 사용하세요.
+> **참고**: `--full-auto`는 `--sandbox workspace-write --ask-for-approval on-request`의 **편의 alias**입니다. 단, 비대화형 실행에는 `codex exec --sandbox workspace-write` 사용을 권장합니다. `codex exec --full-auto`는 이전 호환성을 위한 **deprecated 경로**로 유지되며, 실행 시 **deprecated 경고**를 출력합니다.
 
-### 세부 승인 정책 (Granular)
+### 세부 승인 정책 (Granular 구조)
+
+특정 승인 프롬프트 카테고리만 대화형으로 유지하고 나머지는 자동으로 거부하는 중간 지점 형태입니다. `approval_policy = { granular = { ... } }` 형태를 사용합니다. granular 정책은 샌드박스 승인, execpolicy 규칙 프롬프트, MCP 프롬프트, `request_permissions` 프롬프트, 스킬 스크립트 승인을 다룹니다.
 
 ```toml
 approval_policy = { granular = {
-  sandbox_approval = true,        # 샌드박스 에스컬레이션 승인
-  rules = true,                   # execpolicy 규칙 승인
-  mcp_elicitations = true,        # MCP 호출 승인
-  request_permissions = false,    # 권한 요청 자동 거부
-  skill_approval = false          # 스킬 스크립트 자동 승인
+  sandbox_approval = true,        # 샌드박스 에스컬레이션 승인 프롬프트를 대화형으로 유지
+  rules = true,                   # execpolicy 규칙 프롬프트를 대화형으로 유지
+  mcp_elicitations = true,        # MCP elicitations 프롬프트를 대화형으로 유지
+  request_permissions = false,    # request_permissions 프롬프트 자동 거부
+  skill_approval = false          # 스킬 스크립트 승인 자동 거부
 } }
 ```
 
-Granular 정책은 샌드박스 승인, execpolicy-rule 프롬프트, MCP 프롬프트, `request_permissions` 프롬프트, 스킬 스크립트 승인을 포함합니다.
+| 필드 | `true` (대화형 유지) | `false` (자동 거부) |
+| --- | --- | --- |
+| `sandbox_approval` | 샌드박스 에스컬레이션 요청을 사용자에게 승인 프롬프트로 표시 | 자동 거부 |
+| `rules` | execpolicy-rule 프롬프트를 사용자에게 표시 | 자동 거부 |
+| `mcp_elicitations` | MCP elicitations를 사용자에게 표시 | 자동 거부 |
+| `request_permissions` | `request_permissions` 프롬프트를 사용자에게 표시 | 자동 거부 |
+| `skill_approval` | 스킬 스크립트 승인을 사용자에게 표시 | 자동 거부 |
+
+> `granular` 구조는 특정 승인 프롬프트 카테고리를 **대화형으로 유지**하면서 나머지는 **자동으로 거부**합니다. 자동 거부된 요청은 메인 에이전트에게 더 안전한 경로를 찾도록 지시됩니다.
 
 ### `config.toml` 설정
 
@@ -344,7 +390,7 @@ allow_login_shell = false # 선택적 강화: 셸 기반 도구에서 로그인 
 [sandbox_workspace_write]
 network_access = true
 
-# 선택: 세분화된 승인 정책
+# 선택: 세부 승인 정책 (granular)
 # approval_policy = { granular = {
 #   sandbox_approval = true,
 #   rules = true,
@@ -354,18 +400,16 @@ network_access = true
 # } }
 ```
 
-### 프로필 파일
+### 프로필 (Profiles)
 
-프리셋을 프로필 파일로 저장한 뒤 `codex --profile profile-name`으로 선택할 수 있습니다:
+프리셋을 `[profiles.NAME]` 인라인 테이블로 저장한 뒤 `codex --profile <name>`으로 선택할 수 있습니다:
 
 ```toml
-# ~/.codex/full_auto.config.toml
+[profiles.full_auto]
 approval_policy = "on-request"
 sandbox_mode    = "workspace-write"
-```
 
-```toml
-# ~/.codex/readonly_quiet.config.toml
+[profiles.readonly_quiet]
 approval_policy = "never"
 sandbox_mode    = "read-only"
 ```
@@ -647,10 +691,27 @@ Codex는 호스트명을 허용하기 전에 **최선의 노력(best-effort) DNS
 
 ### 웹 검색 제어
 
+`web_search` 설정으로 spawn된 명령에 전체 네트워크 접근을 부여하지 않고도 웹 검색 도구를 제어할 수 있습니다. 공식 문서의 두 페이지가 서로 다른 형태를 보여주므로 두 가지를 모두 참조하세요.
+
+**Agent approvals & security 페이지 형태** — 최상위 키에 문자열 값 (`"cached"` / `"live"` / `"disabled"`):
+
 ```toml
-web_search = "cached"     # 기본값: OpenAI 관리 인덱스 사용
-# web_search = "live"     # 실시간 웹 검색 (--search와 동일)
-# web_search = "disabled" # 웹 검색 비활성화
+web_search = "cached"     # 기본값: OpenAI 관리 인덱스 사용 (사전 인덱싱된 결과)
+# web_search = "disabled" # 웹 검색 도구 끄기
+# web_search = "live"     # 실시간 웹 검색 (--search 플래그와 동일)
+```
+
+| 값 | 동작 |
+| --- | --- |
+| `"cached"` (기본값) | OpenAI 관리 인덱스의 사전 인덱싱된 결과 반환. 임의 라이브 콘텐츠로부터의 프롬프트 인젝션 노출을 줄이지만, 웹 결과는 여전히 신뢰할 수 없는 것으로 취급해야 함 |
+| `"live"` | 실시간 웹 검색 (`--search` 플래그와 동일) |
+| `"disabled"` | 웹 검색 도구 비활성화 |
+
+**Codex security guide 페이지 형태** — `[tools]` 블록 아래 boolean 값:
+
+```toml
+[tools]
+web_search = true
 ```
 
 > `--yolo` 또는 다른 전체 접근 샌드박스 설정을 사용하면 웹 검색이 기본적으로 `live`로 설정됩니다.
@@ -702,7 +763,7 @@ devcontainer up --workspace-folder . --config .devcontainer/devcontainer.secure.
 
 | 모드 | 설명 |
 | --- | --- |
-| Linux 샌드박스 유지 | Dev Container 프로필이 `bwrap`에 필요한 기능을 부여하는 경우 내부 샌드박스를 계속 사용 |
+| Linux 샌드박스 유지 | 컨테이너가 `bwrap`이 내부 샌드박스를 생성하는 데 필요한 기능(user namespace, setuid, seccomp)을 부여하는 경우 내부 샌드박스를 계속 사용 |
 | `--sandbox danger-full-access` | 컨테이너 자체가 보안 경계인 경우, Codex가 두 번째 샌드박스 레이어를 생성하지 않도록 설정 |
 
 > Dev Container는 상당한 보호를 제공하지만 모든 공격을 방지하지는 못합니다. 컨테이너 내에서 `--sandbox danger-full-access` 또는 `--yolo`를 사용하면 악의적인 프로젝트가 devcontainer 내의 모든 것(자격 증명 포함)을 유출할 수 있습니다. 신뢰할 수 있는 리포지토리에서만 사용하세요.
@@ -711,7 +772,7 @@ devcontainer up --workspace-folder . --config .devcontainer/devcontainer.secure.
 
 - 참조 방화벽은 시작점으로 의도된 것입니다. 도메인 allowlist를 격리 수단으로 의존하는 경우, 환경에 맞는 DNS 리바인딩 및 DNS 새로고침 보호(TTL 인식 새로고침 또는 DNS 인식 방화벽)를 구현하세요.
 - 지속적 마운트로 명령어 히스토리와 Codex 구성을 보존합니다.
-- `bubblewrap`이 포함되어 있어 컨테이너가 필요한 기능을 부여하면 내부 Linux 샌드박스를 사용할 수 있습니다.
+- 참조 이미지는 기본 bwrap + seccomp 샌드박스 사용을 전제로 하며, `bubblewrap` 패키지를 포함하고 있습니다.
 
 ---
 

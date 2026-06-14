@@ -1,8 +1,19 @@
 # Codex - 엔터프라이즈 관리
 
-> ChatGPT Enterprise 환경에서 Codex를 관리하기 위한 관리자 가이드입니다.
+> ChatGPT Enterprise/Business 환경에서 Codex를 관리하기 위한 관리자 가이드입니다.
 
-**참조**: <https://developers.openai.com/codex/enterprise/admin-setup>, <https://developers.openai.com/codex/enterprise/governance>, <https://developers.openai.com/codex/enterprise/managed-configuration>, <https://developers.openai.com/codex/auth>, <https://developers.openai.com/codex/enterprise/access-tokens>, <https://developers.openai.com/codex/remote-connections>, <https://developers.openai.com/codex/amazon-bedrock>
+**참조 (대조 기준 원문)**:
+- <https://developers.openai.com/codex/enterprise/admin-setup/>
+- <https://developers.openai.com/codex/enterprise/governance/>
+- <https://developers.openai.com/codex/enterprise/managed-configuration/>
+- <https://developers.openai.com/codex/auth/>
+- <https://developers.openai.com/codex/enterprise/access-tokens/>
+- <https://developers.openai.com/codex/remote-connections/>
+- <https://developers.openai.com/codex/amazon-bedrock/>
+- <https://developers.openai.com/codex/security/threat-model/>
+- <https://developers.openai.com/codex/feature-maturity/>
+
+**최종 업데이트**: 2026-06-15
 
 ---
 
@@ -11,14 +22,17 @@
 - [엔터프라이즈 관리 개요](#엔터프라이즈-관리-개요)
 - [Admin Setup 롤아웃](#admin-setup-롤아웃)
 - [인증](#인증)
+- [접근 토큰 (Access Tokens)](#접근-토큰-access-tokens)
 - [requirements.toml 시스템](#requirementstoml-시스템)
 - [Managed Configuration (managed_config.toml)](#managed-configuration-managed_configtoml)
 - [macOS MDM 배포](#macos-mdm-배포)
 - [Managed Hooks](#managed-hooks)
 - [Amazon Bedrock 배포](#amazon-bedrock-배포)
 - [엔터프라이즈 보안 기능](#엔터프라이즈-보안-기능)
+- [Codex Security 위협 모델](#codex-security-위협-모델)
 - [Governance 및 Observability](#governance-및-observability)
 - [원격 연결](#원격-연결)
+- [기능 성숙도 (Feature Maturity)](#기능-성숙도-feature-maturity)
 
 ---
 
@@ -31,7 +45,9 @@
 | **Requirements** (강제 제약) | 관리자가 강제하는 보안 제약 | 불가 |
 | **Managed defaults** (관리 기본값) | 시작 시 적용되는 기본값 | 세션 중 변경 가능 (재시작 시 복원) |
 
-Requirements는 보안 관련 설정(approval policy, approvals reviewer, automatic review policy, sandbox mode, web search mode, managed hooks, MCP 서버 허용 목록)을 제한합니다. 구성 충돌 시 Codex는 호환 가능한 값으로 대체하고 사용자에게 알립니다.
+Requirements는 보안 관련 설정(approval policy, sandbox mode, web search mode, 선택적으로 활성화 가능한 MCP 서버)을 제한합니다. `config.toml`, 프로필, CLI config 오버라이드 등에서 구성을 해석할 때 강제 requirement와 충돌하는 값이 있으면 Codex는 requirements 호환 값으로 대체하고 사용자에게 알립니다. `mcp_servers` 허용 목록이 구성된 경우, Codex는 MCP 서버의 이름과 아이덴티티가 모두 승인된 항목과 일치할 때만 활성화하며, 그렇지 않으면 비활성화합니다.
+
+Requirements는 `[features]` 테이블을 통해 기능 플래그도 제약할 수 있습니다. 기능은 일반적으로 보안에 민감하지 않지만, 필요한 경우 값을 고정할 수 있으며 생략된 키는 제한되지 않습니다.
 
 ---
 
@@ -61,63 +77,86 @@ local, cloud 또는 둘 다 활성화할 수 있으며, 워크스페이스 설�
 
 ### Codex Local 설정
 
-**Workspace Settings > Settings and Permissions**에서 구성합니다.
-
-Codex local은 신규 ChatGPT Enterprise 워크스페이스에서 **기본 활성화**됩니다.
+**Workspace Settings > Settings and Permissions**에서 **Allow members to use Codex Local** 토글을 켭니다. 이 설정은 GitHub Connector를 필요로 하지 않습니다.
 
 1. **Allow members to use Codex Local** 토글 켜기
-   - 활성화 시 Codex App, CLI, IDE Extension 사용 가능
-   - 비활성화 시 사용자에게 `403 - Unauthorized` 오류 표시
+   - 활성화 시 사용자가 ChatGPT 계정으로 Codex App, CLI, IDE Extension에 로그인 가능
+   - 비활성화 시 사용자에게 `403 - Unauthorized. Contact your ChatGPT administrator for access.` 오류 표시
 
 2. **접근 토큰 설정** (선택 사항)
-   - **Allow members to use Codex access tokens** 토글 켜기
-   - **Access token expiration limit**: 새 토큰에 대해 선택 가능한 최대 만료 기간 설정
-   - 커스텀 롤을 통해 접근 토큰 권한을 부여할 수도 있음
+   - **Workspace Settings > Permissions & roles**의 Access tokens 섹션에서 **Allow users to create access tokens** 켜기
+   - **Access token expiration limit**: 새 토큰에 대해 선택 가능한 최대 만료 기간 설정 (기존 토큰은 영향 없음)
+   - 자세한 내용은 [접근 토큰 (Access Tokens)](#접근-토큰-access-tokens) 섹션 참조
 
 3. **기기 코드 인증** (선택 사항)
    - 비대화형 환경(예: 원격 개발 서버)에서 CLI 로그인 시 device code 인증 허용
+
+> 조직 전체에 Codex를 표준화하려면 Team Config로 기본값, 규칙, 스킬을 공유할 수 있습니다. 위치와 우선순위는 Config basics를 참조하세요.
 
 ### Codex Cloud 설정
 
 #### 사전 요구사항
 
-- **GitHub (cloud-hosted) 리포지토리** 필요
-- 온프레미스 또는 비-GitHub 코드베이스인 경우 Codex SDK로 자체 인프라에 유사 워크플로우 구축 가능
-- 관리자로서 Codex를 설정하려면 조직 전체에서 일반적으로 사용되는 리포지토리에 **GitHub 접근 권한이 필수**입니다. 필요한 접근 권한이 없는 경우, 해당 권한을 가진 엔지니어링 팀원과 협업하세요.
+Codex cloud는 **GitHub (cloud-hosted) 리포지토리**가 필요합니다. 온프레미스 또는 비-GitHub 코드베이스인 경우 Codex SDK로 자체 인프라에 유사 워크플로우를 구축할 수 있습니다.
+
+관리자로서 Codex를 설정하려면 조직 전체에서 일반적으로 사용되는 리포지토리에 **GitHub 접근 권한이 필수**입니다. 필요한 접근 권한이 없는 경우, 해당 권한을 가진 엔지니어링 팀원과 협업하세요.
 
 #### 워크스페이스 설정
 
-1. **ChatGPT GitHub Connector** 활성화: Codex 섹션의 Workspace Settings > Settings and Permissions
+1. Codex 섹션의 Workspace Settings > Settings and Permissions에서 **ChatGPT GitHub Connector** 활성화
 2. **Allow members to use Codex cloud** 토글 켜기
-   - 활성화 후 최대 10분 소요 (ChatGPT에 Codex 탭 표시)
+   - 활성화 후 사용자가 ChatGPT의 좌측 네비게이션 패널에서 Codex에 직접 접근 가능
+   - 활성화 후 ChatGPT에 Codex가 표시되기까지 최대 10분 소요
 
 #### GitHub Connector 설정
 
-1. Codex에서 **Get started** 선택
-2. **Connect to GitHub** 선택 → ChatGPT GitHub Connector 설치
-3. 설치 대상 조직 선택
-4. 연결할 리포지토리 허용
+1. Codex cloud에서 **Get started** 선택
+2. **Connect to GitHub** 선택 → 아직 GitHub를 ChatGPT에 연결하지 않은 경우 ChatGPT GitHub Connector 설치
+   - 계정에 ChatGPT Connector 허용
+   - ChatGPT Connector의 설치 대상 선택 (일반적으로 메인 조직)
+   - Codex에 연결할 리포지토리 허용 (GitHub 관리자의 승인이 필요할 수 있음)
+3. 개발자에게 가장 관련성 높은 리포지토리를 선택해 첫 번째 환경을 생성, 환경 공동 작업자 이메일 주소 추가로 편집 권한 부여
+4. 스타터 작업 몇 개 실행 (예: 테스트 작성, 버그 수정, 코드 탐색)
 
-GitHub Enterprise Managed Users (EMU)의 경우 조직 소유자가 먼저 Codex GitHub App을 설치해야 합니다.
+환경을 생성하면 GitHub에 연결된 사용자가 해당 환경으로 작업을 생성할 수 있습니다. 리포지토리에 접근 권한이 있는 사용자는 작업에서 생성된 PR을 push할 수도 있습니다.
 
-Codex는 각 작업에 단기 수명의 최소 권한 GitHub App 설치 토큰을 사용하며, 사용자의 기존 GitHub 권한과 브랜치 보호 규칙을 준수합니다.
+#### GitHub Connector IP allow list 구성
 
-#### IP 주소 구성
+ChatGPT GitHub Connector에 연결할 수 있는 IP 주소를 제어하려면 다음 IP 대역을 구성합니다:
 
-GitHub 조직이 앱 연결에 사용하는 IP 주소를 제어하는 경우, Codex cloud 송신 IP 대역을 허용 목록에 추가해야 합니다. 이 IP 대역은 변경될 수 있으므로 자동 확인 및 업데이트를 권장합니다.
+- ChatGPT 송신(egress) IP 대역
+- Codex 컨테이너 송신 IP 대역
+
+이 IP 대역은 변경될 수 있으므로 자동 확인 및 최신 값 기반 업데이트를 권장합니다.
+
+#### 환경 관리
+
+ChatGPT 워크스페이스 관리자는 워크스페이스의 Codex 환경을 편집 및 삭제할 수 있습니다. 추가 GitHub 리포지토리 연결은 **Environments** 또는 환경 선택기의 **Manage Environments** → **Create Environment**에서 리포지토리를 선택해 생성합니다.
+
+> Codex는 코드베이스를 검토하여 환경 설정을 자동으로 최적화합니다. 구체적인 성능 문제가 관찰되기 전까지는 고급 환경 구성을 피하세요.
 
 #### 인터넷 접근 설정
 
-기본적으로 Codex cloud 에이전트는 런타임에 **인터넷 접근이 없습니다** (프롬프트 인젝션 등 보안 위험 방지).
+기본적으로 Codex cloud 에이전트는 런타임에 **인터넷 접근이 없습니다** (프롬프트 인젝션 등 보안/안전 위험 방지).
 
-이 설정으로 사용자가 다음을 수행할 수 있습니다:
+관리자가 환경에서 에이전트 인터넷 접근을 허용하려면 **Allow Codex agent to access the internet**을 켭니다. 이 설정이 켜지면 사용자는 다음을 수행할 수 있습니다:
+
 - 일반 소프트웨어 종속성 도메인 허용 목록 사용
 - 도메인 및 신뢰할 수 있는 사이트 추가
 - 허용된 HTTP 메서드 지정
 
 #### Slack 통합
 
-**Enable Codex Slack app to post answers on task completion**을 켜면 작업 완료 시 Codex가 전체 답변을 Slack에 게시합니다. 비활성화 시 작업 링크만 게시됩니다.
+**Allow Codex Slack app to post answers on task completion**을 켜면 작업 완료 시 Codex가 전체 답변을 Slack에 게시합니다. 비활성화 시 작업 링크만 게시합니다. 자세한 내용은 Codex in Slack을 참조하세요.
+
+#### 코드 리뷰 설정
+
+**Settings → Code review**에서 구성합니다. 사용자는 자신의 PR에 대해 Codex가 코드 리뷰를 수행할지 지정할 수 있으며, 리포지토리의 모든 기여자에 대해 코드 리뷰가 실행되도록 구성할 수도 있습니다.
+
+Codex는 두 가지 유형의 코드 리뷰를 지원합니다:
+
+1. PR을 열 때 자동으로 트리거되는 코드 리뷰
+2. `@Codex` 멘션으로 이슈를 확인하는 반응형 코드 리뷰 (예: "@Codex fix this CI error", "@Codex address that feedback")
 
 #### Linear 통합
 
@@ -125,9 +164,7 @@ Linear 통합을 통해 작업을 Codex cloud에 위임할 수 있습니다. 자
 
 ### RBAC (역할 기반 접근 제어)
 
-**Workspace Settings > Settings and Permissions**에서 RBAC로 세부 권한을 제어합니다.
-
-#### RBAC 기능
+Codex는 역할 기반 접근(RBAC)을 지원합니다. **Settings & Permissions → Custom Roles**에서 커스텀 롤을 생성하고 Groups 탭에서 생성한 그룹에 역할을 할당하여 Codex 권한 관리를 단순화하고 워크스페이스 보안을 개선합니다.
 
 Workspace Owners는 다음을 수행할 수 있습니다:
 
@@ -141,40 +178,25 @@ Workspace Owners는 다음을 수행할 수 있습니다:
 
 사용자는 여러 역할을 상속할 수 있으며, 권한은 가장 허용적인(가장 덜 제한적인) 것으로 해석됩니다.
 
-#### Codex Admin 그룹 생성
+#### Allow members to administer Codex
 
-**Allow members to administer Codex** 토글이 Codex Admin 역할을 부여합니다.
-
-**Codex Admin 권한**:
-
-| 권한 | 설명 |
-| --- | --- |
-| Codex 워크스페이스 Analytics 보기 | 채택 및 사용 현황 모니터링 |
-| Codex Policies 페이지 열기 | cloud-managed `requirements.toml` 정책 관리 |
-| 관리 정책을 그룹에 할당 | 사용자 그룹별 정책 또는 기본 대체 정책 구성 |
-| Cloud 환경 관리 | 환경 편집 및 삭제 |
+이 토글은 사용자가 Codex 워크스페이스 Analytics를 보고 환경을 관리(편집 및 삭제)할 수 있게 합니다. RBAC가 지원되므로 특정 사용자 하위 집합에 대해서만 이 토글을 켤 수 있습니다.
 
 **권장 롤아웃 패턴**:
 
 1. "Codex Users" 그룹: Codex를 사용할 사용자
 2. "Codex Admin" 그룹: 설정 및 정책을 관리할 소수 그룹
-3. **Allow members to administer Codex**가 활성화된 커스텀 롤을 "Codex Admin" 그룹에만 할당
+3. 환경 관리 권한이 활성화된 커스텀 롤을 "Codex Admin" 그룹에만 할당
 4. "Codex Admin" 그룹 멤버십을 workspace owner 또는 지정된 플랫폼/IT/거버넌스 담당자로 제한
 5. SCIM 사용 시 "Codex Admin" 그룹을 IdP로 백업하여 멤버십 변경이 감사 가능하고 중앙 관리되도록 함
 
-### 코드 리뷰 설정
+> RBAC에 대한 자세한 내용은 Role-based access (RBAC) 및 Help Center 문서를 참조하세요.
 
-**Settings → Code review**에서 구성합니다.
+### 코드 리뷰
 
-| 설정 | 설명 |
-| --- | --- |
-| 리포지토리 수준 구성 | 리포지토리별 코드 리뷰 설정 |
-| Auto review | PR에 대해 Codex가 자동으로 리뷰를 트리거할지 여부 |
-| Review triggers | 어떤 PR 이벤트가 Codex 리뷰를 시작할지 제어 |
+코드 리뷰 설정은 **Settings → Code review**에서 구성합니다. 자세한 내용은 위 [코드 리뷰 설정](#코드-리뷰-설정) 섹션을 참조하세요.
 
-사용자도 자신의 PR에 대해 auto review를 활성화하고 Codex가 자동으로 리뷰를 트리거하는 시점을 선택할 수 있습니다.
-
-### Codex Security 설정
+### Codex Security
 
 Codex Security는 엔지니어링 및 보안 팀이 연결된 GitHub 리포지토리에서 가능한 취약점을 찾고, 확인하고, 수정하도록 돕습니다.
 
@@ -187,26 +209,47 @@ Codex Security는 엔지니어링 및 보안 팀이 연결된 GitHub 리포지�
 
 설정, 스캔 생성, 발견 결과 검토, 위협 모델 지침은 Codex Security 설정 문서를 참조하세요.
 
-### Cloud-managed 정책 (Codex Policies)
+### Cloud-managed Requirements (관리 정책)
 
-Codex Admin은 Codex Policies 페이지에서 `requirements.toml` 정책을 배포할 수 있습니다.
+ChatGPT Business 또는 Enterprise 플랜으로 로그인하면 Codex 서비스에서 관리자 강제 requirements를 가져올 수 있습니다. 이는 `requirements.toml` 호환 requirements의 또 다른 소스이며 CLI, App, IDE Extension 등 모든 Codex 서피스에 적용됩니다.
 
-**권장 설정**:
+#### Cloud-managed Requirements 구성
 
-1. 대부분의 사용자를 위한 기본 정책 생성, 필요한 경우에만 더 엄격하거나 허용적인 변형 생성
-2. 각 관리 정책을 특정 사용자 그룹에 할당, 기본 대체 정책 구성
-3. 그룹 규칙 순서에 주의: 사용자가 둘 이상의 그룹 규칙과 매칭되면 **첫 번째 매칭 규칙**이 적용
-4. 각 정책을 해당 그룹의 완전한 프로필로 취급: Codex는 이후 매칭 그룹 규칙에서 누락된 필드를 채우지 않음
+1. Codex managed-config 페이지로 이동
+2. `requirements.toml`과 동일한 형식과 키로 새 관리 requirements 파일 생성
+3. 저장하면 일치하는 사용자에게 즉시 적용
 
-#### 정책 할당 확인
+```toml
+enforce_residency = "us"
+allowed_approval_policies = ["on-request"]
+allowed_sandbox_modes = ["read-only", "workspace-write"]
 
-워크플로우 마지막의 정책 조회 도구를 사용하여 사용자에게 적용되는 관리 정책을 확인할 수 있습니다. 그룹별 또는 사용자 이메일 입력으로 정책 할당을 확인합니다.
+[rules]
+prefix_rules = [
+  { pattern = [{ any_of = ["bash", "sh", "zsh"] }], decision = "prompt", justification = "Require explicit approval for shell entrypoints" },
+]
+```
+
+#### 그룹에 Requirements 할당
+
+관리자는 서로 다른 사용자 그룹에 대해 서로 다른 관리 requirements를 구성할 수 있으며, 기본 대체 requirements 정책도 설정할 수 있습니다.
+
+- 사용자가 둘 이상의 그룹별 규칙과 매칭되면 **첫 번째 매칭 규칙**이 적용
+- Codex는 이후 매칭 그룹 규칙에서 누락된 requirements 필드를 채우지 않음
+- 예: 첫 번째 그룹 규칙이 `allowed_sandbox_modes = ["read-only"]`만 설정하고, 이후 그룹 규칙이 `allowed_approval_policies = ["on-request"]`를 설정해도 Codex는 첫 번째 매칭 규칙만 적용
+
+#### Cloud-managed Requirements 로컬 적용 방식
+
+사용자가 Codex를 시작하고 ChatGPT Business/Enterprise로 로그인하면 best-effort로 관리 requirements를 적용합니다.
+
+1. 유효하고 만료되지 않은 로컬 관리 requirements 캐시 항목이 있으면 사용
+2. 캐시가 없거나 만료/손상/현재 인증 아이덴티티와 불일치 시 서비스에서 가져오기 시도 (재시도 포함)
+3. 성공 시 서명된 새 캐시 항목 작성
+4. 유효한 캐시가 없고 가져오기도 실패하거나 타임아웃 시 관리 requirements 레이어 없이 계속 진행
 
 ### Team Config
 
-조직 전체에 Codex를 표준화하려면 Team Config를 사용하여 기본값, 규칙, 스킬을 공유합니다.
-
-리포지토리의 `.codex` 디렉토리에 체크인하면, Codex가 해당 리포지토리를 열 때 자동으로 설정을 적용합니다.
+조직 전체에 Codex를 표준화하려면 Team Config를 사용하여 기본값, 규칙, 스킬을 공유하면 모든 로컬 구성에서 중복 설정 없이 팀 전체에 적용할 수 있습니다.
 
 | 유형 | 경로 | 용도 |
 | --- | --- | --- |
@@ -214,7 +257,7 @@ Codex Admin은 Codex Policies 페이지에서 `requirements.toml` 정책을 배�
 | Rules | `rules/` | 샌드박스 밖에서 Codex가 실행할 수 있는 명령 제어 |
 | Skills | `skills/` | 팀이 공유할 스킬 제공 |
 
-트래픽이 가장 높은 리포지토리부터 Team Config를 시작하세요.
+위치와 우선순위는 Config basics를 참조하세요.
 
 ---
 
@@ -237,13 +280,9 @@ Codex는 두 가지 로그인 방식을 지원합니다.
 
 ### ChatGPT 로그인
 
-Codex App, CLI, IDE Extension에서 ChatGPT로 로그인하면 브라우저 창이 열리고 로그인 후 access token을 반환합니다.
+Codex CLI 또는 IDE Extension에서 ChatGPT로 로그인하면 브라우저 창이 열리고 로그인 흐름을 완료한 후 access token을 CLI/IDE Extension에 반환합니다.
 
-이미 환경에 ChatGPT access token이 있는 경우 stdin으로 전달:
-
-```bash
-printenv CODEX_ACCESS_TOKEN | codex login --with-access-token
-```
+로그인 후 Codex는 로그인 세부 정보를 캐시하고 다음에 CLI 또는 Extension을 시작할 때 재사용합니다. CLI와 Extension은 동일한 캐시된 로그인 세부 정보를 공유하며, 어느 한쪽에서 로그아웃하면 다음 시작 시 다시 로그인해야 합니다.
 
 ### API 키 로그인
 
@@ -251,23 +290,21 @@ OpenAI 대시보드에서 API 키를 가져와 사용합니다. API 키 사용 �
 
 API 키 인증은 로컬 Codex 워크플로우만 지원하며, ChatGPT 워크스페이스 접근이나 클라우드 서비스에 의존하는 일부 기능은 제한되거나 사용할 수 없습니다.
 
-### 기기 코드 인증 (beta)
+### 기기 코드 인증 (experimental, beta)
 
-원격 또는 헤드리스 환경에서 브라우저 기반 로그인이 작동하지 않는 경우 사용합니다.
+ChatGPT로 CLI에 로그인할 때 브라우저 기반 로그인 UI가 작동하지 않는 상황(예: 원격/헤드리스 환경, 로컬 네트워크 설정이 OAuth 토큰 반환을 위한 `localhost` 콜백을 차단)에서는 device code 인증을 우선 사용합니다. 이 방법이 작동하지 않으면 아래 fallback 중 하나를 사용합니다.
 
-**설정 방법**:
+**우선 방법: Device code authentication (experimental, beta)**:
 
 1. ChatGPT 보안 설정(개인 계정) 또는 워크스페이스 권한(워크스페이스 관리자)에서 device code 로그인 활성화
-2. 대화형 로그인 UI에서 **Sign in with Device Code** 선택 또는 `codex login --device-auth` 실행
-3. 브라우저에서 링크를 열고 로그인한 후 일회성 코드 입력
-
-서버에서 device code 로그인이 활성화되지 않은 경우 표준 브라우저 기반 로그인으로 대체됩니다.
+2. Codex를 실행 중인 터미널에서 `codex login --device-auth` 실행
+3. 브라우저에서 링크를 열고 계정으로 로그인한 후 일회성 코드 입력
 
 ### 원격/헤드리스 환경 폴백 인증
 
-ChatGPT로 CLI에 로그인할 때 브라우저 기반 로그인 UI가 작동하지 않는 경우(예: 원격 또는 헤드리스 환경, 로컬 네트워크 설정이 `localhost` 콜백을 차단하는 경우) 다음 폴백 방법을 사용할 수 있습니다.
+device code 인증이 환경에서 작동하지 않는 경우 다음 fallback 방법을 사용할 수 있습니다.
 
-#### 폴백 1: 로컬에서 인증 후 auth.json 복사
+#### Fallback 1: 로컬에서 인증 후 auth cache 복사
 
 브라우저가 있는 머신에서 로그인한 후 캐시된 자격 증명을 헤드리스 머신으로 복사합니다.
 
@@ -298,11 +335,9 @@ docker exec MY_CONTAINER mkdir -p "$CONTAINER_HOME/.codex"
 docker cp ~/.codex/auth.json MY_CONTAINER:"$CONTAINER_HOME/.codex/auth.json"
 ```
 
-OS가 `~/.codex/auth.json` 대신 자격 증명 저장소를 사용하는 경우 이 방법이 적용되지 않을 수 있습니다. 파일 기반 저장소 구성에 대한 자세한 내용은 [자격 증명 저장소](#자격-증명-저장소)를 참조하세요.
+OS가 `~/.codex/auth.json` 대신 자격 증명 저장소를 사용하는 경우 이 방법이 적용되지 않을 수 있습니다. 파일 기반 저장소 구성에 대한 자세한 내용은 자격 증명 저장소를 참조하세요.
 
-신뢰할 수 있는 CI/CD 러너에서 이 패턴의 고급 버전은 **Maintain Codex account auth in CI/CD (advanced)** 가이드를 참조하세요. API 키는 여전히 자동화의 권장 기본값입니다.
-
-#### 폴백 2: SSH를 통한 localhost 콜백 포워딩
+#### Fallback 2: SSH를 통한 localhost 콜백 포워딩
 
 로컬 머신과 원격 호스트 간에 포트를 포워딩할 수 있는 경우, 표준 브라우저 기반 흐름을 터널링할 수 있습니다.
 
@@ -336,87 +371,6 @@ ssh -L 1455:localhost:1455 user@remote
 - 티켓이나 이슈에 붙여넣기
 - 채팅이나 메신저에 공유
 - 신뢰할 수 없는 머신에 보관
-
-### 접근 토큰 (Access Tokens)
-
-Codex 접근 토큰은 신뢰할 수 있는 자동화가 ChatGPT 워크스페이스 아이덴티티로 Codex local을 실행할 수 있게 합니다. ChatGPT Business 및 Enterprise 워크스페이스에서 지원됩니다.
-
-**사용 사례**:
-
-| 사례 | 설명 |
-| --- | --- |
-| `codex exec` 작업 | 신뢰할 수 있는 자동화에서 실행 |
-| 로컬 스크립트 | 반복 가능한 비대화형 실행 |
-| 엔터프라이즈 워크플로우 | ChatGPT 워크스페이스 사용자와 연결되어야 하는 경우 |
-
-**주의 사항**:
-
-| 위험 | 설명 |
-| --- | --- |
-| 유출된 시크릿 | 토큰 소유자는 누구나 토큰 생성자로 Codex 실행 가능 |
-| 신뢰할 수 없는 실행 환경 | 공개 CI, 포크된 PR, 공유 머신에서는 토큰 노출 위험 |
-| 공유 아이덴티티 | 한 사람의 토큰을 여러 팀에서 재사용하면 감사 추적이 어려움 |
-| 오래된 자격 증명 | 장기 토큰은 워크플로우 변경 후에도 활성 상태로 유지될 수 있음 |
-| 잘못된 자격 증명 유형 | 접근 토큰은 Codex local 전용, 일반 OpenAI API 호출은 Platform API 키 사용 |
-
-#### 접근 토큰 설정
-
-1. **Workspace Settings > Permissions & roles**에서 Codex Local 활성화
-2. **Allow members to use Codex access tokens** 켜기 (또는 커스텀 롤로 권한 부여)
-3. **Access token expiration limit**으로 새 토큰에 대해 선택할 수 있는 최대 만료 기간 설정
-
-#### 토큰 생성
-
-1. **Access tokens** 페이지에서 **Create** 선택
-2. 설명적인 이름 입력 (예: `release-ci`, `nightly-docs-check`)
-3. 만료 기간 선택 (7, 30, 60, 90일 권장). **No expiration** 선택 시 정기적 교체 필요
-4. **Create** 후 생성된 토큰 즉시 복사 (모달 닫으면 재확인 불가)
-5. 시크릿 매니저 또는 CI 시크릿 스토어에 저장
-
-최단 커스텀 만료 기간은 1일입니다. 해지되거나 만료된 토큰으로는 새 Codex 실행을 시작할 수 없습니다.
-
-#### 토큰 사용
-
-임시 자동화의 경우 환경 변수 사용:
-
-```bash
-export CODEX_ACCESS_TOKEN="<ACCESS_TOKEN>"
-codex exec --json "review this repository and summarize the top risks"
-```
-
-영구 로컬 로그인의 경우 파이프로 전달:
-
-```bash
-printf '%s' "$CODEX_ACCESS_TOKEN" | codex login --with-access-token
-codex exec "summarize the last release diff"
-```
-
-`codex login --with-access-token`은 Codex 인증 저장소에 에이전트 아이덴티티 자격 증명을 저장합니다. 자격 증명을 머신에 저장하고 싶지 않으면 `CODEX_ACCESS_TOKEN` 환경 변수를 사용하세요.
-
-#### 접근 토큰 권한 매트릭스
-
-| 기능 | Workspace owner/admin | 접근 토큰 권한 멤버 | 접근 토큰 권한 없는 멤버 |
-| --- | --- | --- | --- |
-| Access tokens 페이지 열기 | 예 | 예 | 아니오 |
-| 접근 토큰 생성 | 자신의 ChatGPT 아이덴티티로 | 자신의 ChatGPT 아이덴티티로 | 아니오 |
-| 접근 토큰 목록 보기 | 워크스페이스 전체 (생성자 포함) | 자신이 생성한 토큰만 | 아니오 |
-| 접근 토큰 해지 | 워크스페이스의 모든 토큰 | 자신이 생성한 토큰만 | 페이지 접근 불가 |
-| 접근 토큰 권한 부여/제거 | 예 | 아니오 | 아니오 |
-| 다른 Codex 엔터프라이즈 설정 관리 | 예 (관리자 역할 및 Codex 관리자 권한 기반) | 아니오 (별도로 부여되지 않은 경우) | 아니오 |
-
-#### 토큰 교체 절차
-
-1. 교체 토큰 생성
-2. 실행 환경, 스케줄러 또는 시크릿 매니저의 시크릿 업데이트
-3. 새 토큰으로 스모크 테스트 실행
-4. Access tokens 페이지에서 이전 토큰 해지
-
-#### 접근 토큰 문제 해결
-
-| 문제 | 해결 방법 |
-| --- | --- |
-| Access tokens 페이지가 404 또는 forbidden | 워크스페이스 owner 또는 admin에게 Codex 접근 토큰이 활성화되어 있는지, 역할에 접근 토큰 권한이 포함되어 있는지 확인 요청 |
-| `codex login --with-access-token` 실패 | 브라우저 세션 토큰이나 Platform API 키가 아닌 **생성된 접근 토큰**을 복사했는지 확인. 토큰이 만료되거나 해지되지 않았는지 확인 |
 
 ### MFA 요구사항
 
@@ -475,6 +429,130 @@ codex login
 
 ---
 
+## 접근 토큰 (Access Tokens)
+
+> <https://developers.openai.com/codex/enterprise/access-tokens/>
+
+Codex 접근 토큰은 Codex 권한으로 범위가 지정된(scoped) ChatGPT access token으로, 신뢰할 수 있는 자동화가 ChatGPT 워크스페이스 아이덴티티로 Codex local을 실행할 수 있게 합니다. 스크립트, 예약 작업, CI runner가 반복 가능한 비대화형 Codex 접근이 필요할 때 사용합니다.
+
+**지원 플랜**: 현재 ChatGPT **Business 및 Enterprise** 워크스페이스에서 지원됩니다.
+
+> 접근 토큰은 ChatGPT admin console의 **Access tokens** 페이지에서 생성됩니다. 토큰을 생성한 ChatGPT 사용자 및 워크스페이스에 연결되며, Codex는 이를 프로그래밍 방식 로컬 워크플로우의 에이전트 아이덴티티로 사용합니다.
+
+### 언제 어떤 자격 증명을 사용할까
+
+| 자격 증명 | 용도 |
+| --- | --- |
+| **Platform API 키** | 자동화에 API 키가 이미 작동한다면 계속 API 키 인증 사용. 일반 OpenAI API 호출에 적합 |
+| **Codex access token** | 워크플로우가 특별히 ChatGPT 워크스페이스 접근, ChatGPT 관리 Codex 자격(entitlements), 엔터프라이즈 워크스페이스 제어가 필요할 때 사용 |
+| **Workspace Agent access token** | 게시된 ChatGPT 워크스페이스 에이전트를 자체 시스템에서 트리거할 때 사용 (Workspace Agents API). Codex access token은 workspace agent 트리거 호출을 인증하지 않음 |
+
+접근 토큰은 사용자가 브라우저 로그인을 완료하지 않고 Codex를 실행해야 할 때 사용합니다. 토큰은 생성한 ChatGPT 워크스페이스 사용자를 나타내므로 실행 시 해당 사용자의 Codex 접근 권한을 사용하고 워크스페이스 거버넌스 데이터에 나타납니다.
+
+Codex는 실행 시작 시 토큰을 검사하고 해당 실행을 워크스페이스 아이덴티티에 연결합니다. 토큰은 다른 자동화 시크릿과 동일하게 취급하세요: 시크릿 매니저에 저장, 로그에서 제외, 정기적 교체.
+
+**사용 사례**:
+
+| 사례 | 설명 |
+| --- | --- |
+| `codex exec` 작업 | 신뢰할 수 있는 자동화에서 실행 |
+| 로컬 스크립트 | 반복 가능한 비대화형 실행 |
+| 엔터프라이즈 워크플로우 | 사용량이 API 조직 키 대신 ChatGPT 워크스페이스 사용자와 연결되어야 하는 경우 |
+
+### 주요 위험
+
+| 위험 | 설명 |
+| --- | --- |
+| **유출된 시크릿** | 토큰을 가진 누구나 토큰 생성자로 Codex 실행을 시작할 수 있음. 시크릿 매니저에 저장, 로그에서 제외, 정기 교체 |
+| **신뢰할 수 없는 runner** | 공개 CI, 포크된 PR, 공유 머신은 토큰을 워크스페이스 외부 인물에게 노출할 수 있음. 신뢰할 수 있는 runner에서만 사용 |
+| **공유 아이덴티티** | 한 사람의 토큰을 무관한 여러 팀에서 재사용하면 소유권과 감사 추적 해석이 어려움. 특정 워크플로우 소유자를 위한 토큰 생성 |
+| **오래된 자격 증명** | 장기 토큰은 워크플로우 변경 후에도 활성 상태로 유지될 수 있음. 유한 만료를 선호하고 더 이상 사용하지 않는 토큰은 해지 |
+| **잘못된 자격 증명 유형** | Codex 접근 토큰은 Codex local 워크플로우 전용. 게시된 workspace agent 트리거에는 Workspace Agent access token, 일반 OpenAI API 호출에는 Platform API 키 사용 |
+
+### 접근 토큰 설정
+
+워크스페이스 설정의 access token 권한으로 허용된 멤버에 대해 접근 토큰 생성을 켭니다.
+
+1. **Workspace Settings > Permissions & roles**로 이동
+2. Access tokens 섹션에서 모든 허용된 멤버가 접근 토큰을 생성할 수 있게 하려면 **Allow users to create access tokens** 켜기
+3. 멤버가 해당 토큰을 Codex app, CLI, IDE Extension과 함께 사용해야 하는 경우 Codex Local 섹션의 **Allow members to use Codex Local**도 켜져 있는지 확인
+
+> 접근 토큰 생성은 토큰이 저장될 위치, 사용할 자동화, 교체 방법을 이해하는 사람 또는 서비스 소유자로 제한하세요.
+
+#### 만료 한도 설정
+
+워크스페이스 owner 및 admin은 멤버가 Codex 접근 토큰 생성 시 선택할 수 있는 최대 만료 기간을 설정할 수 있습니다.
+
+1. **Workspace Settings > Permissions & roles**로 이동
+2. Codex Local 섹션의 **Access token expiration limit** 설정
+
+한도는 신규 접근 토큰에만 적용되며, 기존 토큰은 현재 만료 기간을 유지합니다.
+
+### 토큰 생성
+
+**Access tokens** 페이지에서 토큰 이름과 만료 시점을 선택합니다.
+
+1. **Access tokens** 페이지로 이동
+2. **Create** 선택
+3. 설명적인 이름 입력 (예: `release-ci`, `nightly-docs-check`)
+4. 만료 기간 선택. **7, 30, 60, 90일** 등 유한 만료를 권장. **No expiration** 선택 시 정기적 교체 일정 수립
+5. **Create** 선택
+6. 생성된 접근 토큰을 **즉시 복사** (모달을 닫으면 다시 확인할 수 없음)
+7. 시크릿 매니저 또는 CI 시크릿 스토어에 저장
+
+최단 커스텀 만료 기간은 1일입니다. 해지되거나 만료된 토큰으로는 새 Codex 실행을 시작할 수 없습니다.
+
+### 토큰 사용
+
+임시 자동화의 경우 `CODEX_ACCESS_TOKEN`에 토큰을 저장하고 평소처럼 Codex를 실행합니다:
+
+```bash
+export CODEX_ACCESS_TOKEN="<access-token>"
+codex exec --json "review this repository and summarize the top risks"
+```
+
+영구 로컬 로그인의 경우 토큰을 `codex login --with-access-token`으로 파이프합니다:
+
+```bash
+printf '%s' "$CODEX_ACCESS_TOKEN" | codex login --with-access-token
+codex exec "summarize the last release diff"
+```
+
+`codex login --with-access-token`은 Codex 인증 저장소에 에이전트 아이덴티티 자격 증명을 저장합니다. 머신에 자격 증명을 저장하고 싶지 않으면 `CODEX_ACCESS_TOKEN` 환경 변수를 대신 사용하세요.
+
+### 접근 토큰 권한 매트릭스
+
+| 기능 | Workspace owner/admin | 접근 토큰 권한 멤버 | 접근 토큰 권한 없는 멤버 |
+| --- | --- | --- | --- |
+| Access tokens 페이지 열기 | 예 | 예 | 아니오 |
+| 접근 토큰 생성 | 자신의 ChatGPT 워크스페이스 아이덴티티로 | 자신의 ChatGPT 워크스페이스 아이덴티티로 | 아니오 |
+| 접근 토큰 목록 보기 | 워크스페이스 전체 (각 토큰 생성자 포함) | 자신이 생성한 토큰만 | 아니오 |
+| Access tokens 페이지에서 토큰 해지 | 워크스페이스의 모든 토큰 | 자신이 생성한 토큰만 | 페이지 접근 불가 |
+| 접근 토큰 권한 부여/제거 | 예 | 아니오 | 아니오 |
+| 다른 Codex 엔터프라이즈 설정 관리 | 예 (admin 역할 및 Codex admin 권한 기반) | 아니오 (별도로 부여되지 않은 경우) | 아니오 |
+
+> 요약: workspace owner와 admin은 워크스페이스 수준에서 접근을 관리합니다. 멤버는 자신의 토큰을 생성 및 관리하려면 접근 토큰 권한이 필요하지만, 이 권한은 admin 권한이나 다른 멤버의 토큰 접근을 부여하지 않습니다.
+
+### 토큰 교체 절차
+
+접근 토큰은 다른 자동화 시크릿과 동일한 방식으로 교체합니다.
+
+1. 교체 토큰 생성
+2. runner, 스케줄러, 시크릿 매니저의 시크릿 업데이트
+3. 새 토큰으로 스모크 테스트 실행
+4. Access tokens 페이지에서 이전 토큰 해지
+
+> Access tokens 페이지에서 workspace owner와 admin은 워크스페이스의 모든 토큰을 해지할 수 있습니다. 접근 토큰 권한이 있는 멤버는 자신이 생성한 토큰만 해지할 수 있습니다. 접근 토큰 생성은 일반 Codex local 권한과 별개인 워크스페이스의 access token 권한으로 제어됩니다.
+
+### 접근 토큰 문제 해결
+
+| 문제 | 해결 방법 |
+| --- | --- |
+| Access tokens 페이지가 404 또는 forbidden | workspace owner 또는 admin에게 역할에 **Allow users to create access tokens**가 포함되어 있는지, Codex 사용 예정인 경우 **Allow members to use Codex Local**이 활성화되어 있는지 확인 요청 |
+| `codex login --with-access-token` 실패 | 브라우저 세션 토큰이나 Platform API 키가 아닌 **생성된 접근 토큰**을 복사했는지 확인. 토큰이 만료되거나 해지되지 않았는지 확인 |
+
+---
+
 ## requirements.toml 시스템
 
 `requirements.toml`은 사용자가 재정의할 수 없는 **관리자 강제 제약**을 정의합니다.
@@ -495,15 +573,7 @@ Codex는 다음 순서로 requirements를 적용합니다 (이전 레이어가 �
 
 ### 클라우드 관리 Requirements
 
-ChatGPT Business 또는 Enterprise 플랜으로 로그인하면 Codex 서비스에서 관리자 강제 requirements를 가져올 수 있습니다. CLI, App, IDE Extension 등 모든 Codex 서피스에 적용됩니다.
-
-#### 작동 방식
-
-1. 사용자가 Codex를 시작하고 ChatGPT Business/Enterprise로 로그인
-2. 유효하고 만료되지 않은 로컬 관리 requirements 캐시 항목이 있으면 사용
-3. 캐시가 없거나 만료/손상/인증 아이덴티티 불일치 시 서비스에서 가져오기 시도 (재시도 포함)
-4. 성공 시 서명된 새 캐시 항목 작성
-5. 유효한 캐시가 없고 가져오기도 실패하면 관리 requirements 레이어 없이 계속 진행
+> 상세한 cloud-managed requirements 구성·할당·로컬 적용 방식은 위 [Cloud-managed Requirements (관리 정책)](#cloud-managed-requirements-관리-정책) 섹션을 참조하세요.
 
 ### 제어 가능한 설정
 
@@ -512,16 +582,12 @@ ChatGPT Business 또는 Enterprise 플랜으로 로그인하면 Codex 서비스�
 | 승인 정책 | `allowed_approval_policies` | 허용되는 승인 정책 값 제한 |
 | 샌드박스 모드 | `allowed_sandbox_modes` | 허용되는 샌드박스 모드 제한 |
 | 웹 검색 | `allowed_web_search_modes` | 웹 검색 모드 제한 (`disabled`, `cached`, `live`) |
-| 자동 검토 | `allowed_approvals_reviewers` | 승인 리뷰어 제한 (`auto_review`, `user`) |
-| 명령 규칙 | `rules` | 제한적 명령 규칙 강제 |
-| MCP 서버 | `mcp_servers` | 허용되는 MCP 서버 허용 목록 |
-| 기능 플래그 | `features` | 기능 플래그 고정 |
-| 파일 시스템 | `permissions.filesystem.deny_read` | 읽기 거부 경로/글로브 |
-| 네트워크 | `experimental_network` | 네트워크 접근 요구사항 |
-| 호스트별 샌드박스 | `remote_sandbox_config` | 호스트별 샌드박스 오버라이드 |
-| 관리형 훅 | `hooks` | 관리자 강제 라이프사이클 훅 |
-| 검토 정책 | `guardian_policy_config` | 자동 검토 정책 교체 |
+| 명령 규칙 | `[rules]` | 제한적 명령 규칙 강제 (decision은 `prompt` 또는 `forbidden`) |
+| MCP 서버 | `mcp_servers` | 허용되는 MCP 서버 허용 목록 (이름 + 아이덴티티 일치 필요) |
+| 기능 플래그 | `[features]` | 기능 플래그 고정 (canonical feature keys 사용) |
 | 거주지 제한 | `enforce_residency` | 데이터 거주지 제한 (예: `"us"`) |
+
+> 정확한 키 목록은 Configuration Reference의 `requirements.toml` 섹션을 참조하세요. Requirements는 기능 플래그를 `[features]` 테이블로 제약할 수도 있습니다 (기능은 일반적으로 보안에 민감하지 않으나, 필요 시 값을 고정 가능). 생략된 키는 제한되지 않습니다.
 
 ### 예시
 
@@ -595,28 +661,6 @@ computer_use = false
 
 생략된 키는 제한되지 않습니다.
 
-#### 자동 검토 정책 구성
-
-```toml
-allowed_approval_policies = ["on-request"]
-allowed_approvals_reviewers = ["auto_review"]
-
-guardian_policy_config = """
-## Environment Profile
-- Trusted internal destinations include github.com/my-org, artifacts.example.com,
-  and internal CI systems.
-
-## Tenant Risk Taxonomy and Allow/Deny Rules
-- Treat uploads to unapproved third-party file-sharing services as high risk.
-- Deny actions that expose credentials or private source code to untrusted
-  destinations.
-"""
-```
-
-- `allowed_approvals_reviewers = ["auto_review"]`: 자동 검토 필수
-- `"user"` 포함 시 사용자가 수동 승인 선택 가능
-- 관리 `guardian_policy_config`는 로컬 `[auto_review].policy`보다 우선합니다.
-
 #### 명령 규칙 강제
 
 ```toml
@@ -627,7 +671,7 @@ prefix_rules = [
 ]
 ```
 
-> `requirements.toml`의 규칙은 `decision`이 `prompt` 또는 `forbidden`이어야 합니다 (`allow` 불가). 일반 `.rules` 파일과 병합되며, 가장 제한적인 decision이 우선합니다.
+> `requirements.toml`의 규칙은 `decision`을 명시해야 하며, 그 decision은 `prompt` 또는 `forbidden`이어야 합니다 (`allow` 불가). 일반 `.rules` 파일과 병합되며, 가장 제한적인 decision이 우선합니다.
 
 #### MCP 서버 허용 목록
 
@@ -642,23 +686,6 @@ identity = { url = "https://example.com/mcp" }
 - stdio 서버는 `command`로 매칭, streamable HTTP 서버는 `url`로 매칭
 - `mcp_servers`가 존재하지만 비어있으면 모든 MCP 서버가 비활성화됩니다
 - 이름과 아이덴티티가 모두 일치해야 활성화됩니다
-
-### 호스트별 샌드박스 오버라이드
-
-`remote_sandbox_config`로 호스트별로 다른 샌드박스 요구사항을 적용합니다.
-
-```toml
-allowed_sandbox_modes = ["read-only"]
-
-[[remote_sandbox_config]]
-hostname_patterns = ["*.devbox.example.com", "runner-??.ci.example.com"]
-allowed_sandbox_modes = ["read-only", "workspace-write"]
-```
-
-- 첫 번째로 매칭되는 항목이 우선 적용됩니다
-- 매칭이 대소문자 구분 없이 수행됩니다
-- `*`는 임의의 문자 시퀀스, `?`는 한 문자와 매칭됩니다
-- 호스트 이름 매칭은 정책 선택용이며, 인증된 디바이스 증명으로 간주하지 마세요
 
 ---
 
@@ -677,15 +704,19 @@ allowed_sandbox_modes = ["read-only", "workspace-write"]
 
 ### 구성 우선순위
 
+Codex는 다음 순서(상위가 하위를 덮어씀)로 유효 구성을 조립합니다:
+
 | 우선순위 | 소스 |
 | --- | --- |
 | 1 (최고) | macOS 관리 환경설정 (MDM) |
-| 2 | `managed_config.toml` |
+| 2 | `managed_config.toml` (시스템/관리 파일) |
 | 3 | `config.toml` (사용자 기본 구성) |
 
-CLI `--config key=value` 오버라이드는 베이스에 적용되지만, 관리 레이어가 우선합니다. 즉, 로컬 플래그를 제공해도 각 실행이 관리 기본값에서 시작됩니다.
+CLI `--config key=value` 오버라이드는 base에 적용되지만 관리 레이어가 이를 덮어씁니다. 즉, 로컬 플래그를 제공해도 각 실행이 관리 기본값에서 시작됩니다.
 
-클라우드 관리 requirements는 requirements 레이어에 영향을 미치며 managed defaults에는 영향을 주지 않습니다.
+> 관리 기본값(managed defaults)은 사용자의 로컬 `config.toml` 위에 병합되며, CLI `--config` 오버라이드보다 우선합니다. 사용자는 세션 중 해당 설정을 변경할 수 있지만 Codex가 다음 시작 시 관리 기본값을 다시 적용합니다. 관리 기본값이 requirements를 충족하는지 확인하세요 — Codex는 허용되지 않은 값을 거부합니다.
+
+Cloud-managed requirements는 requirements 레이어에 영향을 미치며 managed defaults에는 영향을 주지 않습니다. 자세한 내용은 위 [Cloud-managed Requirements (관리 정책)](#cloud-managed-requirements-관리-정책) 섹션을 참조하세요.
 
 ### 예시 managed_config.toml
 
@@ -742,7 +773,7 @@ Jamf Pro, Fleet, Kandji 등 표준 macOS MDM 도구 사용 가능.
 
 ## Managed Hooks
 
-`requirements.toml`에서 관리형 라이프사이클 훅을 직접 정의할 수 있습니다.
+`requirements.toml`에서 관리형 라이프사이클 훅을 직접 정의할 수 있습니다. `allow_managed_hooks_only`(0.137.0+)는 requirements 키로 사용자/프로젝트/세션/플러그인 소스의 훅을 건너뛰고 관리 훅만 허용합니다.
 
 ### 설정
 
@@ -776,6 +807,23 @@ statusMessage = "Checking managed Bash command"
 - `allow_managed_hooks_only = true`는 사용자, 프로젝트, 세션, 플러그인 소스의 훅을 건너뛰지만 `requirements.toml` 및 다른 관리 구성 레이어의 훅은 로드합니다
 - 사용자가 로컬에서 훅을 비활성화한 경우에도 관리 훅을 강제하려면 `[features].hooks = true`를 `[hooks]`와 함께 설정하세요
 
+### Permission Profile 허용 목록 (0.138.0+)
+
+`allowed_permission_profiles`로 허용되는 permission profile 집합을 강제합니다. managed permission profile allowlist가 설정된 경우 Codex는 이 목록 외의 프로필을 거부합니다.
+
+```toml
+# 허용되는 permission profile만 강제
+allowed_permission_profiles = ["default", "read-only"]
+```
+
+> 자세한 permission profile 키와 `allowed_sandbox_modes`와의 관계는 Configuration Reference의 `requirements.toml` 섹션을 참조하세요.
+
+### 월간 크레딧 한도 (0.137.0+)
+
+관리 환경에서 월간 크레딧 사용 한도를 설정할 수 있습니다. 한도 도달 시 추가 사용이 제한됩니다.
+
+> cloud-managed config bundle(0.137.0, EDU 플랜 포함)과 월간 크레딧 한도 구성에 대한 자세한 내용은 Configuration Reference 및 managed-config 페이지를 참조하세요.
+
 ---
 
 ## Amazon Bedrock 배포
@@ -800,7 +848,7 @@ Amazon Bedrock을 모델 제공자로 구성하면 Codex가 로컬에서 실행�
 
 ### 구성
 
-`~/.codex/config.toml`에 `amazon-bedrock` 모델 제공자를 추가합니다.
+`~/.codex/config.toml`에 Amazon Bedrock Mantle 경로를 위한 `amazon-bedrock` 모델 제공자를 추가합니다. 모델 지정은 선택 사항이며, 필요할 때 지원되는 모델을 명시적으로 선택하세요.
 
 ```toml
 model_provider = "amazon-bedrock"
@@ -834,7 +882,7 @@ export AWS_REGION=us-east-2
 | 환경 변수 | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_SESSION_TOKEN` |
 | AWS Management Console | `aws login` |
 | AWS SSO / 이름이 지정된 프로필 | `aws sso login --profile codex-bedrock` + `export AWS_PROFILE=codex-bedrock` |
-| 페더레이션 아이덴티티 | `credential_process`로 구성된 AWS 프로필 |
+| 페더레이션 아이덴티티 | `credential_process`로 구성된 AWS 프로필. 기업 SSO 또는 OIDC 페더레이션의 경우 Codex 외부에서 AWS 프로필을 구성하고 AWS SDK가 자격 증명을 해결하도록 두세요. 브라우저 로그인, 토큰 교환, 캐싱, 갱신은 AWS 프로필의 `credential_process` 헬퍼에 포함 |
 
 ### 데스크톱 앱 및 VS Code Extension
 
@@ -847,12 +895,16 @@ export AWS_REGION=us-east-2
 
 ### 지원 모델
 
+정확한 모델 ID를 사용하세요:
+
 ```
 openai.gpt-5.5
 openai.gpt-5.4
 ```
 
-모델 가용성은 AWS 리전에 따라 다릅니다.
+> 위 모델 ID는 Amazon Bedrock 원문에 명시된 값입니다. 일반 Codex 권장 기본 모델은 gpt-5.4이지만(models/pricing 페이지 기준), Bedrock 제공자에서 사용 가능한 모델은 Bedrock 원문 기준을 따릅니다.
+
+모델 가용성은 AWS 리전에 따라 다릅니다. 모델 선택 전 AWS 리전별 모델 지원을 확인하세요.
 
 ### 설정 확인
 
@@ -928,7 +980,7 @@ Fast Mode는 우선 처리(priority processing)를 사용하며, 초기 Amazon B
 
 \* 특정 리전으로만 제한됩니다. 개별 기능 문서에서 지역 제한을 확인하세요.
 
-† 일부 자사 플러그인을 사용할 수 없습니다.
+† 로컬 플러그인 번들은 기능이 ChatGPT 인증을 필요로 하지 않을 때 지원됩니다. OpenAI 큐레이션 플러그인 검색 및 app connectors나 클라우드 호스팅 공유에 의존하는 기능은 사용할 수 없습니다.
 
 ### 문제 해결
 
@@ -967,6 +1019,41 @@ Codex는 ChatGPT Enterprise 보안 기능을 지원합니다.
 | **감사 로깅** | ChatGPT Compliance API를 통한 감사 로그 |
 
 보안 제어 및 런타임 보호에 대한 자세한 내용은 Agent approvals & security 문서를, ZDR에 대한 자세한 내용은 Zero Data Retention (ZDR) 문서를 참조하세요. 광범위한 엔터프라이즈 보안 개요는 Codex 보안 백서를 참조하세요.
+
+> Codex는 Zero Data Retention (ZDR)이 활성화된 OpenAI 조직을 지원합니다.
+
+---
+
+## Codex Security 위협 모델
+
+> <https://developers.openai.com/codex/security/threat-model/>
+
+위협 모델(threat model)은 리포지토리가 어떻게 작동하는지에 대한 짧은 보안 요약입니다. Codex Security에서는 `project overview`로 편집하며, 시스템은 이를 향후 스캔의 스캔 컨텍스트, 우선순위 지정, 리뷰에 사용합니다.
+
+Codex Security는 코드에서 첫 초안을 자동 생성합니다. 발견 결과가 어긋나 보이면 위협 모델을 가장 먼저 편집하세요.
+
+### 유용한 위협 모델이 다루는 항목
+
+| 항목 | 설명 |
+| --- | --- |
+| 진입점 및 신뢰할 수 없는 입력 | 외부 입력이 들어오는 경로 |
+| 신뢰 경계 및 인증 가정 | 컴포넌트 간 신뢰 관계, 인증 가정 |
+| 민감 데이터 경로 또는 권한 있는 작업 | 민감 정보 흐름, 권한 상승 지점 |
+| 우선 검토 영역 | 팀이 가장 먼저 검토하기를 원하는 부분 |
+
+**예시**:
+
+> Public API for account changes. Accepts JSON requests and file uploads. Uses an internal auth service for identity checks and writes billing changes through an internal service. Focus review on auth checks, upload parsing, and service-to-service trust boundaries.
+
+### 위협 모델 개선 및 재검토
+
+결과를 개선하려면 먼저 위협 모델을 편집하세요. 발견 결과가 관심 영역을 누락하거나 예상치 못한 위치에 나타날 때 사용합니다. 위협 모델은 향후 스캔 컨텍스트를 변경합니다.
+
+일부 사용자는 현재 위협 모델을 Codex에 복사해 더 면밀히 검토할 영역을 기반으로 개선하는 대화를 나눈 뒤, 업데이트된 버전을 다시 웹 UI에 붙여넣습니다.
+
+### 편집 위치
+
+위협 모델을 검토하거나 업데이트하려면 Codex Security scans에서 리포지토리를 열고 **Edit**을 클릭하세요.
 
 ---
 
@@ -1012,7 +1099,17 @@ ChatGPT 워크스페이스 관리자가 셀프 서비스로 채택 현황을 추
 
 ### Analytics API
 
-프로그래밍 방식으로 Codex 메트릭을 가져옵니다. 일일 시계열 메트릭을 제공하며, 선택적으로 사용자별 및 클라이언트별 세부 분류가 가능합니다.
+프로그래밍 방식으로 Codex 메트릭을 가져옵니다. 보고 자동화, 내부 대시보드 구축, 기존 엔지니어링 데이터와 Codex 메트릭 결합이 필요할 때 사용합니다.
+
+**측정 항목**: 워크스페이스의 일일 시계열 메트릭을 제공하며, 선택적으로 사용자별 분류와 클라이언트별 사용량을 제공합니다.
+
+**측정 범주**:
+
+| 범주 | 내용 |
+| --- | --- |
+| 일일 사용량 및 채택 | 스레드, 턴, 크레딧 일일 합계. 클라이언트 서피스별 분류. 채택 및 파워 유저 분석을 위한 사용자별 보고(선택) |
+| 코드 리뷰 활동 | Codex가 완료한 PR 리뷰. Codex가 생성한 총 코멘트. 코멘트 심각도 분류 |
+| 코드 리뷰 사용자 참여 | Codex 코멘트에 대한 답변. 찬성/반대 포함 반응. 팀이 Codex 피드백에 응답하는 방식의 참여 분류 |
 
 **엔드포인트**:
 
@@ -1128,6 +1225,16 @@ curl -H "Authorization: Bearer <YOUR_COMPLIANCE_API_KEY>" \
   "https://api.chatgpt.com/v1/compliance/workspaces/<WORKSPACE_ID>/codex_tasks"
 ```
 
+### 추천 거버넌스 조합
+
+대부분의 엔터프라이즈는 다음 조합을 사용합니다:
+
+| 도구 | 용도 |
+| --- | --- |
+| **Analytics Dashboard** | 셀프 서비스 모니터링 및 빠른 답변 |
+| **Analytics API** | 자동화된 보고 및 BI 통합 |
+| **Compliance API** | 감사 내보내기 및 조사 |
+
 ### 추천 거버넌스 설정
 
 | 역할 | 담당 |
@@ -1145,38 +1252,57 @@ curl -H "Authorization: Bearer <YOUR_COMPLIANCE_API_KEY>" \
 
 ### 지원 연결 유형
 
+원격 연결을 통해 다른 디바이스나 다른 머신에서 Codex를 사용할 수 있습니다. ChatGPT 모바일 앱으로 연결된 Mac 또는 Windows 기기에서 Codex를 사용하거나, 다른 지원되는 Codex App 기기에서 작업을 계속하거나, Codex App을 SSH 호스트의 프로젝트에 연결할 수 있습니다.
+
+원격 접속은 연결된 호스트의 프로젝트, 스레드, 파일, 자격 증명, 권한, 플러그인, Computer Use, 브라우저 설정, 로컬 도구를 사용합니다. 호스트에서 새 스레드를 시작하거나 기존 스레드를 계속하고, 후속 지시를 보내고, 질문에 답하고, 진행 중인 작업을 조정하고, 명령과 기타 작업을 승인하고, 출력/diff/테스트 결과/터미널 출력/스크린샷을 검토하고, 작업 완료 또는 주의 필요 시 알림을 받고, 연결된 호스트와 스레드 간 전환할 수 있습니다.
+
 | 유형 | 설명 |
 | --- | --- |
-| **모바일 → Codex App 호스트** | ChatGPT 모바일 앱에서 Mac/Windows Codex App 호스트 제어 |
-| **Codex App → Codex App** | 다른 Codex App 기기에서 작업 계속 |
+| **모바일 → Codex App 호스트** | ChatGPT 모바일 앱(iOS/Android)에서 Mac/Windows Codex App 호스트 제어 |
+| **Codex App → Codex App** | 다른 지원되는 Codex App 기기에서 작업 계속 |
 | **Codex App → SSH 호스트** | SSH 호스트의 프로젝트에 연결 |
 
 ### 모바일 원격 접속
-
-원격 접속은 연결된 호스트의 프로젝트, 스레드, 파일, 자격 증명, 권한, 플러그인, Computer Use, 브라우저 설정, 로컬 도구를 사용합니다.
 
 **지원 호스트 OS**: macOS, Windows
 
 **지원 모바일**: iOS, Android (ChatGPT 모바일 앱)
 
-> Windows는 현재 다른 컴퓨터를 제어할 수 없습니다.
+> Mac에서 Windows 호스트를 제어하거나, iOS/Android의 ChatGPT에서 Windows 호스트를 제어할 수 있습니다. 단, Windows는 현재 Codex App에서 다른 컴퓨터를 제어할 수 없습니다.
+
+#### 사전 요구사항
+
+- 사용하려는 ChatGPT 계정과 워크스페이스에서 Codex 접근 권한
+- iOS 또는 Android 기기의 최신 ChatGPT 모바일 앱 (Codex가 보이지 않으면 먼저 ChatGPT 업데이트)
+- 깨어 있고 온라인이며 동일한 계정/워크스페이스에 로그인된 호스트에서 실행 중인 최신 Codex App (macOS/Windows). 모바일 설정은 Codex App에서 시작하며 CLI나 IDE Extension에서는 설정할 수 없음
+- 해당 계정/워크스페이스에 필요한 모든 MFA, SSO, 패스키 구성
+
+> 워크스페이스를 통해 Codex를 사용하는 경우 관리자가 Remote Control 접근을 활성화해야 연결할 수 있습니다.
 
 #### 설정 절차
 
-1. **호스트에서 시작**: Codex App에서 사이드바의 **Set up Codex mobile** 선택
-2. **QR 코드 스캔**: 휴대폰으로 QR 코드 스캔 → ChatGPT 열기
-3. **ChatGPT에서 완료**: 동일한 ChatGPT 계정/워크스페이스 확인, MFA/SSO/패스키 완료
-4. **호스트 설정 검토**: Settings > Connections에서 연결된 기기 관리
+1. **호스트에서 시작**: Codex App을 열고 사이드바에서 **Set up Codex mobile** 선택. 설정 흐름이 해당 호스트의 원격 접근을 활성화한 후 휴대폰에서 스캔할 QR 코드를 표시
+2. **QR 코드 스캔**: 휴대폰으로 QR 코드 스캔 → ChatGPT가 열려 모바일 앱과 호스트 연결 완료
+3. **ChatGPT에서 완료**: 동일한 ChatGPT 계정/워크스페이스 확인, 필요한 MFA/SSO/패스키 단계 완료. 설정 성공 시 호스트가 휴대폰의 Codex에 표시
+4. **호스트 설정 검토**: Settings > Connections에서 연결된 기기 관리. 컴퓨터를 계속 깨어 있게 할지, Computer Use를 활성화할지, Chrome 확장을 설치할지 선택 가능
 
-> 워크스페이스를 통해 Codex를 사용하는 경우 관리자가 Remote Control 접근을 활성화해야 합니다.
+### 호스트 선택 전략
+
+| 호스트 유형 | 설명 |
+| --- | --- |
+| **랩탑/데스크톱** | 이미 Codex를 사용하는 Mac/Windows PC. 절전/네트워크 단절/Codex 종료 시 원격 접근 중단. Mac 랩탑은 뚜껑을 열고 전원 연결 시 원격 접근 유지 가능 |
+| **전용 always-on 컴퓨터** | 더 오래 실행되는 작업을 위해 항상 켜져 있는 Mac/Windows PC. 필요한 프로젝트, 자격 증명, 플러그인, MCP 서버, 도구 설치 |
+| **원격 개발 환경** | 프로젝트가 이미 원격 환경에 있는 경우 SSH 호스트 또는 관리형 원격 개발 환경 사용. 휴대폰은 Codex App 호스트에 연결되고 Codex는 원격 환경에서 작동 |
 
 ### SSH 원격 연결
 
-Codex App에서 SSH 호스트의 원격 프로젝트를 추가하고 원격 파일 시스템 및 셸에 대해 스레드를 실행합니다.
+Codex App에서 SSH 호스트의 원격 프로젝트를 추가하고 원격 파일 시스템 및 셸에 대해 스레드를 실행합니다. 원격 프로젝트 스레드는 원격 호스트에서 명령을 실행하고, 파일을 읽고, 변경 사항을 작성합니다.
+
+원격 호스트에는 일반 SSH 접근과 동일한 보안 기대치를 적용하세요: 신뢰할 수 있는 키, 최소 권한 계정, 인증되지 않은 공개 리스너 없음.
 
 #### 설정 절차
 
-1. SSH config에 호스트 추가 (Codex가 자동 검색)
+1. SSH config에 호스트를 추가해 Codex가 자동 검색하도록 합니다. Codex는 `~/.ssh/config`에서 구체적인 호스트 alias를 읽고 OpenSSH로 해결하며, 패턴 전용 호스트는 무시합니다.
 
 ```ssh
 Host devbox
@@ -1191,10 +1317,10 @@ Host devbox
 ssh devbox
 ```
 
-3. 원격 호스트에 Codex 설치 및 인증
-4. Codex App에서 **Settings > Connections**에서 SSH 호스트 추가/활성화 후 원격 프로젝트 폴더 선택
+3. 원격 호스트에 Codex를 설치하고 인증합니다. App은 원격 사용자의 로그인 셸을 통해 SSH로 원격 Codex app server를 시작하므로, 원격 호스트의 해당 셸 `PATH`에서 `codex` 명령을 사용할 수 있는지 확인하세요.
+4. Codex App에서 **Settings > Connections**에서 SSH 호스트를 추가/활성화한 후 원격 프로젝트 폴더를 선택합니다.
 
-> 원격 연결은 SSH를 사용하여 원격 Codex app server를 시작하고 관리합니다. app server 전송을 공용 네트워크에 직접 노출하지 마세요.
+> 원격 연결은 SSH를 사용해 원격 Codex app server(app-server v2 RPC, 0.137.0+)를 시작하고 관리합니다. app server 전송을 공유 또는 공용 네트워크에 직접 노출하지 마세요. 현재 네트워크 외부의 원격 머신에 접근해야 하는 경우 app server를 인터넷에 직접 노출하는 대신 VPN이나 mesh 네트워킹 도구를 사용하세요.
 
 ### 보안 릴레이
 
@@ -1210,3 +1336,20 @@ Codex는 신뢰할 수 있는 머신을 공용 인터넷에 직접 노출하지 
 | 승인 요청이 나타나지 않음 | 동일한 계정/워크스페이스 확인, QR 코드 재스캔, 관리자에게 Remote Control 접근 활성화 확인 |
 | 원격 세션 연결 끊김 | 호스트가 절전 모드인지, 네트워크 연결이 끊겼는지, Codex가 종료되었는지 확인 |
 | 인증 문제 | MFA/SSO/패스키 인증 완료, 관리자에게 Remote Control 접근 확인 |
+
+---
+
+## 기능 성숙도 (Feature Maturity)
+
+> <https://developers.openai.com/codex/feature-maturity/>
+
+일부 Codex 기능은 성숙도 라벨 뒤에서 제공되어 각 기능의 신뢰성, 변경 가능성, 지원 수준을 이해할 수 있게 합니다.
+
+| 성숙도 | 의미 | 가이드 |
+| --- | --- | --- |
+| **Under development** | 사용 준비가 되지 않음 | 사용하지 마세요 |
+| **Experimental** | 불안정하며 OpenAI가 제거하거나 변경할 수 있음 | 본인 책임하에 사용 |
+| **Beta** | 광범위한 테스트에 준비됨. 대부분 완성되었으나 일부는 사용자 피드백에 따라 변경될 수 있음 | 대부분의 평가 및 파일럿에 적합. 작은 변경 예상 |
+| **Stable** | 완전히 지원되고 문서화되며 광범위한 사용 준비 완료. 동작과 구성이 시간이 지나도 일관되게 유지됨 | 프로덕션 사용에 안전. 제거는 일반적으로 deprecation 프로세스를 거침 |
+
+> 엔터프라이즈 배포에서는 Stable 기능을 프로덕션에, Beta 기능을 파일럿/평가에, Experimental는 제한적/임시로만 사용하는 것을 권장합니다.

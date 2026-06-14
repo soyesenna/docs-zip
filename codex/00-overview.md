@@ -2,7 +2,7 @@
 
 > OpenAI의 에이전트 기반 코딩 도구, Codex에 대한 종합 가이드
 
-**참조**: [developers.openai.com/codex/overview](https://developers.openai.com/codex/overview) | [developers.openai.com/codex/quickstart](https://developers.openai.com/codex/quickstart) | [developers.openai.com/codex/changelog](https://developers.openai.com/codex/changelog) | [developers.openai.com/codex/feature-maturity](https://developers.openai.com/codex/feature-maturity) | [github.com/openai/codex](https://github.com/openai/codex)
+**참조**: [developers.openai.com/codex](https://developers.openai.com/codex/) | [developers.openai.com/codex/quickstart](https://developers.openai.com/codex/quickstart/) | [developers.openai.com/codex/models](https://developers.openai.com/codex/models/) | [developers.openai.com/codex/changelog](https://developers.openai.com/codex/changelog/) | [developers.openai.com/codex/feature-maturity](https://developers.openai.com/codex/feature-maturity/) | [github.com/openai/codex](https://github.com/openai/codex)
 
 ---
 
@@ -22,7 +22,7 @@ ChatGPT **Plus, Pro, Business, Edu, Enterprise** 플랜에 Codex가 포함되어
 | --- | --- |
 | **App** | macOS/Windows 데스크톱 앱. 프로젝트 사이드바, 스레드 목록, 리뷰 패널 제공. 권장 실행 환경 |
 | **IDE Extension** | VS Code, Cursor, Windsurf에서 사이드바 패널로 동작 |
-| **CLI** | 터미널에서 직접 실행하는 풀스크린 TUI. macOS, Windows, Linux 지원 |
+| **CLI** | 터미널에서 직접 실행하는 풀스크린 TUI. **"The Codex CLI is supported on macOS, Windows, and Linux."** (Quickstart) |
 | **Web (클라우드)** | [chatgpt.com/codex](https://chatgpt.com/codex)에서 브라우저 기반으로 동작. GitHub 리포지토리 연동 |
 | **Amazon Bedrock** | AWS 관리 인증·결제로 Codex를 로컬에서 실행. Bedrock을 모델 프로바이더로 구성 |
 | **Slack** | Slack 연동을 통해 팀 채널에서 `@Codex`로 작업 지시 |
@@ -35,17 +35,7 @@ ChatGPT **Plus, Pro, Business, Edu, Enterprise** 플랜에 Codex가 포함되어
 
 ### 1. 설치
 
-**macOS / Linux** (권장 설치 스크립트):
-
-```shell
-curl -fsSL https://chatgpt.com/codex/install.sh | sh
-```
-
-**Windows** (PowerShell):
-
-```powershell
-powershell -ExecutionPolicy ByPass -c "irm https://chatgpt.com/codex/install.ps1 | iex"
-```
+공식 Quickstart는 npm과 Homebrew 두 가지 설치 방법을 제시합니다.
 
 **npm** (Node.js 필요):
 
@@ -56,7 +46,21 @@ npm install -g @openai/codex
 **Homebrew** (macOS):
 
 ```shell
-brew install --cask codex
+brew install codex
+```
+
+> 참고: 아래 `install.sh` / `install.ps1` 스크립트와 GitHub Release 바이너리는 공식 Quickstart 페이지가 아닌 [GitHub README](https://github.com/openai/codex)에서 제공하는 설치 경로입니다.
+
+**macOS / Linux** (GitHub README 설치 스크립트):
+
+```shell
+curl -fsSL https://chatgpt.com/codex/install.sh | sh
+```
+
+**Windows** (PowerShell, GitHub README):
+
+```powershell
+powershell -ExecutionPolicy ByPass -c "irm https://chatgpt.com/codex/install.ps1 | iex"
 ```
 
 **GitHub Release 바이너리** 직접 다운로드도 지원:
@@ -104,7 +108,8 @@ codex --cd /path/to/project "버그를 찾아줘"
 | **자동화** | 리팩토링, 테스트, 마이그레이션, 설정 작업 등 반복 워크플로우 자동 실행 |
 | **이미지 처리** | 스크린샷이나 디자인 스펙을 첨부하여 이미지 세부 정보를 프롬프트와 함께 활용 |
 | **이미지 생성** | 아이콘, 배너, 일러스트 등 에셋을 직접 생성 (`gpt-image-2` 사용) |
-| **웹 검색** | 내장 웹 검색 도구로 최신 정보를 검색하여 코드 작성에 활용 |
+| **웹 검색** | 내장 웹 검색 도구로 최신 정보를 검색하여 코드 작성에 활용. 기본 `cached` 모드(OpenAI 관리 인덱스) 제공 |
+| **Fast mode** | GPT-5.4 기반 2x 속도 모드로 응답 시간 단축 |
 
 ---
 
@@ -122,6 +127,10 @@ codex --cd /path/to/project "버그를 찾아줘"
 | **Memories / Chronicle** | 과거 작업의 맥락을 기억하여 향후 스레드에 활용 | [Memories 문서](https://developers.openai.com/codex/memories) |
 | **Subagents (서브에이전트)** | 큰 작업을 병렬로 분산 처리 | [Subagents 문서](https://developers.openai.com/codex/subagents) |
 | **Sites** | 웹사이트, 대시보드, 내부 도구, 게임 등을 빌드하고 배포 (Preview) | [Sites 문서](https://developers.openai.com/codex/sites) |
+| **Amazon Bedrock** | AWS 관리 인증·결제로 Codex를 로컬에서 실행. Bedrock을 모델 프로바이더로 구성 | [Bedrock 문서](https://developers.openai.com/codex/deployment/amazon-bedrock) |
+| **/init 명령** | 현재 프로젝트를 분석하여 `AGENTS.md`를 자동 생성·초기화 | [AGENTS.md 문서](https://developers.openai.com/codex/agents-md) |
+| **ChatGPT Go 플랜** | ChatGPT Go 플랜에서도 Codex 사용 지원 (일부 기간 한정 포함) | [Pricing 문서](https://developers.openai.com/codex/pricing) |
+| **Fast mode** | GPT-5.4 기반 2x 속도 모드 | [Speed 문서](https://developers.openai.com/codex/config-file/speed) |
 | **Goal Mode** | 장기 실행 목표를 설정하고 시간·일 단위로 Codex가 자율 진행 | 관련 문서 참조 |
 | **Chrome Extension** | Chrome 탭에서 Codex가 앱·웹사이트를 병렬로 조작 | [Chrome extension 문서](https://developers.openai.com/codex/app/chrome-extension) |
 | **Appshots** | macOS에서 Command 키 두 번으로 최상단 앱 창을 Codex에 전송 | [Appshots 문서](https://developers.openai.com/codex/app/appshots) |
@@ -140,16 +149,33 @@ codex --cd /path/to/project "버그를 찾아줘"
 
 ## 추천 모델
 
+공식 [Models 페이지](https://developers.openai.com/codex/models/)가 "Recommended models"로 권장하는 네 가지 모델입니다. 사이드바의 **Latest: GPT-5.5**. 안내문: **"For most tasks in Codex, start with `gpt-5.5`."** — config 기본값도 `model = "gpt-5.5"`.
+
 | 모델 | 용도 | 상태 |
 | --- | --- | --- |
-| **gpt-5.5** | 복잡한 코딩, Computer Use, 지식 작업, 리서치 워크플로우에 권장되는 최신 프론티어 모델 | 권장 |
-| **gpt-5.4** | 강력한 코딩·추론·도구 사용·에이전트 워크플로우를 갖춘 범용 프론티어 모델. 최초의 Computer Use 내장 범용 모델 | 권장 |
-| **gpt-5.4-mini** | 빠르고 효율적인 미니 모델. 가벼운 작업 및 서브에이전트에 적합. GPT-5.4 대비 약 30% 사용량 | 권장 |
-| **gpt-5.3-codex-spark** | ChatGPT Pro 구독자 전용. 1000+ tok/s의 초고속 실시간 코딩 (연구 프리뷰, 텍스트 전용, 128k 컨텍스트) | Pro 전용 |
+| **gpt-5.5** | 복잡한 코딩, 컴퓨터 사용, 지식 작업, 리서치 워크플로우를 위한 **OpenAI 최신 프론티어 모델**. 대부분의 작업에 추천 (ChatGPT 또는 API 키 인증 시 사용 가능) | 권장 (기본값, Latest) |
+| **gpt-5.4** | 강력한 코딩·추론·도구 사용·에이전트 워크플로우 능력을 갖춘 **플래십 프론티어 모델** | 권장 |
+| **gpt-5.4-mini** | 응답성 높은 코딩 작업과 서브에이전트용 **빠르고 효율적인 미니 모델**. 더 빠르고 저렴한 옵션이 필요할 때 사용 | 권장 (미니) |
+| **gpt-5.3-codex-spark** | 거의 즉각적인 실시간 코딩 반복에 최적화된 **텍스트 전용 리서치 프리뷰** 모델. ChatGPT **Pro** 사용자 전용 | Pro 전용 (Research preview) |
 
-> **Deprecated 모델 경고**: 2026년 4월 7일부터 `gpt-5.2-codex`, `gpt-5.1-codex-mini`, `gpt-5.1-codex-max`, `gpt-5.1-codex`, `gpt-5.1`, `gpt-5` 모델이 ChatGPT 로그인 시 모델 선택기에서 제거되었으며, 4월 14일에 Codex에서 완전히 제거되었습니다. **`gpt-5.2`는 여전히 사용 가능합니다.** `gpt-5.3-codex` 모델도 ChatGPT 로그인 시 deprecated로 표시됩니다. 실제 deprecated된 모델과 아닌 모델을 혼동하지 마세요. 일부 deprecated 모델은 API에서 여전히 사용할 수 있습니다.
+```shell
+codex -m gpt-5.5               # 권장 최신 프론티어 (기본값)
+codex -m gpt-5.4               # 플래십
+codex -m gpt-5.4-mini          # 빠른 미니 (서브에이전트·가벼운 작업)
+codex -m gpt-5.3-codex-spark   # Pro 전용 실시간 리서치 프리뷰
+```
 
-세션 중 `/model` 명령으로 모델을 전환할 수 있습니다.
+### Other models (기타 모델)
+
+ChatGPT로 로그인할 때 Codex는 위 추천 모델에서 가장 잘 동작합니다. 또한 **Chat Completions 또는 Responses API를 지원하는 어떤 모델·프로바이더든** Codex에 지정할 수 있습니다. 다만 **Chat Completions API 지원은 deprecated**되었으며 향후 Codex 릴리스에서 제거될 예정입니다.
+
+> 참고: 공식 Models 페이지의 "Recommended models"는 위 표의 네 가지(`gpt-5.5`, `gpt-5.4`, `gpt-5.4-mini`, `gpt-5.3-codex-spark`)입니다. 모델을 지정하지 않으면 Codex는 추천 모델 중 하나를 기본값으로 사용합니다.
+
+### Deprecated Codex 모델
+
+**`gpt-5.2` 및 `gpt-5.3-codex` 모델은 ChatGPT로 로그인할 때 Codex에서 deprecated**됩니다. 스크립트·설정 파일·`codex exec --model` 명령이 deprecated 모델을 참조하면 위에 나열한 최신 모델로 업데이트하세요. ChatGPT 로그인 기준으로 deprecated된 일부 모델은 **API에서 여전히 사용**할 수 있을 수 있으며, 해당 워크플로우가 필요하면 API 키 인증을 사용하고 API models 페이지에서 현재 가용성을 확인하세요.
+
+세션 중 `/model` 명령으로 모델을 전환할 수 있고, CLI에서는 `--model`/`-m` 플래그로 시작 모델을 지정할 수 있습니다. **현재 Codex 클라우드 작업의 기본 모델은 변경할 수 없습니다.**
 
 ---
 
@@ -178,5 +204,5 @@ codex --cd /path/to/project "버그를 찾아줘"
 
 ---
 
-> **최종 업데이트**: 2026-06-06
-> **출처**: [developers.openai.com/codex/overview](https://developers.openai.com/codex/overview), [developers.openai.com/codex/models](https://developers.openai.com/codex/models), [developers.openai.com/codex/changelog](https://developers.openai.com/codex/changelog), [developers.openai.com/codex/feature-maturity](https://developers.openai.com/codex/feature-maturity), [github.com/openai/codex](https://github.com/openai/codex)
+> **최종 업데이트**: 2026-06-15
+> **출처**: [developers.openai.com/codex](https://developers.openai.com/codex/), [developers.openai.com/codex/quickstart](https://developers.openai.com/codex/quickstart/), [developers.openai.com/codex/models](https://developers.openai.com/codex/models/), [developers.openai.com/codex/changelog](https://developers.openai.com/codex/changelog/), [developers.openai.com/codex/feature-maturity](https://developers.openai.com/codex/feature-maturity/), [github.com/openai/codex](https://github.com/openai/codex)

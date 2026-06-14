@@ -392,9 +392,21 @@ statusMessage = "Reviewing Bash output"
 | `permission_mode` | `string` | 현재 권한 모드 |
 
 **출력:**
-- 일반 텍스트(stdout) -> 서브에이전트의 추가 개발자 컨텍스트
+- 일반 텍스트(stdout) -> 서브에이전트의 추가 개발자 컨텍스트로 추가
 - JSON(stdout) -> `systemMessage` + `hookSpecificOutput.additionalContext`
-- `continue: false`는 파싱되지만 서브에이전트 시작을 막지 않음
+- `continue: false`는 호환성을 위해 파싱되지만 서브에이전트 시작을 막지 않음
+
+**컨텍스트 주입 예시:**
+```json
+{
+  "hookSpecificOutput": {
+    "hookEventName": "SubagentStart",
+    "additionalContext": "Review the repository test conventions first."
+  }
+}
+```
+
+`additionalContext` 텍스트가 서브에이전트의 추가 개발자 컨텍스트로 추가됩니다.
 
 ### 10.3 PreToolUse
 
@@ -484,7 +496,7 @@ statusMessage = "Reviewing Bash output"
 
 ### 10.4 PermissionRequest
 
-**기능:** 승인 요청을 허용/거부합니다. 승인이 필요 없는 명령에는 실행되지 않습니다.
+**기능:** Codex가 승인을 요청하려 할 때 실행됩니다. 예를 들어 **셸 에스컬레이션**(shell escalation)이나 **관리형 네트워크 승인**(managed-network approval)이 해당합니다. 요청을 **허용**(allow)하거나 **거부**(deny)하거나, **결정을 보류하고 일반 승인 흐름이 진행되도록 둘 수 있습니다**. 승인이 필요 없는 명령에는 실행되지 않습니다.
 
 **matcher:** `tool_name` 및 matcher 별칭에 적용. 현재 정식 값은 `Bash`, `apply_patch`, MCP 도구 이름(`mcp__server__tool` 등)을 포함합니다. `apply_patch`는 `Edit`과 `Write`도 매칭합니다.
 
@@ -524,8 +536,13 @@ statusMessage = "Reviewing Bash output"
 }
 ```
 
+**결정 보류 (decline to decide):**
+
+훅이 결정(`allow`/`deny`)을 반환하지 않고 exit `0`으로 종료하면 Codex는 **일반 승인 프롬프트(normal approval flow)** 를 그대로 진행합니다. 즉, 훅이 스스로 판단하지 않고 사용자에게 결정을 맡길 수 있습니다.
+
 - 여러 매칭 훅이 결정을 반환하면 **`deny`가 우선**합니다.
-- 매칭 훅이 결정하지 않으면 일반 승인 흐름이 진행됩니다.
+- 그 외의 경우 `allow`가 있으면 승인 프롬프트를 표시하지 않고 요청을 진행합니다.
+- 매칭 훅이 아무도 결정하지 않으면 일반 승인 흐름이 진행됩니다.
 - `updatedInput`, `updatedPermissions`, `interrupt`는 반환하지 마세요. 이 필드들은 향후 동작을 위해 예약되어 있으며 현재는 fail-closed로 동작합니다.
 - 일부 도구 입력에는 사람이 읽을 수 있는 description이 포함될 수 있지만, 모든 도구에서 `tool_input.description` 필드가 존재한다고 가정하지 마세요.
 
@@ -615,8 +632,20 @@ statusMessage = "Reviewing Bash output"
 | `prompt` | `string` | 전송될 사용자 프롬프트 |
 
 **출력:**
-- 일반 텍스트(stdout) -> 추가 개발자 컨텍스트
+- 일반 텍스트(stdout) -> 추가 개발자 컨텍스트로 추가
 - JSON(stdout) -> 공통 출력 필드 + `hookSpecificOutput.additionalContext`
+
+**컨텍스트 주입 예시:**
+```json
+{
+  "hookSpecificOutput": {
+    "hookEventName": "UserPromptSubmit",
+    "additionalContext": "Ask for a clearer reproduction before editing files."
+  }
+}
+```
+
+`additionalContext` 텍스트가 추가 개발자 컨텍스트로 추가됩니다.
 
 **프롬프트 차단:**
 ```json
@@ -969,3 +998,12 @@ for prefix in READONLY_PREFIXES:
 정확한 현재 와이어 형식이 필요한 경우, Codex GitHub 저장소의 생성된 스키마를 참조하세요.
 
 - 전체 와이어 형식: [Schemas (GitHub)](https://github.com/openai/codex)
+
+---
+
+## 출처
+
+- [Hooks – Codex | OpenAI Developers](https://developers.openai.com/codex/hooks)
+
+> **최종 업데이트:** 2026-06-15
+
