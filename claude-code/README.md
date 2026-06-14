@@ -1,7 +1,7 @@
 # Claude Code 개발자 문서
 
 > [Anthropic Claude Code 공식 문서](https://code.claude.com/docs/en/overview)를 기반으로 정리한 한국어 개발자 가이드입니다.
-> 최종 업데이트: 2026-06-06
+> 최종 업데이트: 2026-06-15
 
 Claude Code는 Anthropic이 개발한 에이전트 기반 코딩 도구입니다. 터미널, VS Code, JetBrains, 데스크톱 앱, 웹 브라우저 등 다양한 환경에서 동작하며, 자연어 명령으로 코드 작성·수정·탐색·디버깅이 가능합니다.
 
@@ -114,7 +114,11 @@ claude --model opus           # 모델 지정
 ## 원문 링크
 
 - 공식 문서: https://code.claude.com/docs/en/overview
+- What's New (주간 릴리스 노트): https://code.claude.com/docs/en/whats-new
+- Changelog: https://code.claude.com/docs/en/changelog
 - GitHub: https://github.com/anthropics/claude-code
+- CHANGELOG.md: https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md
 - 릴리스 노트: https://github.com/anthropics/claude-code/releases
+- Agent SDK 문서: https://code.claude.com/docs/en/agent-sdk/overview
 - API 레퍼런스: https://docs.anthropic.com/en/api/claude-code
 - 상태 페이지: https://status.anthropic.com/
