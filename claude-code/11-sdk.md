@@ -1,7 +1,8 @@
 # 11. Claude Code SDK (Agent SDK)
 
-> **참조**: [Run Claude Code programmatically - Claude Code Docs](https://code.claude.com/docs/en/headless)
-> · [Agent SDK overview - Claude API Docs](https://code.claude.com/docs/en/sdk)
+> **원문**: [Run Claude Code programmatically (headless)](https://code.claude.com/docs/en/headless)
+> · [Agent SDK overview](https://code.claude.com/docs/en/sdk)
+> · [Agent SDK overview (canonical)](https://code.claude.com/docs/en/agent-sdk/overview)
 > · [Legacy SDK - Anthropic](https://docs.anthropic.com/en/docs/claude-code/sdk)
 
 ---
@@ -15,7 +16,7 @@
 - [Headless CLI 예제](#headless-cli-예제)
 - [스트리밍 이벤트](#스트리밍-이벤트)
 - [Agent SDK (Python/TypeScript)](#agent-sdk-pythontypescript)
-- [Legacy SDK (TypeScript/Python)](#legacy-sdk-typescriptpython)
+- [Legacy SDK (deprecated)](#legacy-sdk-deprecated)
 - [고급 사용법](#고급-사용법)
 - [CLI 옵션 전체 표](#cli-옵션-전체-표)
 - [출력 형식 상세](#출력-형식-상세)
@@ -25,6 +26,8 @@
 ---
 
 ## SDK 개요
+
+> **과금 공지 (2026-06-15 시점)**: Starting June 15, 2026, Agent SDK and `claude -p` usage on subscription plans will draw from a new monthly Agent SDK credit, separate from your interactive usage limits. 구독 플랜에서 Agent SDK와 `claude -p` 사용량은 기존 대화형 사용량 한도와 분리된 **월간 Agent SDK 크레딧**에서 차감된다. 자세한 내용은 "Use the Claude Agent SDK with your Claude plan" 문서를 참조.
 
 **Agent SDK**는 Claude Code와 동일한 도구, 에이전트 루프, 컨텍스트 관리 기능을 제공합니다. CLI를 통한 스크립트/CI/CD 용도와 Python/TypeScript 패키지를 통한 완전한 프로그래밍 제어를 모두 지원합니다.
 
@@ -36,7 +39,7 @@
 |------|--------|------|
 | **CLI** | 내장 | `claude -p` 명령으로 비대화형 실행 |
 | **Python (Agent SDK)** | `claude-agent-sdk` | 프로그래밍 제어용 Python 패키지 |
-| **TypeScript (Agent SDK)** | `claude-agent-sdk` | 프로그래밍 제어용 TypeScript 패키지 |
+| **TypeScript (Agent SDK)** | `@anthropic-ai/claude-agent-sdk` | 프로그래밍 제어용 TypeScript 패키지 |
 | **TypeScript (Legacy)** | `@anthropic-ai/claude-code` | 서브프로세스 기반 NPM 패키지 |
 | **Python (Legacy)** | `claude-code-sdk` | 서브프로세스 기반 PyPI 패키지 |
 
@@ -67,6 +70,14 @@ export CLAUDE_CODE_USE_BEDROCK=1
 # AWS 자격 증명 구성 필요
 ```
 
+### Claude Platform on AWS
+
+```bash
+export CLAUDE_CODE_USE_ANTHROPIC_AWS=1
+export ANTHROPIC_AWS_WORKSPACE_ID="<workspace-id>"
+# AWS 자격 증명 구성 필요
+```
+
 ### Google Vertex AI
 
 ```bash
@@ -80,6 +91,12 @@ export CLAUDE_CODE_USE_VERTEX=1
 export CLAUDE_CODE_USE_FOUNDRY=1
 # Azure 자격 증명 구성 필요
 ```
+
+### 서드파티 인증 제약 (정책)
+
+> Unless previously approved, Anthropic does not allow third party developers to offer claude.ai login or rate limits for their products, including agents built on the Claude Agent SDK. Please use the API key authentication methods described in this document instead.
+>
+> 사전 승인 없이, 서드파티 개발자는 자사 제품(Claude Agent SDK 기반 에이전트 포함)에서 claude.ai 로그인 또는 rate limits를 제공할 수 없다. 대신 이 문서에 설명된 API 키 인증 방법을 사용해야 한다.
 
 ---
 
@@ -134,6 +151,12 @@ Bare 모드에서 Claude는 Bash, 파일 읽기, 파일 편집 도구에 접근�
 
 > **참고**: Bare 모드는 OAuth 및 키체인 읽기를 건너뜁니다. Anthropic 인증은 `ANTHROPIC_API_KEY` 또는 `--settings`에 전달된 JSON의 `apiKeyHelper`를 통해야 합니다. Bedrock, Vertex, Foundry는 각 공급자의 기본 자격 증명을 사용합니다.
 
+### 백그라운드 작업 종료 동작 (Background tasks at exit)
+
+`claude -p` 실행 중 Claude가 백그라운드 Bash 작업(예: dev 서버, watch 빌드)을 시작한 경우, 그 작업은 Claude가 최종 결과를 반환하고 stdin이 닫힌 후 **약 5초 후에 종료(terminated)**된다. 이 유예 기간(grace period)은 결과 직후에 끝나는 작업이 출력을 정상적으로 전달할 수 있게 한다.
+
+> **버전 메모**: Before v2.1.163, a never-exiting background process would hold the `claude -p` invocation open indefinitely. v2.1.163 미만에서는 종료되지 않는 백그라운드 프로세스가 `claude -p` 호출을 무기한 대기시키는 문제가 있었다.
+
 ---
 
 ## Agent SDK (Python/TypeScript)
@@ -147,7 +170,7 @@ Agent SDK는 Claude Code와 동일한 도구, 에이전트 루프, 컨텍스트 
 **TypeScript:**
 
 ```bash
-npm install claude-agent-sdk
+npm install @anthropic-ai/claude-agent-sdk
 ```
 
 **Python:**
@@ -175,7 +198,7 @@ asyncio.run(main())
 ### TypeScript 예시
 
 ```typescript
-import { query, ClaudeAgentOptions } from 'claude-agent-sdk';
+import { query, ClaudeAgentOptions } from '@anthropic-ai/claude-agent-sdk';
 
 const messages = await query({
   prompt: 'Find and fix the bug in auth.py',
@@ -193,16 +216,33 @@ Agent SDK는 Claude Code의 강력한 기능을 모두 사용할 수 있습니�
 
 | 기능 | 설명 |
 |------|------|
-| **Built-in tools** | 파일 읽기, 명령 실행, 코드 편집 등 내장 도구 |
+| **Built-in tools** | 파일 읽기, 명령 실행, 코드 편집, 웹 검색 등 내장 도구 (상세 표는 아래) |
 | **Hooks** | Claude Code의 hook 시스템 활용 |
 | **Subagents** | 하위 에이전트 실행 |
 | **MCP** | Model Context Protocol 지원 |
 | **Permissions** | 세분화된 권한 제어 |
 | **Sessions** | 세션 관리 및 대화 이어가기 |
 
+#### 내장 도구 (Built-in tools)
+
+에이전트는 별도 도구 구현 없이도 파일 읽기, 명령 실행, 코드베이스 검색을 바로 수행할 수 있다. 주요 내장 도구는 다음과 같다.
+
+| 도구 | 역할 |
+|------|------|
+| **Read** | 작업 디렉토리의 파일을 읽는다 |
+| **Write** | 새 파일을 생성한다 |
+| **Edit** | 기존 파일에 정밀한 편집을 수행한다 |
+| **Bash** | 터미널 명령, 스크립트, git 작업을 실행한다 |
+| **Monitor** | 백그라운드 스크립트를 감시하고 각 출력 라인을 이벤트로 반응한다 |
+| **Glob** | 패턴으로 파일을 찾는다 (`**/*.ts`, `src/**/*.py`) |
+| **Grep** | 정규식으로 파일 내용을 검색한다 |
+| **WebSearch** | 최신 정보를 위해 웹을 검색한다 |
+| **WebFetch** | 웹 페이지 콘텐츠를 가져와 파싱한다 |
+| **AskUserQuestion** | 사용자에게 객관식 명확화 질문을 한다 |
+
 ### Claude Code 파일시스템 기능
 
-`setting_sources=["project"]` (Python) 또는 `settingSources: ['project']` (TypeScript)를 설정하면 Claude Code의 파일시스템 기반 설정을 사용할 수 있습니다.
+SDK는 기본 옵션에서 작업 디렉토리의 `.claude/`와 `~/.claude/`에 있는 Claude Code의 파일시스템 기반 설정을 자동으로 로드한다. 로드할 소스를 제한하려면 옵션에 `setting_sources` (Python) 또는 `settingSources` (TypeScript)를 설정한다. 즉, `settingSources`는 기능을 "켜는" 스위치가 아니라 기본값(전체 로드)을 "제한"하는 용도다.
 
 | 기능 | 설명 | 위치 |
 |------|------|------|
@@ -211,103 +251,163 @@ Agent SDK는 Claude Code의 강력한 기능을 모두 사용할 수 있습니�
 | Memory | 프로젝트 컨텍스트 및 지침 | `CLAUDE.md` 또는 `.claude/CLAUDE.md` |
 | Plugins | 커스텀 명령, 에이전트, MCP 서버 확장 | `plugins` 옵션으로 프로그래밍 방식 사용 |
 
+### Subagents 예시 (`AgentDefinition`)
+
+`AgentDefinition`으로 특화된 하위 에이전트를 정의하고 메인 에이전트가 위임하게 할 수 있다. 하위 에이전트는 `Agent` 도구로 호출되므로, 호출을 자동 승인하려면 `allowed_tools`에 `Agent`를 포함해야 한다.
+
+```python
+import asyncio
+from claude_agent_sdk import query, ClaudeAgentOptions, AgentDefinition
+
+async def main():
+    async for message in query(
+        prompt="Use the code-reviewer agent to review this codebase",
+        options=ClaudeAgentOptions(
+            allowed_tools=["Read", "Glob", "Grep", "Agent"],
+            agents={
+                "code-reviewer": AgentDefinition(
+                    description="Expert code reviewer for quality and security reviews.",
+                    prompt="Analyze code quality and suggest improvements.",
+                    tools=["Read", "Glob", "Grep"],
+                )
+            },
+        ),
+    ):
+        if hasattr(message, "result"):
+            print(message.result)
+
+asyncio.run(main())
+```
+
+> 하위 에이전트 컨텍스트 내의 메시지는 `parent_tool_use_id` 필드를 포함해 어떤 메시지가 어느 하위 에이전트 실행에 속하는지 추적할 수 있다.
+
+### MCP 서버 예시 (`mcp_servers`)
+
+`mcp_servers` 옵션으로 외부 시스템(데이터베이스, 브라우저, API 등)에 Model Context Protocol로 연결한다. 아래는 Playwright MCP 서버를 연결해 브라우저 자동화 기능을 부여하는 예시다.
+
+```python
+import asyncio
+from claude_agent_sdk import query, ClaudeAgentOptions
+
+async def main():
+    async for message in query(
+        prompt="Open example.com and describe what you see",
+        options=ClaudeAgentOptions(
+            mcp_servers={
+                "playwright": {"command": "npx", "args": ["@playwright/mcp@latest"]}
+            }
+        ),
+    ):
+        if hasattr(message, "result"):
+            print(message.result)
+
+asyncio.run(main())
+```
+
+### Hooks 예시 (`HookMatcher`)
+
+`hooks` 옵션과 `HookMatcher`로 에이전트 수명 주기의 주요 지점(`PreToolUse`, `PostToolUse`, `Stop`, `SessionStart`, `SessionEnd`, `UserPromptSubmit` 등)에 커스텀 코드를 실행한다. 아래는 `PostToolUse`로 모든 파일 변경을 감사 로그에 기록하는 예시다.
+
+```python
+import asyncio
+from datetime import datetime
+from claude_agent_sdk import query, ClaudeAgentOptions, HookMatcher
+
+async def log_file_change(input_data, tool_use_id, context):
+    file_path = input_data.get("tool_input", {}).get("file_path", "unknown")
+    with open("./audit.log", "a") as f:
+        f.write(f"{datetime.now()}: modified {file_path}\n")
+    return {}
+
+async def main():
+    async for message in query(
+        prompt="Refactor utils.py to improve readability",
+        options=ClaudeAgentOptions(
+            permission_mode="acceptEdits",
+            hooks={
+                "PostToolUse": [
+                    HookMatcher(matcher="Edit|Write", hooks=[log_file_change])
+                ]
+            },
+        ),
+    ):
+        if hasattr(message, "result"):
+            print(message.result)
+
+asyncio.run(main())
+```
+
+### Sessions 예시 (`resume`)
+
+첫 번째 `query`에서 `SystemMessage`의 `session_id`를 캡처하고, 두 번째 `query`에 `resume` 옵션으로 전달하면 이전 컨텍스트를 그대로 이어간다.
+
+```python
+import asyncio
+from claude_agent_sdk import query, ClaudeAgentOptions, SystemMessage, ResultMessage
+
+async def main():
+    session_id = None
+
+    # 첫 번째 query: session_id 캡처
+    async for message in query(
+        prompt="Read the authentication module",
+        options=ClaudeAgentOptions(allowed_tools=["Read", "Glob"]),
+    ):
+        if isinstance(message, SystemMessage) and message.subtype == "init":
+            session_id = message.data["session_id"]
+
+    # 두 번째 query: 이전 컨텍스트에서 계속
+    async for message in query(
+        prompt="Now find all places that call it",
+        options=ClaudeAgentOptions(resume=session_id),
+    ):
+        if isinstance(message, ResultMessage):
+            print(message.result)
+
+asyncio.run(main())
+```
+
 ---
 
-## Legacy SDK (TypeScript/Python)
+## Legacy SDK (deprecated)
 
-### 설치
+> **주의**: 아래 패키지들은 이전 세대 SDK로, Claude Code를 서브프로세스로 실행하는 방식이다. 공식 sdk 문서의 SDK references 사이드바는 구 TypeScript SDK를 "TypeScript V2 (removed)"로 명시하며, 현재는 **Agent SDK**(`@anthropic-ai/claude-agent-sdk`, `claude-agent-sdk`)가 프라이머리 SDK이다. 신규 도입 시 Agent SDK를 사용하고, 기존 코드는 [Migration Guide](https://code.claude.com/docs/en/sdk/migration)를 참조해 이전한다.
+
+### 레거시 TypeScript SDK (`@anthropic-ai/claude-code`)
+
+서브프로세스 기반 NPM 패키지.
 
 ```bash
 npm install @anthropic-ai/claude-code
 ```
-
-### 기본 사용법
 
 ```typescript
 import { claude } from '@anthropic-ai/claude-code';
 
 const result = await claude({
   prompt: 'explain this codebase',
-  options: {
-    maxTurns: 3,
-  },
-});
-
-console.log(result);
-```
-
-### 옵션 표
-
-| 인자 | 설명 | 기본값 |
-|------|------|--------|
-| `abortController` | 중단 컨트롤러 | `new AbortController()` |
-| `cwd` | 현재 작업 디렉토리 | `process.cwd()` |
-| `executable` | JavaScript 런타임 | Node.js에서는 `node`, Bun에서는 `bun` |
-| `executableArgs` | 실행 파일에 전달할 인자 | `[]` |
-| `pathToClaudeCodeExecutable` | Claude Code 실행 파일 경로 | 패키지에 포함된 실행 파일 |
-
-### 전체 옵션 예시
-
-```typescript
-import { claude } from '@anthropic-ai/claude-code';
-
-const result = await claude({
-  prompt: 'fix the failing tests',
-  options: {
-    maxTurns: 5,
-    systemPrompt: 'You are a test fixing expert.',
-    allowedTools: ['Bash', 'Read', 'Edit'],
-    outputFormat: 'json',
-    cwd: '/path/to/project',
-  },
+  options: { maxTurns: 3 },
 });
 ```
 
----
+주요 옵션: `abortController`, `cwd`, `executable`, `executableArgs`, `pathToClaudeCodeExecutable` 등. Agent SDK로의 마이그레이션은 Migration Guide를 참조.
 
-## Python SDK
+### 레거시 Python SDK (`claude-code-sdk`)
 
-### 전제조건
-
-| 요구사항 | 버전 |
-|----------|------|
-| **Python** | 3.10+ |
-| **Node.js** | 설치 필요 |
-| **Claude Code CLI** | `npm install -g @anthropic-ai/claude-code` |
-
-### 설치
+서브프로세스 기반 PyPI 패키지. Python 3.10+, Node.js, Claude Code CLI가 필요하다.
 
 ```bash
 pip install claude-code-sdk
 ```
 
-### 기본 사용법
-
-```python
-from claude_code_sdk import ClaudeCode
-
-client = ClaudeCode()
-
-result = client.query("explain this codebase")
-print(result)
-```
-
-### 옵션 사용
-
-Python SDK는 `ClaudeCodeOptions` 클래스를 통해 CLI의 모든 인자를 지원합니다.
-
 ```python
 from claude_code_sdk import ClaudeCode, ClaudeCodeOptions
 
-options = ClaudeCodeOptions(
-    max_turns=3,
-    system_prompt="You are a Python expert.",
-    output_format="json",
-)
-
-client = ClaudeCode(options=options)
-result = client.query("analyze the code for bugs")
+client = ClaudeCode(options=ClaudeCodeOptions(max_turns=3))
+result = client.query("explain this codebase")
 ```
+
+> **참고**: 두 패키지 모두 deprecated이며, Agent SDK가 제공하는 동등한 기능(구조화된 출력, 도구 승인 콜백, 네이티브 메시지 객체)으로 대체되었다.
 
 ---
 
@@ -381,15 +481,25 @@ claude -p "Run the test suite and fix any failures" \
   --allowedTools "Bash,Read,Edit"
 ```
 
-세션 전체에 권한 모드를 설정하려면 `--permission-mode`를 사용합니다.
+세션 전체에 권한 모드를 설정하려면 `--permission-mode`를 사용합니다. 개별 도구를 나열하는 대신 세션 전체 기준선을 정할 때 쓴다.
 
 | 모드 | 동작 |
 |------|------|
-| `dontAsk` | `permissions.allow` 규칙 또는 읽기 전용 명령 세트에 없는 모든 것을 거부. 잠금 CI 실행에 적합 |
-| `acceptEdits` | 파일 쓰기와 `mkdir`, `touch`, `mv`, `cp` 등의 파일시스템 명령을 자동 승인. 다른 셸 명령과 네트워크 요청은 여전히 `--allowedTools` 또는 `permissions.allow` 규칙 필요 |
+| `dontAsk` | `permissions.allow` 규칙 또는 읽기 전용 명령 세트에 없는 모든 것을 거부. 잠금 CI 실행에 적합. 허용되지 않은 명령이 시도되면 프롬프트 없이 거부한다 |
+| `acceptEdits` | 파일 쓰기를 프롬프트 없이 허용하고 `mkdir`, `touch`, `mv`, `cp` 등 흔한 파일시스템 명령도 자동 승인. 다른 셸 명령과 네트워크 요청은 여전히 `--allowedTools` 항목 또는 `permissions.allow` 규칙이 필요하며, 없으면 시도 시 실행이 중단(abort)된다 |
 
 ```bash
+# acceptEdits: 파일 수정은 자동 승인, 그 외는 규칙 필요
 claude -p "Apply the lint fixes" --permission-mode acceptEdits
+```
+
+**CI 활용 예시 (`dontAsk`)**: 잠금 CI에서는 `--permission-mode dontAsk`와 함께 `permissions.allow` 규칙(또는 `--allowedTools`)으로 허용할 명령을 명시적으로 나열한다. 허용 목록에 없는 모든 작업은 자동 거부되므로, 예상치 못한 네트워크 호출이나 파괴적 명령이 실행되지 않는다.
+
+```bash
+# CI: 읽기 전용 분석만 허용하고 그 외는 거부
+claude --bare -p "Summarize the changes since the last release" \
+  --permission-mode dontAsk \
+  --allowedTools "Read,Glob,Grep"
 ```
 
 ### 커밋 생성하기
@@ -403,10 +513,24 @@ claude -p "Look at my staged changes and create an appropriate commit" \
 
 ### 시스템 프롬프트 커스터마이즈
 
+두 가지 system prompt flag로 동작을 제어한다.
+
+| 플래그 | 동작 |
+|--------|------|
+| `--append-system-prompt` | Claude Code의 기본 시스템 프롬프트를 유지하면서 추가 지침을 덧붙인다. 기본 동작을 보존하려는 경우에 사용 |
+| `--system-prompt` | 기본 시스템 프롬프트를 완전히 교체한다 (`--print` 전용). Claude Code의 기본 동작(도구 사용 가이드 등)이 사라지므로 주의 |
+
 ```bash
+# 기본 프롬프트에 추가 (보안 검토 지침)
 gh pr diff "$1" | claude -p \
   --append-system-prompt "You are a security engineer. Review for vulnerabilities." \
   --output-format json
+```
+
+```bash
+# 기본 프롬프트를 완전히 교체 (보안 감사 전용)
+claude -p --system-prompt "You are a security auditor. Focus only on security issues." \
+  "review this code"
 ```
 
 ### 대화 이어가기
@@ -758,4 +882,4 @@ const result = await claude({
 
 ## 요약
 
-**Agent SDK**는 Claude Code와 동일한 도구, 에이전트 루프, 컨텍스트 관리를 제공하는 새로운 프라이머리 SDK입니다. CLI(`claude -p`), Python(`claude-agent-sdk`), TypeScript(`claude-agent-sdk`) 환경에서 사용할 수 있으며, `--bare` 모드, `--permission-mode`, `--json-schema` 구조화된 출력, 스트리밍 이벤트(`system/api_retry`, `system/plugin_install`) 등을 통해 CI/CD 파이프라인과 스크립트에 강력하게 통합할 수 있습니다. 기존 Legacy SDK(`@anthropic-ai/claude-code`, `claude-code-sdk`)는 하위 호환을 위해 유지됩니다.
+**Agent SDK**는 Claude Code와 동일한 도구, 에이전트 루프, 컨텍스트 관리를 제공하는 새로운 프라이머리 SDK입니다. CLI(`claude -p`), Python(`claude-agent-sdk`), TypeScript(`@anthropic-ai/claude-agent-sdk`) 환경에서 사용할 수 있으며, `--bare` 모드, `--permission-mode`, `--json-schema` 구조화된 출력, 스트리밍 이벤트(`system/api_retry`, `system/plugin_install`) 등을 통해 CI/CD 파이프라인과 스크립트에 강력하게 통합할 수 있습니다. 2026-06-15부터 구독 플랜에서 월간 Agent SDK 크레딧이 별도로 적용된다. 기존 Legacy SDK(`@anthropic-ai/claude-code`, `claude-code-sdk`)는 deprecated이며 하위 호환을 위해 유지됩니다.

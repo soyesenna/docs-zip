@@ -2,9 +2,7 @@
 
 > 시스템 요구사항, 플랫폼별 설치, 인증, 업데이트, 제거 방법
 
-**원문**: [Advanced Setup](https://code.claude.com/docs/en/setup) | [Authentication](https://code.claude.com/docs/en/authentication) | [Amazon Bedrock](https://code.claude.com/docs/en/amazon-bedrock) | [Google Vertex AI](https://code.claude.com/docs/en/google-vertex-ai) | [Microsoft Foundry](https://code.claude.com/docs/en/microsoft-foundry)
-
-**참고**: [Advanced Setup - Claude Code 공식 문서](https://docs.anthropic.com/en/docs/claude-code/setup) | [Bedrock - Anthropic 공식 문서](https://docs.anthropic.com/en/docs/claude-code/bedrock) | [Vertex AI - Anthropic 공식 문서](https://docs.anthropic.com/en/docs/claude-code/vertex) | [Microsoft Foundry - Anthropic 공식 문서](https://docs.anthropic.com/en/docs/claude-code/microsoft-foundry)
+**원문**: [Advanced Setup](https://code.claude.com/docs/en/setup) | [Authentication](https://code.claude.com/docs/en/authentication) | [Troubleshoot installation and login](https://code.claude.com/docs/en/troubleshoot-install) | [Release channels](https://code.claude.com/docs/en/channels) | [Amazon Bedrock](https://code.claude.com/docs/en/amazon-bedrock) | [Google Vertex AI](https://code.claude.com/docs/en/google-vertex-ai) | [Microsoft Foundry](https://code.claude.com/docs/en/microsoft-foundry)
 
 ---
 
@@ -123,7 +121,7 @@ WSL 배포판을 열고 Linux 설치 명령을 실행합니다. PowerShell이나
 
 ## Linux 패키지 매니저 설치
 
-Claude Code는 서명된 apt, dnf, apk 저장소를 제공합니다. `stable`을 `latest`로 변경하면 롤링 채널을 사용합니다. 패키지 매니저 설치는 Claude Code를 통해 자동 업데이트되지 않으며, 일반 시스템 업그레이드 프로세스를 통해 업데이트됩니다.
+Claude Code는 서명된 apt, dnf, apk 저장소를 제공합니다. 각 저장소는 두 채널을 제공합니다: `stable`은 약 1주일 뒤의 버전을 서비스하며 주요 회귀가 있는 릴리스를 건너뛰고, `latest`는 모든 릴리스를 출시 즉시 서비스합니다. 아래 명령은 `stable` 채널을 구성하며, 각 섹션에서 `latest` 채널로 전환하는 명령도 함께 제공합니다. 패키지 매니저 설치는 Claude Code를 통해 자동 업데이트되지 않으며, 일반 시스템 업그레이드 프로세스를 통해 업데이트됩니다.
 
 ### apt (Debian / Ubuntu)
 
@@ -135,6 +133,13 @@ echo "deb [signed-by=/etc/apt/keyrings/claude-code.asc] https://downloads.claude
   | sudo tee /etc/apt/sources.list.d/claude-code.list
 sudo apt update
 sudo apt install claude-code
+```
+
+`latest` 채널로 전환하려면 URL 경로와 suite 이름이 모두 변경됩니다. 다음 `deb` 라인을 사용하세요:
+
+```bash
+echo "deb [signed-by=/etc/apt/keyrings/claude-code.asc] https://downloads.claude.ai/claude-code/apt/latest latest main" \
+  | sudo tee /etc/apt/sources.list.d/claude-code.list
 ```
 
 GPG 키 핑거프린트 확인: `gpg --show-keys /etc/apt/keyrings/claude-code.asc` 출력이 `31DD DE24 DDFA B679 F42D 7BD2 BAA9 29FF 1A7E CACE`인지 확인하세요.
@@ -155,6 +160,12 @@ EOF
 sudo dnf install claude-code
 ```
 
+`latest` 채널로 전환하려면 `baseurl`을 `latest` 저장소로 변경하세요:
+
+```
+baseurl=https://downloads.claude.ai/claude-code/rpm/latest
+```
+
 dnf는 첫 설치 시 키를 다운로드하고 핑거프린트 확인을 요청합니다. `31DD DE24 DDFA B679 F42D 7BD2 BAA9 29FF 1A7E CACE`와 일치하는지 확인 후 수락하세요.
 
 업그레이드: `sudo dnf upgrade claude-code`
@@ -166,6 +177,13 @@ wget -O /etc/apk/keys/claude-code.rsa.pub \
   https://downloads.claude.ai/keys/claude-code.rsa.pub
 echo "https://downloads.claude.ai/claude-code/apk/stable" >> /etc/apk/repositories
 apk add claude-code
+```
+
+`latest` 채널로 전환하려면 `stable` 저장소 라인을 제거하고 `latest` 저장소를 추가하세요:
+
+```bash
+sed -i '\|downloads.claude.ai/claude-code/apk/stable|d' /etc/apk/repositories
+echo "https://downloads.claude.ai/claude-code/apk/latest" >> /etc/apk/repositories
 ```
 
 키 무결성 확인: `sha256sum /etc/apk/keys/claude-code.rsa.pub` 출력이 `395759c1f7449ef4cdef305a42e820f3c766d6090d142634ebdb049f113168b6`인지 확인하세요.
@@ -265,7 +283,7 @@ claude
 |----------|-----------|------|
 | 1 | 클라우드 프로바이더 자격 증명 | `CLAUDE_CODE_USE_BEDROCK`, `CLAUDE_CODE_USE_VERTEX`, `CLAUDE_CODE_USE_FOUNDRY` 설정 시 |
 | 2 | `ANTHROPIC_AUTH_TOKEN` 환경 변수 | `Authorization: Bearer` 헤더로 전송. LLM 게이트웨이/프록시에서 Bearer 토큰으로 인증할 때 사용 |
-| 3 | `ANTHROPIC_API_KEY` 환경 변수 | `X-Api-Key` 헤더로 전송. Claude Console의 키로 직접 Anthropic API 액세스 시 사용. 대화형 모드에서는 한 번 승인/거부 선택이 저장되며, `/config`의 "Use custom API key" 토글로 변경 가능 |
+| 3 | `ANTHROPIC_API_KEY` 환경 변수 | `X-Api-Key` 헤더로 전송. Claude Console의 키로 직접 Anthropic API 액세스 시 사용. 대화형 모드에서는 한 번 승인/거부 선택이 저장되며, `/config`의 "Use custom API key" 토글로 변경 가능. 비대화형 모드(`-p` 플래그)에서는 키가 존재할 때 항상 사용됨 |
 | 4 | `apiKeyHelper` 스크립트 출력 | 동적/회전 자격 증명(예: Vault의 단기 토큰)에 사용 |
 | 5 | `CLAUDE_CODE_OAUTH_TOKEN` 환경 변수 | `claude setup-token`으로 생성된 장기 OAuth 토큰. 브라우저 로그인이 불가능한 CI 파이프라인/스크립트용 |
 | 6 | 구독 OAuth 자격 증명 (`/login`) | Claude Pro, Max, Team, Enterprise 사용자의 기본 인증 방식 |
@@ -377,6 +395,8 @@ export CLAUDE_CODE_OAUTH_TOKEN=your-token
 `/config`에서 `latest`에서 `stable`로 전환하면 현재 버전을 유지할지 다운그레이드를 허용할지 선택할 수 있습니다. 유지를 선택하면 `minimumVersion`이 해당 버전으로 설정됩니다. 다시 `latest`로 전환하면 초기화됩니다.
 
 관리 설정(managed settings)에서 조직 전체 최소 버전을 강제할 수 있으며, 사용자 및 프로젝트 설정으로는 재정의할 수 없습니다.
+
+> `minimumVersion` 핀은 업데이트만 제한합니다. Claude Code가 버전 범위 밖에서 **시작 자체를 거부**하도록 하려면 managed settings의 `requiredMinimumVersion` 및 `requiredMaximumVersion`을 사용하세요. 업데이트도 `requiredMaximumVersion` 상한을 존중합니다. 자세한 내용은 사용 가능한 설정(available settings) 문서를 참조하세요.
 
 ### 자동 업데이트 비활성화
 
@@ -501,7 +521,35 @@ winget uninstall Anthropic.ClaudeCode
 npm uninstall -g @anthropic-ai/claude-code
 ```
 
+### apt / dnf / apk 제거
+
+패키지와 저장소 설정을 함께 제거합니다.
+
+**apt:**
+
+```bash
+sudo apt remove claude-code
+sudo rm /etc/apt/sources.list.d/claude-code.list /etc/apt/keyrings/claude-code.asc
+```
+
+**dnf:**
+
+```bash
+sudo dnf remove claude-code
+sudo rm /etc/yum.repos.d/claude-code.repo
+```
+
+**apk:**
+
+```bash
+apk del claude-code
+sed -i '\|downloads.claude.ai/claude-code/apk|d' /etc/apk/repositories
+rm /etc/apk/keys/claude-code.rsa.pub
+```
+
 ### 설정 파일 완전 제거
+
+> VS Code 확장, JetBrains 플러그인, Desktop 앱도 `~/.claude/`에 기록합니다. 이들 중 하나라도 설치되어 있으면 다음 실행 시 디렉토리가 재생성됩니다. Claude Code를 완전히 제거하려면 이 파일들을 삭제하기 전에 VS Code 확장, JetBrains 플러그인, Desktop 앱을 먼저 제거하세요.
 
 ```bash
 # macOS, Linux, WSL
@@ -627,7 +675,16 @@ export ANTHROPIC_SMALL_FAST_MODEL_AWS_REGION=us-west-2
 
 **주의 사항:**
 
-- `AWS_REGION`은 필수 환경 변수입니다. Claude Code는 이 설정을 `.aws` config 파일에서 읽지 않습니다.
+- v2.1.172부터 `AWS_REGION`은 옵셔널입니다. AWS 프로파일의 리전을 재정의하거나 프로파일에 리전이 없는 경우에만 설정하면 됩니다. Claude Code는 다음 우선순위 체인으로 리전을 해결합니다 (AWS SDK 우선순위와 일치):
+
+  | 순위 | 소스 | 비고 |
+  |------|------|------|
+  | 1 | `AWS_REGION` | 환경 변수 |
+  | 2 | `AWS_DEFAULT_REGION` | 환경 변수 |
+  | 3 | 활성 AWS 프로파일의 `region` | AWS 공유 자격 증명 파일(`~/.aws/credentials`) 먼저, 그 다음 공유 config 파일(`~/.aws/config`) |
+  | 4 | `us-east-1` | 기본 폴백 |
+
+  활성 프로파일은 `AWS_PROFILE`(미설정 시 `default`)입니다. `AWS_SHARED_CREDENTIALS_FILE` 또는 `AWS_CONFIG_FILE`로 비기본 파일 경로를 지정할 수 있습니다. `/status`로 해결된 리전을 확인하세요. 리전이 AWS config 파일 또는 기본 폴백에서 온 경우 `/status`는 출처도 표시합니다. **On v2.1.171 and earlier, Claude Code does not read the AWS config files, so set `AWS_REGION` explicitly.**
 - Bedrock 사용 시 `/logout` 명령을 사용할 수 없습니다 (AWS 자격 증명으로 인증 처리).
 - WebSearch 도구는 Bedrock에서 사용할 수 없습니다.
 - 설정 파일을 사용하여 `AWS_PROFILE` 등 다른 프로세스에 노출하고 싶지 않은 환경 변수를 관리할 수 있습니다.
@@ -762,32 +819,60 @@ Amazon Bedrock Guardrails을 사용하여 Claude Code에 콘텐츠 필터링을 
 
 ### Mantle 엔드포인트
 
-Mantle은 Amazon Bedrock 엔드포인트로, 네이티브 Anthropic API 형태로 Claude 모델을 제공합니다. 동일한 AWS 자격 증명, IAM 권한, `awsAuthRefresh` 구성을 사용합니다.
+Mantle은 Amazon Bedrock 엔드포인트로, 네이티브 Anthropic API 형태로 Claude 모델을 제공합니다. Bedrock Invoke API가 아닌 네이티브 Anthropic API 형태를 사용하며, 동일한 AWS 자격 증명, IAM 권한, `awsAuthRefresh` 구성을 사용합니다.
+
+#### Mantle 활성화
+
+AWS 자격 증명이 이미 구성된 상태에서 `CLAUDE_CODE_USE_MANTLE`을 설정하여 요청을 Mantle 엔드포인트로 라우팅합니다:
 
 ```bash
 export CLAUDE_CODE_USE_MANTLE=1
 export AWS_REGION=us-east-1
 ```
 
-Mantle 모델 ID는 `anthropic.` 접두사를 사용하며 버전 접미사가 없습니다 (예: `anthropic.claude-haiku-4-5`).
+Claude Code는 AWS 리전에서 엔드포인트 URL을 구성합니다. v2.1.172부터 리전은 위 Bedrock과 동일한 우선순위로 해결되며, 이전 버전은 `AWS_REGION`만 사용합니다. 커스텀 엔드포인트나 게이트웨이용 URL을 재정의하려면 `ANTHROPIC_BEDROCK_MANTLE_BASE_URL`을 설정하세요.
+
+Claude Code 내에서 `/status`를 실행하여 확인합니다. Mantle이 활성화되어 있으면 provider 라인에 `Amazon Bedrock (Mantle)`으로 표시됩니다.
+
+#### Mantle 모델 선택
+
+Mantle 모델 ID는 `anthropic.` 접두사를 사용하며 버전 접미사가 없습니다 (예: `anthropic.claude-haiku-4-5`). 계정에서 사용 가능한 모델은 조직에 부여된 권한에 따라 다르며, 추가 모델 ID는 AWS의 온보딩 자료에 나열됩니다. 허용 목록(allowlist) 모델에 대한 액세스를 요청하려면 AWS 계정 팀에 문의하세요.
+
+`--model` 플래그 또는 Claude Code 내의 `/model`로 모델을 설정합니다:
 
 ```bash
 claude --model anthropic.claude-haiku-4-5
 ```
 
-Bedrock Invoke API와 Mantle을 동시에 사용하려면 두 환경 변수를 모두 설정합니다:
+#### Bedrock Invoke API와 Mantle 동시 사용
+
+Mantle에서 사용 가능한 모델이 현재 사용 중인 모든 모델을 포함하지 않을 수 있습니다. `CLAUDE_CODE_USE_BEDROCK`과 `CLAUDE_CODE_USE_MANTLE`을 모두 설정하면 Claude Code가 동일한 세션에서 두 엔드포인트를 모두 호출합니다. Mantle 형식과 일치하는 모델 ID는 Mantle로 라우팅되고, 나머지 모델 ID는 Bedrock Invoke API로 전달됩니다:
 
 ```bash
 export CLAUDE_CODE_USE_BEDROCK=1
 export CLAUDE_CODE_USE_MANTLE=1
 ```
 
-Mantle 모델을 `/model` 피커에 표시하려면 설정 파일의 `availableModels`에 ID를 나열합니다:
+Mantle 모델을 `/model` 피커에 표시하려면 설정 파일의 `availableModels`에 ID를 나열합니다. 이 설정은 피커를 나열된 항목으로 제한하므로 유지하려는 모든 별칭을 포함해야 합니다:
 
 ```json
 {
   "availableModels": ["opus", "sonnet", "haiku", "anthropic.claude-haiku-4-5"]
 }
+```
+
+`anthropic.` 접두사가 있는 항목은 커스텀 피커 옵션으로 추가되어 Mantle로 라우팅됩니다. `anthropic.claude-haiku-4-5`를 계정에 부여된 모델 ID로 교체하세요. `availableModels`가 다른 모델 설정과 상호 작용하는 방식은 모델 선택 제한(Restrict model selection) 문서를 참조하세요.
+
+두 프로바이더가 모두 활성화되어 있으면 `/status`에 `Amazon Bedrock + Amazon Bedrock (Mantle)`으로 표시됩니다.
+
+#### Mantle을 게이트웨이를 통해 라우팅
+
+조직이 서버 측에서 AWS 자격 증명을 주입하는 중앙 집중식 LLM 게이트웨이를 통해 모델 트래픽을 라우팅하는 경우, 클라이언트 측 인증을 비활성화하여 Claude Code가 SigV4 서명 또는 `x-api-key` 헤더 없이 요청을 전송하도록 합니다:
+
+```bash
+export CLAUDE_CODE_USE_MANTLE=1
+export CLAUDE_CODE_SKIP_MANTLE_AUTH=1
+export ANTHROPIC_BEDROCK_MANTLE_BASE_URL=https://your-gateway.example.com
 ```
 
 **Mantle 환경 변수:**
@@ -806,8 +891,10 @@ Mantle 모델을 `/model` 피커에 표시하려면 설정 파일의 `availableM
 | SSO/기업 프록시 인증 루프 | `awsAuthRefresh` 설정 제거. 수동으로 `aws sso login` 실행 |
 | 리전 문제 | `aws bedrock list-inference-profiles --region your-region`으로 모델 가용성 확인. `export AWS_REGION=us-east-1`로 전환 |
 | "on-demand throughput isn't supported" | 모델을 추론 프로파일 ID로 지정 |
-| Mantle 403 오류 | AWS 계정에 해당 모델 액세스 권한이 없음. AWS 계정 팀에 문의 |
-| Mantle 400 오류 (모델 ID 명시) | 해당 모델 ID는 Mantle에서 제공되지 않음. Mantle 형식 ID 사용 또는 두 엔드포인트 모두 활성화 |
+| Mantle 403 오류 | 유효한 자격 증명으로 `403`이 발생하면 AWS 계정에 요청한 모델에 대한 액세스 권한이 없는 것임. AWS 계정 팀에 액세스 요청 |
+| Mantle 400 오류 (모델 ID 명시) | 해당 모델 ID는 Mantle에서 제공되지 않음. Mantle은 표준 Bedrock 카탈로그와 별개의 모델 라인업을 가지므로 `us.anthropic.claude-sonnet-4-6` 같은 inference profile ID는 작동하지 않음. Mantle 형식 ID를 사용하거나, 두 엔드포인트를 모두 활성화하여 Claude Code가 각 요청을 모델이 사용 가능한 엔드포인트로 라우팅하도록 설정 |
+
+> Mantle 관련 진단: `CLAUDE_CODE_USE_MANTLE`을 설정했는데 `/status`에 `Amazon Bedrock (Mantle)`이 표시되지 않으면, 변수가 프로세스에 도달하지 않은 것입니다. `claude`를 실행한 쉘에서 변수가 export되었는지 확인하거나, 설정 파일의 `env` 블록에 설정하세요.
 
 > Claude Code는 Bedrock Invoke API를 사용하며 Converse API는 지원하지 않습니다.
 
@@ -836,7 +923,7 @@ claude
 
 ### 리전 구성
 
-Claude Code는 Vertex AI 글로벌, 멀티 리전, 리전 엔드포인트를 지원합니다. `CLOUD_ML_REGION`을 `global`, 멀티 리전 위치(`eu`, `us`), 또는 특정 리전(`us-east5`)으로 설정합니다.
+Claude Code는 Vertex AI 글로벌, 멀티 리전, 리전 엔드포인트를 지원합니다. `CLOUD_ML_REGION`을 `global`, 멀티 리전 위치(`eu`, `us`), 또는 특정 리전(`us-east5`)으로 설정합니다. Claude Code는 각 형태에 맞는 Vertex AI 호스트명을 자동으로 선택하며, 멀티 리전 위치의 경우 `aiplatform.eu.rep.googleapis.com` 및 `aiplatform.us.rep.googleapis.com` 호스트를 사용합니다.
 
 ### 수동 설정
 

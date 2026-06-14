@@ -1,6 +1,6 @@
 # 04. 플러그인 시스템 (Plugins)
 
-> **원문**: [Create plugins](https://code.claude.com/docs/en/plugins) | [Plugins reference](https://code.claude.com/docs/en/plugins-reference) | [Discover plugins](https://code.claude.com/docs/en/discover-plugins) | [Plugin dependencies](https://code.claude.com/docs/en/plugin-dependencies) | [Plugin marketplaces](https://code.claude.com/docs/en/plugin-marketplaces)
+> **원문**: [Create plugins](https://code.claude.com/docs/en/plugins) | [Plugins reference](https://code.claude.com/docs/en/plugins-reference) | [Discover plugins](https://code.claude.com/docs/en/discover-plugins) | [Plugin dependencies](https://code.claude.com/docs/en/plugin-dependencies) | [Plugin marketplaces](https://code.claude.com/docs/en/plugin-marketplaces) | [Plugin hints](https://code.claude.com/docs/en/plugin-hints)
 
 ---
 
@@ -265,6 +265,15 @@ claude plugin init my-helper --with skills hooks
 claude plugin init my-helper --force
 ```
 
+### plugin init 관리자 차단
+
+스캐폴드된 플러그인은 마켓플레이스가 아닌 `@skills-dir` 소스에서 로드됩니다. 관리자는 이 소스를 차단할 수 있습니다:
+
+- `strictKnownMarketplaces` managed setting으로 허용 목록을 지정하여 `@skills-dir` 소스를 제외
+- managed settings의 `blockedMarketplaces`에 `{"source": "skills-dir"}` 항목을 추가하여 명시적 차단
+
+차단된 경우 `plugin init`는 파일을 쓰기 전에 실패합니다.
+
 ### plugin install
 
 마켓플레이스에서 플러그인을 설치합니다.
@@ -432,6 +441,30 @@ claude plugin tag [--push] [--dry-run] [-f, --force]
 | `true` (기본값) | `plugin.json`이 권위 있는 소스. 마켓플레이스 엔트리는 추가 컴포넌트를 보강 |
 | `false` | 마켓플레이스 엔트리가 전체 정의. `plugin.json`의 컴포넌트 선언과 충돌 시 로드 실패 |
 
+#### 예약 마켓플레이스명 (Reserved marketplace names)
+
+Anthropic은 다음 15개의 마켓플레이스명을 예약어로 보호합니다. 사용자 정의 마켓플레이스는 이 이름을 사용할 수 없습니다.
+
+| 예약 마켓플레이스명 |
+|-------------------|
+| `claude-code-marketplace` |
+| `claude-code-plugins` |
+| `claude-plugins-official` |
+| `claude-plugins-community` |
+| `claude-community` |
+| `anthropic-marketplace` |
+| `anthropic-plugins` |
+| `agent-skills` |
+| `anthropic-agent-skills` |
+| `knowledge-work-plugins` |
+| `life-sciences` |
+| `claude-for-legal` |
+| `claude-for-financial-services` |
+| `financial-services-plugins` |
+| `claude-for-industry` |
+
+또한 `official-claude-plugins`, `anthropic-tools-v2` 등 공식 Anthropic 출처를 사칭하는 이름도 차단됩니다.
+
 ### 마켓플레이스 CLI 명령어
 
 ```bash
@@ -456,6 +489,10 @@ export DISABLE_AUTOUPDATER=1
 export FORCE_AUTOUPDATE_PLUGINS=1
 ```
 
+### 관리자 플러그인 추천 (pluginSuggestionMarketplaces)
+
+관리자가 `pluginSuggestionMarketplaces` managed setting으로 마켓플레이스를 허용하면, 현재 작업 디렉토리와 관련된 플러그인이 **suggested for this directory** 라벨과 함께 `/plugin` Discover 탭 상단에 고정됩니다. 이는 플러그인 디스커버리 UI의 관련성 추천 메커니즘으로, 작업 컨텍스트에 맞는 플러그인을 자동으로 노출합니다.
+
 ### 공식 마켓플레이스
 
 Anthropic은 두 개의 공개 마켓플레이스를 운영합니다.
@@ -469,11 +506,42 @@ Anthropic은 두 개의 공개 마켓플레이스를 운영합니다.
 
 | 카테고리 | 예시 플러그인 |
 |----------|---------------|
-| **코드 인텔리전스** | `pyright-lsp`, `typescript-lsp`, `rust-analyzer-lsp`, `gopls-lsp` 등 (LSP 기반) |
-| **외부 통합** | `github`, `gitlab`, `atlassian`, `figma`, `vercel`, `sentry`, `slack` 등 |
+| **코드 인텔리전스** | LSP 기반 언어 서버 플러그인 (아래 11개 언어 표 참조) |
+| **외부 통합** | 아래 카테고리별 그룹핑 참조 |
 | **보안 검토** | `security-guidance` (자동 보안 리뷰) |
 | **개발 워크플로우** | `commit-commands`, `pr-review-toolkit`, `agent-sdk-dev`, `plugin-dev` |
 | **출력 스타일** | `explanatory-output-style`, `learning-output-style` |
+
+#### 공식 LSP 플러그인 카탈로그 (11개 언어)
+
+코드 인텔리전스 플러그인은 Claude Code의 내장 LSP 도구를 활성화하여 정의로 이동, 참조 찾기, 편집 직후 타입 에러 즉시 확인을 가능하게 합니다. 각 플러그인은 해당 언어 서버 바이너리가 시스템에 설치되어 있어야 동작합니다.
+
+| 언어 | 플러그인 | 필수 바이너리 |
+|------|----------|---------------|
+| C/C++ | `clangd-lsp` | `clangd` |
+| C# | `csharp-lsp` | `csharp-ls` |
+| Go | `gopls-lsp` | `gopls` |
+| Java | `jdtls-lsp` | `jdtls` |
+| Kotlin | `kotlin-lsp` | `kotlin-language-server` |
+| Lua | `lua-lsp` | `lua-language-server` |
+| PHP | `php-lsp` | `intelephense` |
+| Python | `pyright-lsp` | `pyright-langserver` |
+| Rust | `rust-analyzer-lsp` | `rust-analyzer` |
+| Swift | `swift-lsp` | `sourcekit-lsp` |
+| TypeScript | `typescript-lsp` | `typescript-language-server` |
+
+#### 외부 통합 플러그인 (카테고리별)
+
+외부 통합 플러그인은 사전 구성된 MCP 서버를 번들하여 수동 설정 없이 외부 서비스에 연결합니다.
+
+| 카테고리 | 플러그인 |
+|----------|----------|
+| **소스 컨트롤** | `github`, `gitlab` |
+| **프로젝트 관리** | `atlassian` (Jira/Confluence), `asana`, `linear`, `notion` |
+| **디자인** | `figma` |
+| **인프라** | `vercel`, `firebase`, `supabase` |
+| **커뮤니케이션** | `slack` |
+| **모니터링** | `sentry` |
 
 ### 개인 저장소 인증
 
@@ -577,9 +645,12 @@ claude --plugin-url "https://example.com/my-plugin.zip https://example.com/other
 
 ```bash
 /reload-plugins    # 플러그인, 스킬, 에이전트, 훅, MCP/LSP 서버 모두 리로드
+/reload-plugins --force    # 캐시 무효화 경고를 무시하고 강제 적용
 ```
 
 `SKILL.md` 변경은 즉시 반영되지만, `hooks/`, `.mcp.json`, `agents/` 등은 `/reload-plugins` 또는 재시작이 필요합니다.
+
+리로드는 다음 요청에 토큰 비용을 발생시킵니다. 새로 로드된 컴포넌트가 대화에 추가되는 콘텐츠를 발표하는 반면, 기존 히스토리는 프롬프트 캐시에서 읽기 때문입니다. 특히 플러그인이 MCP 서버를 제공하고 해당 도구가 tool search로 지연되지 않을 때, 변경이 캐시를 무효화하여 다음 요청이 전체 대화를 다시 읽는 비용이 발생하면 `/reload-plugins`는 경고와 함께 적용을 보류합니다. `--force`로 강제 적용할 수 있습니다.
 
 ### skills 디렉토리에서 개발
 
@@ -728,6 +799,37 @@ When reviewing code, check for:
 
 v2.1.142+에서는 플러그인 루트에 `SKILL.md`가 있고 `skills/` 하위 디렉토리가 없으며 `skills` 매니페스트 필드도 없는 경우, 단일 스킬 플러그인으로 자동 로드됩니다. 스킬 호출 이름은 frontmatter의 `name` 필드를 사용하고, 없으면 디렉토리 베이스네임을 사용합니다.
 
+### SKILL.md frontmatter 필드
+
+SKILL.md의 YAML frontmatter는 스킬 동작을 제어하는 여러 필드를 지원합니다.
+
+| 필드 | 설명 |
+|------|------|
+| `description` | 스킬 용도 설명. Claude가 작업 컨텍스트에 따라 스킬 자동 호출 여부를 결정하는 핵심 필드 |
+| `name` | 스킬 호출 이름. 단일 스킬 플러그인에서 이 필드를 사용하지 않으면 디렉토리 베이스네임 사용 |
+| `disable-model-invocation` | `true`로 설정하면 모델의 자동 호출을 끄고 사용자 수동 호출 전용 스킬로 만듦. 스킬이 의도치 않게 트리거되는 것을 방지할 때 유용 |
+
+`disable-model-invocation: true`를 사용하는 SKILL.md 예시:
+
+```markdown
+---
+description: 수동으로만 실행되는 민감한 관리 작업. 모델이 자동으로 호출하지 않음.
+disable-model-invocation: true
+---
+
+이 스킬은 사용자가 명시적으로 호출할 때만 실행됩니다.
+```
+
+### Discover 탭 플러그인 상세 정보
+
+`/plugin` 인터페이스의 Discover 탭에서 플러그인 상세 뷰는 다음 최근 기능들을 제공합니다.
+
+| 기능 | 최소 버전 | 설명 |
+|------|-----------|------|
+| 컨텍스트 비용 추정 | v2.1.143+ | 플러그인이 세션에 추가하는 토큰 비용 추정치 표시 |
+| Last updated 날짜 | v2.1.144+ | 플러그인 마지막 업데이트 날짜 표시 |
+| Will install 섹션 | v2.1.145+ | 설치될 컴포넌트(스킬, 에이전트, 훅, MCP/LSP 서버)를 설치 전에 사전 검토 가능 |
+
 ---
 
 ## 11. 디버깅 및 문제 해결
@@ -761,11 +863,11 @@ claude plugin validate ./my-plugin --strict   # CI용 (경고도 에러 처리)
 
 플러그인을 커뮤니티 마켓플레이스에 제출하려면:
 
-1. 로컬에서 `claude plugin validate` 실행
+1. 로컬에서 `claude plugin validate` 실행 (리뷰 파이프라인도 동일한 검사와 자동 안전 스크리닝을 수행)
 2. 제출 폼 사용:
-   - Claude.ai: claude.ai/settings/plugins/submit
-   - Console: platform.claude.com/plugins/submit
-3. 승인된 플러그인은 `anthropics/claude-plugins-community` 카탈로그에 특정 commit SHA로 고정됩니다.
+   - Claude.ai: claude.ai/admin-settings/directory/submissions/plugins/new (Team 또는 Enterprise 조직 필요, Owner가 기본 접근 권한 보유)
+   - Console: platform.claude.com/plugins/submit (Team/Enterprise 조직이 없는 개인 작성자용)
+3. 승인된 플러그인은 `anthropics/claude-plugins-community` 카탈로그에 특정 commit SHA로 고정되며, CI가 새 커밋 push 시 자동으로 핀을 범프합니다. 공개 카탈로그는 리뷰 파이프라인에서 매일 밤 동기화되므로 승인 후 카탈로그(`marketplace.json`) 반영까지 지연이 있을 수 있습니다.
 
 커뮤니티 마켓플레이스 설치:
 
@@ -793,3 +895,89 @@ claude plugin validate ./my-plugin --strict   # CI용 (경고도 에러 처리)
 | URL 기반 마켓플레이스에서 상대 경로 실패 | `marketplace.json`만 다운로드됨 | GitHub/npm/git URL 소스로 변경하거나 Git 기반 마켓플레이스 사용 |
 | `/plugin` 명령어 인식 안 됨 | 구버전 | `claude --version` 확인 후 업데이트 |
 | LSP 진단 오탐 (모노레포) | 워크스페이스 미설정 | Claude 편집 능력에는 영향 없음 |
+
+---
+
+## 12. CLI 힌트 프로토콜 (Plugin Hints)
+
+CLI/SDK 메인테이너가 공식 Anthropic 마켓플레이스에 등록된 자신의 플러그인 설치를 유도하는 힌트 프로토콜입니다. CLI가 Claude Code 환경에서 실행 중임을 감지하면 stderr에 한 줄짜리 마커를 출력하고, Claude Code가 이를 읽어 사용자에게 1회성 설치 프롬프트를 표시합니다.
+
+### 동작 방식
+
+Claude Code는 Bash 및 PowerShell 도구로 실행하는 모든 명령어와 훅 명령어에 대해 `CLAUDECODE` 환경변수를 `1`로 설정합니다. v2.1.172+부터는 동일한 서브프로세스에 `CLAUDE_CODE_CHILD_SESSION`도 `1`로 설정합니다. CLI가 이 변수 중 하나를 감지하면 자기닫는 `<claude-code-hint />` 태그를 stderr에 출력합니다. 훅 명령어에서는 힌트 태그가 제거되어 무시되며, Bash 및 PowerShell 도구 출력만 설치 프롬프트를 트리거합니다.
+
+Claude Code가 명령어 출력을 수신하면:
+
+1. 힌트 라인을 스캔하여 출력이 모델에 도달하기 전에 제거
+2. 힌트가 공식 Anthropic 마켓플레이스의 플러그인을 대상하는지 검증
+3. 플러그인이 이미 설치되어 있지 않고 이전에 프롬프트된 적이 없는지 확인
+4. 힌트를 출력한 명령어 이름을 포함한 설치 프롬프트 표시
+
+Claude Code는 플러그인을 자동으로 설치하지 않으며, 항상 사용자가 확인합니다. 힌트 라인은 출력에서 모델 도달 전 항상 제거되므로 마커는 대화에 나타나지 않고 토큰 사용량에 포함되지 않습니다.
+
+### 환경 변수 선택
+
+힌트 출력 게이트에 사용할 환경 변수 선택:
+
+| 환경 변수 | 설명 |
+|-----------|------|
+| `CLAUDECODE` | 모든 Claude Code 버전에서 설정. 가장 많은 세션에 도달. tmux 세션과 stdio MCP 서버 서브프로세스, IDE 확장의 통합 터미널에서도 설정되므로 인간이 직접 CLI를 실행할 수 있음 |
+| `CLAUDE_CODE_CHILD_SESSION` (v2.1.172+) | Claude Code가 직접 spawn한 서브프로세스(도구 호출, 훅 명령어, 상태 줄 명령어)에만 설정되어 인간 터미널 도달 차단용. 단, 세션 내에서 시작된 수명이 긴 프로세스(예: tmux 서버)는 변수를 캡처하므로 이후 해당 프로세스에서 실행된 셸은 원시 태그를 표시할 수 있음 |
+
+### 힌트 포맷
+
+힌트는 3개의 필수 속성을 가진 자기닫는 태그입니다.
+
+```
+<claude-code-hint v="1" type="plugin" value="example-cli@claude-plugins-official" />
+```
+
+| 속성 | 필수 | 설명 |
+|------|------|------|
+| `v` | Yes | 프로토콜 버전. `1`만 지원 |
+| `type` | Yes | 힌트 종류. `plugin`만 지원 |
+| `value` | Yes | `name@marketplace` 형식의 플러그인 식별자 |
+
+속성 값은 큰따옴표로 감싸거나 감싸지 않을 수 있습니다. 따옴표 없는 값은 공백을 포함할 수 없으며, 이스케이프 시퀀스는 지원되지 않습니다.
+
+### 요구사항
+
+Claude Code는 힌트에 대해 두 가지 조건을 강제하며, 어느 하나라도 실패하면 힌트가 드롭됩니다:
+
+- **독립된 줄**: 태그는 자체 줄을 차지해야 함. 로그 문장 내부 등 줄 중간에 포함된 태그는 무시됨. 줄의 선행/후행 공백은 허용
+- **공식 마켓플레이스**: `value`는 `claude-plugins-official` 등 Anthropic이 제어하는 마켓플레이스의 플러그인을 참조해야 함. 다른 마켓플레이스를 가리키는 힌트는 조용히 드롭됨
+
+권장(비강제) 사항으로는 stderr에 출력하기, 환경 변수로 게이트하기가 있습니다.
+
+### 사용자에게 표시되는 프롬프트
+
+```
+─────────────────────────────────────────────────────────────
+  Plugin recommendation
+
+    The example-cli command suggests installing a plugin.
+
+    Plugin: example-cli
+    Marketplace: claude-plugins-official
+    Official integration for example-cli deployments
+
+    Would you like to install it?
+    ❯ 1. Yes, install example-cli
+      2. No
+      3. No, and don't show plugin installation hints again
+
+─────────────────────────────────────────────────────────────
+```
+
+프롬프트는 힌트를 생성한 명령어 이름을 표시하여 도구와 추천 플러그인 간 불일치를 사용자가 발견할 수 있게 합니다. 사용자가 30초 내에 응답하지 않으면 프롬프트는 **No**로 처리됩니다.
+
+프롬프트 빈도 제한:
+
+- **플러그인당 1회**: 프롬프트가 표시되면 Claude Code는 해당 플러그인을 기록하고 사용자 응답과 관계없이 다시는 프롬프트하지 않음
+- **세션당 1회**: 머신의 모든 CLI에서 Claude Code 세션당 최대 1개의 힌트 프롬프트만 표시
+
+**Yes**를 선택하면 user 스코프에 플러그인이 설치됩니다. **No, and don't show plugin installation hints again**를 선택하면 해당 사용자의 모든 향후 힌트 프롬프트가 비활성화됩니다.
+
+### 공식 마켓플레이스 등록
+
+힌트 프로토콜은 공식 Anthropic 마켓플레이스 `claude-plugins-official`에 등록된 플러그인에만 작동합니다. Anthropic은 재량에 따라 해당 마켓플레이스를 큐레이션하며, 인앱 제출 폼은 커뮤니티 마켓플레이스에만 플러그인을 추가하므로 힌트 프로토콜 검증 대상이 아닙니다. Anthropic 파트너 담당자와 협업 중이라면 공식 마켓플레이스 등록을 조율하세요.

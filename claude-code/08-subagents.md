@@ -1,6 +1,6 @@
 # 08. 서브에이전트 (Subagents)
 
-> **참조**: [Create custom subagents](https://code.claude.com/docs/en/sub-agents) | [Orchestrate agent teams](https://code.claude.com/docs/en/agent-teams)
+> **참조**: [Create custom subagents](https://code.claude.com/docs/en/sub-agents) | [Run agents in parallel](https://code.claude.com/docs/en/agents) | [Manage multiple agents with agent view](https://code.claude.com/docs/en/agent-view) | [Orchestrate agent teams](https://code.claude.com/docs/en/agent-teams)
 
 ---
 
@@ -125,6 +125,8 @@ Plan 모드에서 계획을 제시하기 전 컨텍스트를 수집하는 리서
 
 > **참고**: Explore와 Plan은 CLAUDE.md 파일과 부모 세션의 git status를 건너뛰어 리서치를 빠르고 저렴하게 유지합니다. 다른 모든 빌트인 및 커스텀 서브에이전트는 둘 다 로드합니다.
 
+빌트인 서브에이전트는 인터랙티브 세션에서 항상 등록됩니다. Claude가 특정 빌트인 타입을 사용하지 못하게 하려면 [특정 서브에이전트 비활성화](#특정-서브에이전트-비활성화)에서처럼 `permissions.deny`에 추가하세요. Claude가 서브에이전트로 위임하는 것 자체를 차단하려면 `permissions.deny`로 `Agent` 도구 자체를 거부하세요. 논인터랙티브 모드와 Agent SDK에서는 `CLAUDE_AGENT_SDK_DISABLE_BUILTIN_AGENTS=1`을 설정하여 모든 빌트인 타입을 제거하고 자체 서브에이전트만 제공할 수 있습니다.
+
 ---
 
 ## Quickstart: 첫 서브에이전트 만들기
@@ -211,7 +213,7 @@ Frontmatter는 서브에이전트의 메타데이터와 설정을 정의합니�
 | `description` | **예** | Claude가 언제 이 서브에이전트에 위임할지를 설명 |
 | `tools` | 아니오 | 서브에이전트가 사용할 수 있는 도구. 생략시 모든 도구 상속. Skills를 컨텍스트에 프리로드하려면 `skills` 필드를 사용 |
 | `disallowedTools` | 아니오 | 거부할 도구. 상속 또는 지정된 목록에서 제거 |
-| `model` | 아니오 | 사용할 모델: `sonnet`, `opus`, `haiku`, 전체 모델 ID(예: `claude-opus-4-8`), 또는 `inherit`. 기본값 `inherit` |
+| `model` | 아니오 | 사용할 모델: `sonnet`, `opus`, `haiku`, `fable`, 전체 모델 ID(예: `claude-opus-4-8`), 또는 `inherit`. 기본값 `inherit` |
 | `permissionMode` | 아니오 | 권한 모드: `default`, `acceptEdits`, `auto`, `dontAsk`, `bypassPermissions`, `plan`. 플러그인 서브에이전트에는 무시됨 |
 | `maxTurns` | 아니오 | 서브에이전트가 중단되기 전 최대 에이전트 턴 수 |
 | `skills` | 아니오 | 시작 시 서브에이전트의 컨텍스트에 프리로드할 스킬. 전체 스킬 콘텐츠가 주입됨. 나열되지 않은 스킬도 Skill 도구로 호출 가능 |
@@ -232,7 +234,7 @@ Frontmatter는 서브에이전트의 메타데이터와 설정을 정의합니�
 
 | 설정 방식 | 설명 |
 |-----------|------|
-| **모델 별칭** | `sonnet`, `opus`, `haiku` 중 하나 사용 |
+| **모델 별칭** | 사용 가능한 별칭 중 하나 사용: `sonnet`, `opus`, `haiku`, `fable` |
 | **전체 모델 ID** | `claude-opus-4-8`, `claude-sonnet-4-6` 등. `--model` 플래그와 동일한 값 |
 | **`inherit`** | 메인 대화와 동일한 모델 사용 |
 | **생략** | 기본값 `inherit` (메인 대화와 동일한 모델) |
@@ -302,7 +304,6 @@ tools: Agent(worker, researcher), Read, Bash
 
 | 도구 | 비고 |
 |------|------|
-| `Agent` | 서브에이전트는 다른 서브에이전트를 스폰할 수 없음 |
 | `AskUserQuestion` | 메인 UI에 의존 |
 | `EnterPlanMode` | 메인 UI에 의존 |
 | `ExitPlanMode` | `permissionMode`가 `plan`인 경우 예외적으로 사용 가능 |
@@ -387,6 +388,10 @@ Implement API endpoints. Follow the conventions and patterns from the preloaded 
 
 나열된 각 스킬의 전체 콘텐츠가 시작 시 컨텍스트에 주입됩니다. 이 필드는 프리로드할 스킬을 제어할 뿐, 서브에이전트가 접근할 수 있는 스킬을 제한하지는 않습니다. 나열되지 않은 스킬도 실행 중에 Skill 도구로 호출할 수 있습니다.
 
+> **참고**: `disable-model-invocation: true`를 설정한 스킬은 프리로드할 수 없습니다. 프리로드는 Claude가 호출할 수 있는 동일한 스킬 집합에서 가져오기 때문입니다. 나열된 스킬이 누락되거나 비활성화된 경우 Claude Code는 이를 건너뛰고 디버그 로그에 경고를 기록합니다.
+
+서브에이전트가 스킬을 아예 호출하지 못하게 하려면 `tools` 목록에서 `Skill`을 제거하거나 `disallowedTools`에 추가하세요.
+
 ---
 
 ## 영구 메모리
@@ -414,6 +419,19 @@ patterns, conventions, and recurring issues you discover.
 - 서브에이전트의 시스템 프롬프트에 메모리 디렉터리 읽기/쓰기 지침이 포함됨
 - 메모리 디렉터리의 `MEMORY.md` 첫 200줄 또는 25KB(먼저 도달하는 쪽)가 시스템 프롬프트에 포함됨
 - Read, Write, Edit 도구가 자동으로 활성화되어 메모리 파일 관리 가능
+
+### 영구 메모리 팁
+
+- `project`가 권장 기본 스코프입니다. 버전 관리를 통해 서브에이전트 지식을 공유할 수 있습니다. 지식이 여러 프로젝트에 광범위하게 적용될 때 `user`를, 버전 관리에 체크인하지 않아야 할 때 `local`을 사용하세요.
+- 작업 시작 전 메모리를 상담하라고 지시하세요: "이 PR을 리뷰하되, 이전에 본 패턴이 있는지 메모리를 확인하세요."
+- 작업 완료 후 메모리를 업데이트하라고 지시하세요: "작업이 끝났으니, 배운 것을 메모리에 저장하세요." 시간이 지나면서 서브에이전트를 더 효과적으로 만드는 지식 기반이 축적됩니다.
+- 서브에이전트가 스스로 지식 기반을 능동적으로 유지하도록 메모리 관리 지침을 markdown 파일에 직접 포함하세요:
+
+  ```
+  코드패스, 패턴, 라이브러리 위치, 핵심 아키텍처 결정을 발견할 때마다
+  에이전트 메모리를 업데이트하세요. 이것은 대화 간에 조직 지식을 축적합니다.
+  발견한 내용과 위치에 대한 간결한 노트를 작성하세요.
+  ```
 
 ---
 
@@ -596,6 +614,8 @@ CLI 플래그가 설정보다 우선합니다.
 | 빠르고 타겟팅된 변경 | 독립적이고 요약으로 반환 가능 |
 | 지연 시간이 중요 | — |
 
+> **참고**: 이미 대화에 있는 내용에 대해 빠른 질문을 할 때는 서브에이전트 대신 `/btw`를 사용하세요. `/btw`는 전체 컨텍스트를 볼 수 있지만 도구 접근은 없으며, 답변이 히스토리에 추가되는 대신 폐기됩니다.
+
 ---
 
 ## 시작 시 로드되는 항목
@@ -656,7 +676,22 @@ code-reviewer 서브에이전트로 인증 모듈을 리뷰하세요
 
 ### 자동 압축 (Auto-compaction)
 
-기본적으로 약 95% 용량에서 자동 압축이 트리거됩니다. 더 일찍 트리거하려면 `CLAUDE_AUTOCOMPACT_PCT_OVERRIDE`를 낮은 백분율(예: `50`)로 설정하세요. 압축 이벤트는 트랜스크립트에 `compact_boundary` 항목으로 기록됩니다.
+서브에이전트는 메인 대화와 동일한 로직으로 자동 압축을 지원합니다. 압축은 동일한 조건에서 트리거되며, `CLAUDE_AUTOCOMPACT_PCT_OVERRIDE`가 서브에이전트에도 동일하게 적용됩니다. 기본적으로 약 95% 용량에서 자동 압축이 트리거되며, 더 일찍 트리거하려면 이 환경 변수를 낮은 백분율(예: `50`)로 설정하세요.
+
+압축 이벤트는 서브에이전트 트랜스크립트 파일에 `compact_boundary` 항목으로 기록됩니다.
+
+```json
+{
+  "type": "system",
+  "subtype": "compact_boundary",
+  "compactMetadata": {
+    "trigger": "auto",
+    "preTokens": 167189
+  }
+}
+```
+
+`preTokens` 값은 압축 발생 전에 사용된 토큰 수를 나타냅니다.
 
 ---
 
@@ -668,7 +703,18 @@ Fork는 전체 대화를 상속하는 서브에이전트로, 일반 서브에이
 - Claude가 general-purpose 서브에이전트 대신 fork를 스폰 (Explore 등 네임드 서브에이전트는 기존과 동일)
 - 모든 서브에이전트 스폰이 백그라운드에서 실행
 
+단계적 롤아웃과 무관하게 fork 모드를 명시적으로 제어하려면 `CLAUDE_CODE_FORK_SUBAGENT`를 `1`(활성화) 또는 `0`(비활성화)로 설정하세요. 이 변수는 인터랙티브 모드와 SDK 또는 `claude -p`에서 모두 적용됩니다. `1`로 설정하면 인터랙티브 세션, 논인터랙티브 모드, Agent SDK 모두에서 fork 모드가 활성화되며, `0`은 서버 측 롤아웃과 무관하게 모든 곳에서 fork 모드를 비활성화합니다.
+
 직접 fork: `/fork draft unit tests for the parser changes so far`
+
+Fork는 프롬프트 입력 아래 패널에 나타나며, 메인 세션 행과 각 fork 행이 표시됩니다. 패널 제어 키:
+
+| 키 | 동작 |
+|----|------|
+| `↑` / `↓` | 행 간 이동 |
+| `Enter` | 선택한 fork의 트랜스크립트를 열고 후속 메시지 전송 |
+| `x` | 완료된 fork를 닫거나 실행 중인 fork를 정지 |
+| `Esc` | 프롬프트 입력으로 포커스 복귀 |
 
 | 항목 | Fork | 네임드 서브에이전트 |
 |------|------|---------------------|
@@ -680,18 +726,32 @@ Fork는 전체 대화를 상속하는 서브에이전트로, 일반 서브에이
 
 Fork는 부모와 동일한 시스템 프롬프트와 도구 정의를 가지므로 첫 요청이 부모의 프롬프트 캐시를 재사용합니다. 이로 인해 동일한 컨텍스트가 필요한 작업에서는 새 서브에이전트 스폰보다 저렴합니다. Fork는 재귀 불가(중첩 fork 금지)합니다.
 
+Claude가 Agent 도구를 통해 fork를 스폰할 때 `isolation: "worktree"`를 전달하여 fork의 파일 편집이 체크아웃 대신 별도의 git worktree에 기록되도록 할 수 있습니다.
+
 ---
 
 ## 서브에이전트 제약사항
 
-> **중요**: 서브에이전트는 다른 서브에이전트를 생성할 수 **없습니다**.
+### 중첩 스폰 (Nested subagents)
 
-이 제한은 무한 중첩(Infinite Nesting)을 방지하기 위해 존재합니다. 서브에이전트는 1단계까지만 허용됩니다.
+> **중요**: Claude Code v2.1.172부터 서브에이전트는 자체 서브에이전트를 스폰할 수 있습니다.
 
-```
-메인 대화 → 서브에이전트 (가능)
-서브에이전트 → 또 다른 서브에이전트 (불가능)
-```
+위임된 작업 자체가 병렬 서브태스크로 분할될 때 사용합니다. 예를 들어 리뷰어 서브에이전트가 각 발견 사항별로 검증자(verifier)를 디스패치하면, 중간 출력이 메인 대화에 도달하지 않습니다. 최상위 서브에이전트의 요약만 메인 대화로 반환됩니다.
+
+중첩 서브에이전트는 최상위 서브에이전트와 동일한 방식으로 구성되며, 동일한 스코프에서 해결됩니다. 프롬프트 입력 아래의 서브에이전트 패널에 전체 트리가 표시됩니다: 각 행에 하위 서브에이전트 수를 나타내는 `(+N)` 카운트가 표시되고, 행을 열면 해당 서브에이전트의 직계 자식과 `main`으로 돌아가는 경로가 표시됩니다. `/agents`의 Running 탭은 실행 중인 서브에이전트를 평면 리스트로 표시합니다.
+
+### 깊이 제한 규칙
+
+깊이(depth)는 메인 대화 아래의 서브에이전트 레벨 수로 계산되며, 각 레벨이 포그라운드인지 백그라운드인지와 무관합니다.
+
+| 실행 모드 | 깊이 제한 |
+|-----------|-----------|
+| **포그라운드 서브에이전트** | 임의의 깊이에서 스폰 가능. 각 레벨이 반환될 때까지 부모를 차단하므로 체인이 자기 제한적임. 메인 대화가 전체 체인을 대기 |
+| **백그라운드 서브에이전트** | depth 5의 백그라운드 서브에이전트는 Agent 도구를 받지 않으며 더 이상 스폰 불가. 이 제한은 고정되어 있으며 구성 불가. 무한 동시 트리를 방지하기 위해 존재 |
+
+특정 서브에이전트가 다른 서브에이전트를 스폰하지 못하게 하려면 `tools` 목록에서 `Agent`를 제거하거나 `disallowedTools`에 추가하세요.
+
+> **참고**: Fork는 여전히 다른 fork를 스폰할 수 없습니다. Fork는 다른 서브에이전트 타입은 스폰할 수 있으며, 그것들도 깊이 제한에 포함됩니다.
 
 ---
 
@@ -803,6 +863,25 @@ Agent Teams는 여러 Claude Code 인스턴스가 함께 작동하도록 조정�
 | **적합한 경우** | 결과만 중요한 집중 작업 | 논의와 협업이 필요한 복잡한 작업 |
 | **토큰 비용** | 낮음: 결과가 메인 컨텍스트로 요약됨 | 높음: 각 팀원이 별도의 Claude 인스턴스 |
 
+### 병렬 작업의 4가지 접근 방식
+
+서브에이전트와 Agent Teams 외에도 Claude Code는 병렬 작업을 위한 두 가지 접근 방식을 추가로 제공합니다. 작업의 성격(직접 각 대화에 머무는지, 작업을 넘기고 나중에 확인하는지, Claude가 워커 그룹을 조정하는지)에 따라 선택합니다.
+
+| 접근 방식 | 제공하는 것 | 사용 시기 |
+|-----------|-------------|-----------|
+| **서브에이전트** | 한 세션 내에서 사이드 작업을 자체 컨텍스트로 수행하고 요약을 반환하는 위임 워커 | 사이드 작업이 검색 결과, 로그, 파일 내용으로 메인 대화를 채울 때 |
+| **Agent view** | 백그라운드에서 실행되는 세션을 디스패치하고 모니터링하는 단일 화면. `claude agents`로 열기. Research preview | 여러 독립 작업을 넘기고 한눈에 상태를 확인하며, 하나가 도움을 필요로 할 때만 개입할 때 |
+| **Agent Teams** | 공유 태스크 리스트와 에이전트 간 메시징으로 조정되는 다중 세션. 리드가 관리. 실험적이며 기본 비활성화 | Claude가 프로젝트를 여러 조각으로 나누어 할당하고 워커들을 동기화하게 할 때 |
+| **Dynamic workflows** | 여러 서브에이전트를 실행하고 결과를 교차 검증하는 스크립트. 턴바이턴으로 조정하기엔 너무 크거나 두 번 이상 패스가 필요한 작업용 | 작업이 소수의 서브에이전트로 감당 안 되거나, 발견 사항을 서로 검증해야 할 때 (코드베이스 전체 감사, 500개 파일 마이그레이션, 교차 검증 리서치, 여러 관점에서 초안된 계획) |
+
+핵심 구분:
+- **서브에이전트**: Claude가 한 대화 내에서 위임하고 결과를 수집 (터턴바이턴 판단)
+- **Agent view**: 독립 작업을 넘기고 나중에 확인
+- **Agent Teams**: Claude가 워커 그룹을 계획·할당·감독
+- **Dynamic workflows**: Claude의 턴바이턴 판단이 아닌 **스크립트가 계획을 잡음**
+
+> **참고**: 모든 접근 방식에서 워커는 Claude 세션입니다. 백그라운드 세션은 `claude agents`(agent view), 서브에이전트는 `/agents`, 백그라운드 작업은 `/tasks`, dynamic workflows는 `/workflows`로 확인합니다. 자세한 비교는 [Run agents in parallel](https://code.claude.com/docs/en/agents)과 [Manage multiple agents with agent view](https://code.claude.com/docs/en/agent-view)를 참조하세요.
+
 Agent Teams가 가장 효과적인 경우:
 - **리서치 및 리뷰**: 여러 팀원이 문제의 다른 측면을 동시에 조사
 - **새 모듈/기능**: 각 팀원이 서로 다른 부분을 독립적으로 담당
@@ -833,6 +912,8 @@ export CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1
 }
 ```
 
+활성화 후 Claude에게 자연어로 Agent Team 생성을 요청합니다. 작업과 팀 구조를 설명하면 Claude가 팀을 생성하고 팀원을 스폰하여 작업을 조정합니다. 작업이 완료되면 Claude가 자주 스스로 팀을 정리하므로(cleans up on its own), 이후 정리 요청 시 이미 정리할 것이 없다고 보고할 수 있습니다. 자세한 플로우는 [Agent Teams 시작하기](#agent-teams-시작하기)를 참조하세요.
+
 ---
 
 ## Agent Teams 시작하기
@@ -861,8 +942,9 @@ Claude가 공유 태스크 리스트가 있는 팀을 생성하고, 각 관점�
 |------|------|
 | **in-process** | 모든 팀원이 메인 터미널 내에서 실행. Shift+Down으로 순환. 추가 설정 없이 모든 터미널에서 작동 |
 | **split panes** | 각 팀원이 별도의 pane을 가짐. 모든 출력을 동시에 보고 pane을 클릭하여 직접 상호작용. tmux 또는 iTerm2 필요 |
+| **tmux** | split-pane 모드를 활성화하며, 현재 터미널에 따라 tmux와 iTerm2 중 어느 것을 사용할지 자동 감지 |
 
-기본값은 `"auto"`로, tmux 세션 내부에서 실행 중이면 split panes을 사용하고 그렇지 않으면 in-process를 사용합니다.
+기본값은 `"auto"`로, tmux 세션 내부에서 실행 중이거나 터미널이 iTerm2이면 split panes을 사용하고 그렇지 않으면 in-process를 사용합니다. `"tmux"` 설정값은 split-pane 모드를 명시적으로 활성화하며 터미널에 따라 tmux/iTerm2를 자동 감지합니다.
 
 **settings.json 설정:**
 

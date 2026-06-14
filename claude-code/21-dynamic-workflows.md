@@ -1,6 +1,6 @@
 # Dynamic Workflows, Agent Teams, Agent View 및 병렬 실행
 
-> **원문**: [Dynamic Workflows](https://code.claude.com/docs/en/workflows) | [Agent Teams](https://code.claude.com/docs/en/agent-teams) | [Running Agents in Parallel](https://code.claude.com/docs/en/agents) | [Agent View](https://code.claude.com/docs/en/agent-view) | [Goal](https://code.claude.com/docs/en/goal)
+> **원문**: [Dynamic Workflows](https://code.claude.com/docs/en/workflows) | [Running Agents in Parallel](https://code.claude.com/docs/en/agents) | [Agent View](https://code.claude.com/docs/en/agent-view) | [Goal](https://code.claude.com/docs/en/goal)
 
 이 문서는 Claude Code의 다중 에이전트 오케스트레이션 기능을 다룹니다. Dynamic Workflows로 수십~수백 개의 에이전트를 스크립트로 조정하고, Agent Teams로 다중 세션을 협업시키며, Agent View로 모든 백그라운드 세션을 한 화면에서 관리하는 방법을 설명합니다.
 
@@ -591,11 +591,121 @@ Worktree 격리 끄기 (v2.1.143+):
 
 ## /goal 명령어
 
-`/goal` 명령어로 완료 조건을 설정하면 Claude가 조건이 충족될 때까지 여러 턴에 걸쳐 계속 작업합니다. 복잡한 태스크에서 중간에 사용자가 개입하지 않아도 Claude가 스스로 판단하여 작업을 이어갈 수 있습니다.
+> `/goal`은 Claude Code v2.1.139 이상 필요.
 
-- 설정 방법: `/goal <완료 조건>` 입력
-- Claude는 조건이 충족될 때까지 턴을 반복하며 작업 진행
-- 탐색 메뉴의 Goals 섹션(Automation 카테고리)에 위치
+`/goal` 명령어로 완료 조건을 설정하면 Claude가 조건이 충족될 때까지 여러 턴에 걸쳐 사용자 개입 없이 계속 작업합니다. 검증 가능한 종료 상태가 있는 실질적인 작업에 적합합니다.
+
+적용 예시:
+
+- 모든 호출 지점이 컴파일되고 테스트가 통과할 때까지 모듈을 새 API로 마이그레이션
+- 모든 인수 기준을 충족할 때까지 설계 문서 구현
+- 각 파일이 크기 예산 이하가 될 때까지 큰 파일을 작은 모듈로 분할
+- 큐가 빌 때까지 라벨링된 이슈 백로그 작업
+
+탐색 메뉴의 Goals 섹션(Automation 카테고리)에 위치합니다.
+
+### 세션을 계속 실행하는 방식 비교
+
+현재 세션을 프롬프트 사이에 계속 실행하는 세 가지 접근 방식이 있습니다. 무엇이 다음 턴을 시작해야 하는지에 따라 선택합니다.
+
+| 접근 방식 | 다음 턴 시작 시점 | 중지 시점 |
+| --- | --- | --- |
+| **`/goal`** | 이전 턴이 종료될 때 | 모델이 조건 충족을 확인할 때 |
+| **`/loop`** | 시간 간격이 경과했을 때 | 사용자가 중지하거나 Claude가 작업 완료를 판단할 때 |
+| **Stop hook** | 이전 턴이 종료될 때 | 스크립트 또는 프롬프트가 결정할 때 |
+
+`/goal`과 Stop hook은 모두 매 턴 종료 후 실행됩니다. `/goal`은 session-scoped 단축키로, 조건을 입력하면 현재 세션에서만 활성화됩니다. Stop hook은 설정 파일에 존재하며 해당 범위의 모든 세션에 적용되고, 결정적 검사를 위한 스크립트나 모델 평가를 위한 프롬프트를 실행할 수 있습니다.
+
+[auto mode](./20-auto-mode-and-configuration.md)는 단일 턴 내에서 도구 호출을 승인하지만 새 턴을 시작하지는 않습니다. Claude는 작업이 완료되었다고 판단하면 중지합니다. `/goal`은 매 턴 후 조건을 확인하는 별도의 평가자를 추가하여, 완료 여부를 작업을 수행하는 모델이 아닌 새로운 모델이 결정하게 합니다. 둘은 보완 관계입니다: auto mode는 per-tool 프롬프트를 제거하고, `/goal`은 per-turn 프롬프트를 제거합니다.
+
+### /goal 사용법
+
+세션당 하나의 goal을 활성화할 수 있습니다. 동일한 명령어가 인자에 따라 설정, 확인, 제거를 수행합니다.
+
+#### goal 설정
+
+`/goal` 뒤에 충족하고자 하는 조건을 입력합니다. 이미 goal이 활성 상태면 새 것이 기존 것을 대체합니다.
+
+```text
+/goal all tests in test/auth pass and the lint step is clean
+```
+
+goal을 설정하면 조건 자체를 지시어로 삼아 즉시 턴이 시작됩니다. 별도의 프롬프트를 보낼 필요가 없습니다. goal이 활성 중일 때 `◎ /goal active` 표시기가 실행 시간을 보여줍니다. 매 턴 후 평가자는 조건이 충족 여부와 그 이유를 설명하는 짧은 사유를 반환하며, 최신 사유는 상태 보기와 트랜스크립트에 표시되어 Claude가 다음에 무엇을 향해 작업 중인지 확인할 수 있습니다.
+
+goal은 조건이 충족되거나 `/goal clear`를 실행할 때까지 계속 실행됩니다. 인자 없이 `/goal`을 실행하면 현재까지의 턴 수와 토큰 사용량을 확인할 수 있습니다.
+
+#### 효과적인 조건 작성
+
+평가자는 Claude가 대화에서 드러낸 내용을 기준으로 조건을 판단합니다. 평가자는 독립적으로 명령을 실행하거나 파일을 읽지 않으므로, 조건을 Claude의 출력으로 증명 가능한 형태로 작성해야 합니다. "All tests in `test/auth` pass"는 Claude가 테스트를 실행하고 그 결과가 트랜스크립트에 남으므로 작동합니다.
+
+여러 턴에 걸쳐 유지되는 조건은 보통 다음을 포함합니다:
+
+- **하나의 측정 가능한 종료 상태**: 테스트 결과, 빌드 종료 코드, 파일 수, 빈 큐
+- **명시된 검사 방법**: Claude가 어떻게 증명해야 하는지 (예: "`npm test` exits 0", "`git status` is clean")
+- **중요한 제약조건**: 도달 과정에서 변경되지 않아야 하는 것 (예: "no other test file is modified")
+
+조건은 최대 4,000자까지 가능합니다.
+
+goal이 실행되는 시간을 제한하려면 조건에 턴 또는 시간 조항을 포함하십시오 (예: `or stop after 20 turns`). Claude는 매 턴마다 해당 조항에 대한 진행 상황을 보고하고, 평가자가 대화에서 이를 판단합니다.
+
+#### 상태 확인
+
+인자 없이 `/goal`을 실행하면 현재 상태를 확인합니다.
+
+```text
+/goal
+```
+
+goal이 활성 중이면 상태에 다음이 표시됩니다:
+
+- 조건
+- 실행 시간
+- 평가된 턴 수
+- 현재 토큰 사용량
+- 평가자의 최신 사유
+
+활성 goal이 없지만 이전 세션에서 달성된 goal이 있었다면, 달성된 조건과 함께 실행 시간, 턴 수, 토큰 사용량이 표시됩니다.
+
+#### goal 제거
+
+조건이 충족되기 전에 활성 goal을 제거하려면 `/goal clear`를 실행합니다.
+
+```text
+/goal clear
+```
+
+`stop`, `off`, `reset`, `none`, `cancel`이 `clear`의 별칭으로 허용됩니다. `/clear`로 새 대화를 시작해도 활성 goal이 제거됩니다.
+
+#### 활성 goal로 세션 재개
+
+세션이 종료될 때 여전히 활성 상태였던 goal은 `--resume` 또는 `--continue`로 해당 세션을 재개할 때 복원됩니다. 조건은 그대로 이어지지만 턴 수, 타이머, 토큰 사용량 기준은 재개 시 리셋됩니다. 이미 달성되거나 제거된 goal은 복원되지 않습니다.
+
+#### 비대화형 모드 실행
+
+`/goal`은 비대화형 모드, desktop 앱, Remote Control에서 모두 작동합니다. `-p`로 goal을 설정하면 단일 호출로 루프를 완료까지 실행합니다.
+
+```bash
+claude -p "/goal CHANGELOG.md has an entry for every PR merged this week"
+```
+
+조건 충족 전에 비대화형 goal을 중지하려면 `Ctrl+C`로 프로세스를 중단합니다.
+
+### 평가 작동 방식
+
+`/goal`은 session-scoped [prompt-based Stop hook](./22-hooks.md)의 래퍼입니다. Claude가 턴을 마칠 때마다 조건과 지금까지의 대화가 구성된 small fast model(기본 Haiku)로 전송됩니다. 해당 모델은 yes/no 결정과 짧은 사유를 반환합니다. "no"는 Claude에게 계속 작업하라고 알리며, 다음 턴을 위한 가이드로 사유를 포함합니다. "yes"는 goal을 제거하고 트랜스크립트에 달성 항목을 기록합니다.
+
+평가자는 세션이 구성된 provider에서 실행됩니다. 도구를 호출하지 않으므로 Claude가 이미 대화에 드러낸 내용만 판단할 수 있습니다.
+
+> 평가 토큰은 provider에 대해 구성된 small fast model로 청구되며, 메인 턴 비용에 비해 일반적으로 무시할 수 있는 수준입니다.
+
+### 요건 및 제약
+
+`/goal`은 평가자가 hooks 시스템의 일부이므로 신뢰 다이얼로그를 수락한 워크스페이스에서만 동작합니다. 또한 다음 경우에 사용할 수 없습니다:
+
+- [`disableAllHooks`](./22-hooks.md)가 어떤 설정 레벨에서든 설정된 경우
+- 관리 설정(managed settings)에 [`allowManagedHooksOnly`](./17-settings.md)가 설정된 경우
+
+각 경우 명령어가 자동으로 이유를 알려주며 조용히 무시하지 않습니다.
 
 ---
 

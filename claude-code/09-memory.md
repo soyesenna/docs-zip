@@ -1,6 +1,6 @@
 # 09. 메모리 시스템 (Memory)
 
-> **참조**: [How Claude remembers your project - Claude Code Docs](https://code.claude.com/docs/en/memory) | [Explore the .claude directory - Claude Code Docs](https://code.claude.com/docs/en/claude-directory)
+> 원문: [How Claude remembers your project - Claude Code Docs](https://code.claude.com/docs/en/memory) | [Explore the .claude directory - Claude Code Docs](https://code.claude.com/docs/en/claude-directory)
 
 ---
 
@@ -68,10 +68,10 @@ CLAUDE.md 파일은 여러 위치에 존재할 수 있으며, 각각 다른 범�
 
 | 범위 | 위치 | 목적 | 활용 사례 | 공유 대상 |
 |------|------|------|-----------|----------|
-| **관리형 정책** | macOS: `/Library/Application Support/ClaudeCode/CLAUDE.md`<br>Linux/WSL: `/etc/claude-code/CLAUDE.md`<br>Windows: `C:\ProgramData\ClaudeCode\CLAUDE.md` | IT/DevOps가 관리하는 조직 전체 지침 | 회사 코딩 표준, 보안 정책, 컴플라이언스 요구사항 | 조직 내 모든 사용자 |
+| **관리형 정책** | macOS: `/Library/Application Support/ClaudeCode/CLAUDE.md`<br>Linux/WSL: `/etc/claude-code/CLAUDE.md`<br>Windows: `C:\Program Files\ClaudeCode\CLAUDE.md` | IT/DevOps가 관리하는 조직 전체 지침 | 회사 코딩 표준, 보안 정책, 컴플라이언스 요구사항 | 조직 내 모든 사용자 |
 | **사용자 지침** | `~/.claude/CLAUDE.md` | 모든 프로젝트에 적용되는 개인 설정 | 코드 스타일링 선호도, 개인 도구 단축키 | 본인만 (모든 프로젝트) |
 | **프로젝트 지침** | `./CLAUDE.md` 또는 `./.claude/CLAUDE.md` | 프로젝트의 팀 공유 지침 | 프로젝트 아키텍처, 코딩 표준, 공통 워크플로우 | 소스 컨트롤을 통한 팀원 |
-| **로컬 지침** | `./CLAUDE.local.md` | _(Deprecated)_ 프로젝트별 개인 설정 (`.gitignore`에 추가) | 샌드박스 URL, 테스트 데이터 | 본인만 (현재 프로젝트) |
+| **로컬 지침** | `./CLAUDE.local.md` | 프로젝트별 개인 설정 (`.gitignore`에 추가) | 샌드박스 URL, 테스트 데이터 | 본인만 (현재 프로젝트) |
 
 ### 계층 로딩 순서
 
@@ -96,7 +96,18 @@ CLAUDE.md 파일은 여러 위치에 존재할 수 있으며, 각각 다른 범�
 | **정렬 순서** | 파일시스템 루트에서 작업 디렉토리 방향. 실행 위치에 가까운 지침이 마지막에 읽힘 |
 | **로컬 파일 위치** | 각 디렉토리 내에서 `CLAUDE.local.md`는 `CLAUDE.md` 다음에 추가 |
 | **모노레포 제외** | `claudeMdExcludes`로 관련 없는 팀의 CLAUDE.md 건너뛰기 가능 |
-| **Import 결합** | `@path` import로 추가 파일을 로드 (최대 5단계 깊이) |
+| **Import 결합** | `@path` import로 추가 파일을 로드 (최대 4단계 깊이, 4 hops) |
+
+### 프로젝트 CLAUDE.md 설정 (Set up a project CLAUDE.md)
+
+프로젝트 CLAUDE.md는 `./CLAUDE.md` 또는 `./.claude/CLAUDE.md` 둘 중 어느 위치에든 저장할 수 있습니다. 이 파일을 생성하고 프로젝트에 참여하는 모든 사람에게 적용되는 지침을 추가하세요: 빌드 및 테스트 명령, 코딩 표준, 아키텍처 결정, 네이밍 컨벤션, 그리고 공통 워크플로우. 이 지침은 version control을 통해 팀과 공유되므로, 개인 선호보다는 프로젝트 수준 표준에 집중하세요.
+
+| 항목 | 설명 |
+| --- | --- |
+| **저장 위치** | `./CLAUDE.md` 또는 `./.claude/CLAUDE.md` 중 선택 가능 |
+| **공유 방식** | version control(git)을 통해 팀원과 공유 |
+| **작성 기준** | 개인 선호가 아닌 프로젝트 수준 표준에 집중 |
+| **권장 내용** | 빌드/테스트 명령, 코딩 표준, 아키텍처 결정, 네이밍 컨벤션, 공통 워크플로우 |
 
 ---
 
@@ -153,12 +164,12 @@ CLAUDE.md 파일은 `@path/to/import` 구문을 사용하여 추가 파일을 �
 |------|------|
 | **상대 경로** | CLAUDE.md 파일 위치를 기준으로 상대 경로 사용 가능 |
 | **절대 경로** | `~/.claude/...` 와 같은 절대 경로 사용 가능 |
-| **재귀 깊이** | 최대 5단계까지 재귀적 Import 가능 |
+| **재귀 깊이** | 최대 4단계(4 hops)까지 재귀적 Import 가능 |
 | **코드 블록 제외** | 마크다운 코드 스팬(`` ` ``)과 코드 블록 내의 Import는 평가되지 않음 |
 
 ### Import 활용 팁
 
-사용자 홈 디렉토리의 파일을 Import하는 것은 팀원 각자가 개별 지침을 제공하는 편리한 방법입니다. `CLAUDE.local.md`는 이전에 비슷한 목적이었으나, Import 기능이 여러 git worktree에서 더 잘 동작하므로 현재는 deprecated 되었으며 Import 사용이 권장됩니다.
+사용자 홈 디렉토리의 파일을 Import하는 것은 팀원 각자가 개별 지침을 제공하는 편리한 방법입니다. `CLAUDE.local.md`도 비슷한 목적으로 사용되지만, gitignored `CLAUDE.local.md`는 해당 파일을 생성한 worktree에만 존재합니다. 동일한 리포지토리의 여러 git worktree에 걸쳐 개인 지침을 공유하려면 홈 디렉토리의 파일을 Import하는 방식이 더 잘 동작합니다.
 
 ---
 
@@ -385,7 +396,7 @@ Claude에게 무언가를 기억해달라고 요청하면(예: "pnpm을 사용�
 |----|----------|
 | **macOS** | `/Library/Application Support/ClaudeCode/CLAUDE.md` |
 | **Linux/WSL** | `/etc/claude-code/CLAUDE.md` |
-| **Windows** | `C:\ProgramData\ClaudeCode\CLAUDE.md` |
+| **Windows** | `C:\Program Files\ClaudeCode\CLAUDE.md` |
 
 배포는 구성 관리 시스템을 통해 진행합니다:
 
@@ -548,7 +559,7 @@ Windows에서 `~/.claude`는 `%USERPROFILE%\.claude`로 확인됩니다. `CLAUDE
 | `.mcp.json` | 프로젝트 전용 | O | 팀 공유 MCP 서버 |
 | `skills/<name>/SKILL.md` | 프로젝트 및 전역 | O | `/name`으로 호출되는 재사용 가능한 프롬프트 |
 | `agents/*.md` | 프로젝트 및 전역 | O | 자체 프롬프트와 도구를 가진 서브에이전트 정의 |
-| `workflows/*.js` | 프로젝트 및 전역 | O | 동적 워크플로 스크립트 |
+| `workflows/*.js` | 프로젝트 및 전역 | O | 동적 워크플로 스크립트 - Claude가 `/workflows`에서 작성 및 저장하며, 각 파일은 `/<name>` 명령이 됨 |
 | `agent-memory/<name>/` | 프로젝트 및 전역 | O | 서브에이전트용 영구 메모리 |
 | `.worktreeinclude` | 프로젝트 전용 | O | 새 worktree에 복사할 gitignore 파일 목록 |
 | `commands/*.md` | 프로젝트 및 전역 | O | 단일 파일 프롬프트 (skills와 동일 메커니즘) |
@@ -742,4 +753,4 @@ CLAUDE.md 콘텐츠는 시스템 프롬프트의 일부가 아닌 시스템 프�
 
 ## 요약
 
-Claude Code의 메모리 시스템은 세션 간 일관성을 제공하는 핵심 기능입니다. CLAUDE.md 파일은 사용자가 작성하는 지속적 지침이며, auto memory는 Claude가 스스로 학습 내용을 축적하는 메커니즘입니다. 계층적 구조(관리형 정책 > 사용자 > 프로젝트 > 로컬), Import 기능(최대 5단계), `.claude/rules/`를 통한 path-specific 규칙(frontmatter `paths` 필드), managed CLAUDE.md를 통한 조직 전체 배포를 이해하는 것이 중요합니다. CLAUDE.md의 블록 수준 HTML 주석은 컨텍스트 주입 전에 제거되며, auto memory는 `MEMORY.md` 엔트리포인트 기반으로 최대 200줄/25KB가 로드되고 토픽 파일은 온디맨드로 읽힙니다. `.claude/` 디렉토리는 `.worktreeinclude`, `commands/`, `output-styles/`, `keybindings.json`, `themes/` 등의 파일도 포함하며, 애플리케이션 데이터는 `cleanupPeriodDays`(기본 30일)에 따라 자동 정리되거나 무기한 보관됩니다. 정기적인 검토와 업데이트를 통해 항상 최신 상태를 유지하세요.
+Claude Code의 메모리 시스템은 세션 간 일관성을 제공하는 핵심 기능입니다. CLAUDE.md 파일은 사용자가 작성하는 지속적 지침이며, auto memory는 Claude가 스스로 학습 내용을 축적하는 메커니즘입니다. 계층적 구조(관리형 정책 > 사용자 > 프로젝트 > 로컬), Import 기능(최대 4단계, 4 hops), `.claude/rules/`를 통한 path-specific 규칙(frontmatter `paths` 필드), managed CLAUDE.md를 통한 조직 전체 배포를 이해하는 것이 중요합니다. CLAUDE.md의 블록 수준 HTML 주석은 컨텍스트 주입 전에 제거되며, auto memory는 `MEMORY.md` 엔트리포인트 기반으로 최대 200줄/25KB가 로드되고 토픽 파일은 온디맨드로 읽힙니다. `.claude/` 디렉토리는 `.worktreeinclude`, `commands/`, `output-styles/`, `keybindings.json`, `themes/` 등의 파일도 포함하며, 애플리케이션 데이터는 `cleanupPeriodDays`(기본 30일)에 따라 자동 정리되거나 무기한 보관됩니다. 정기적인 검토와 업데이트를 통해 항상 최신 상태를 유지하세요.

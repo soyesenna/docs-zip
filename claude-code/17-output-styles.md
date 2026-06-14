@@ -1,7 +1,6 @@
 # 17. 출력 스타일 (Output Styles)
 
-> **원문**: [Output styles - Claude Code Docs](https://code.claude.com/docs/en/output-styles)
-> **기존 참조**: [Settings - Output styles - Anthropic](https://docs.anthropic.com/en/docs/claude-code/settings)
+> **원문**: [Output styles - Claude Code Docs](https://code.claude.com/docs/en/output-styles) | [Settings - Output styles - Anthropic](https://docs.anthropic.com/en/docs/claude-code/settings)
 
 ---
 
@@ -50,6 +49,8 @@ Claude Code의 **Default** 출력 스타일은 소프트웨어 엔지니어링 �
 > /config
 # Output style → 원하는 스타일 선택
 ```
+
+> **참고**: 단독 `/output-style` 명령어는 v2.1.73에서 감축(deprecated)되었고 v2.1.91에서 제거되었습니다. `/config`를 사용하거나 `outputStyle` 설정을 직접 편집하세요.
 
 ### settings.json 직접 편집
 

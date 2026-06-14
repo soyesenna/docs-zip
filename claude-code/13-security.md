@@ -1,6 +1,6 @@
 # 13. 보안 (Security)
 
-> **원문**: [Security](https://code.claude.com/docs/en/security) | [Sandboxing](https://code.claude.com/docs/en/sandboxing) | [Data Usage](https://code.claude.com/docs/en/data-usage) | [Legal and Compliance](https://code.claude.com/docs/en/legal-and-compliance) | [Zero Data Retention](https://code.claude.com/docs/en/zero-data-retention)
+> **원문**: [Security](https://code.claude.com/docs/en/security) | [Sandboxing](https://code.claude.com/docs/en/sandboxing) | [Sandbox Environments](https://code.claude.com/docs/en/sandbox-environments) | [Data Usage](https://code.claude.com/docs/en/data-usage) | [Legal and Compliance](https://code.claude.com/docs/en/legal-and-compliance) | [Zero Data Retention](https://code.claude.com/docs/en/zero-data-retention) | [Security Guidance](https://code.claude.com/docs/en/security-guidance)
 >
 > **참조(구)**: [Security - Anthropic](https://docs.anthropic.com/en/docs/claude-code/security)
 
@@ -21,6 +21,7 @@
 - [데이터 사용](#데이터-사용)
 - [법률 및 규정 준수](#법률-및-규정-준수)
 - [Zero Data Retention](#zero-data-retention)
+- [Security guidance 플러그인](#security-guidance-플러그인)
 - [보안 모범 사례](#보안-모범-사례)
 
 ---
@@ -90,7 +91,7 @@ Bash 명령을 파일시스템 및 네트워크 격리와 함께 샌드박스에
 
 ### 안전한 자격 증명 저장소
 
-API 키와 토큰은 암호화되어 저장됩니다. 자세한 내용은 Credential Management 문서를 참조하세요.
+API 키와 토큰은 macOS에서는 macOS Keychain에 저장되며(가능한 경우), Windows와 Linux에서는 파일 권한으로 보호됩니다. 자세한 내용은 Credential Management 문서를 참조하세요.
 
 ### 사용자 책임
 
@@ -109,7 +110,7 @@ Claude Code는 사용자가 부여한 권한만 가집니다. 승인 전에 제�
 | **권한 시스템** | 민감한 작업에는 명시적 승인 필요 |
 | **컨텍스트 인식 분석** | 전체 요청을 분석하여 잠재적으로 유해한 지침 감지 |
 | **입력 정제** | 사용자 입력을 처리하여 명령 인젝션 방지 |
-| **명령 블록리스트** | `curl`, `wget` 등 웹에서 임의 콘텐츠를 가져오는 위험한 명령 차단 |
+| **웹 콘텐츠 명령 프롬프트** | `curl`, `wget` 등 웹에서 콘텐츠를 가져오는 명령은 기본적으로 자동 승인되지 않고 일반 비읽기 전용 Bash 명령처럼 프롬프트 표시. 한 번 승인하거나 `Bash(curl *)` 같은 명시적 허용 규칙 추가 가능. 완전히 차단하려면 `permissions.deny`에 추가 |
 
 ### 추가 보호 기능
 
@@ -121,7 +122,7 @@ Claude Code는 사용자가 부여한 권한만 가집니다. 승인 전에 제�
 | **명령 인젝션 감지** | 의심스러운 Bash 명령은 이전에 허용 목록에 있어도 수동 승인 필요 |
 | **Fail-closed 매칭** | 일치하지 않는 명령은 수동 승인 필요 (기본 거부) |
 | **자연어 설명** | 복잡한 Bash 명령에 사용자 이해를 돕는 설명이 포함됨 |
-| **안전한 자격 증명 저장소** | API 키와 토큰은 암호화되어 저장됨. Credential Management 참조 |
+| **안전한 자격 증명 저장소** | API 키와 토큰은 macOS에서는 Keychain에 저장되며(가능한 경우), Windows와 Linux에서는 파일 권한으로 보호됨. Credential Management 참조 |
 
 > **참고**: `-p` 플래그로 비대화형 모드로 실행할 때는 신뢰 검증이 비활성화됩니다. 단, `--worktree`는 예외로, 해당 디렉토리에 대해 신뢰가 이미 수락되어 있어야 합니다.
 >
@@ -239,7 +240,7 @@ sudo dnf install bubblewrap socat
 | **Auto-allow** | Bash 명령이 샌드박스 내에서 자동으로 실행되며 권한 없이 허용됨. 샌드박스 불가 명령은 일반 권한 흐름으로 폴백 |
 | **Regular permissions** | 샌드박스된 명령도 포함하여 모든 Bash 명령이 일반 권한 흐름을 거침 |
 
-> Auto-allow 모드에서도 명시적 거부 규칙은 항상 존중되며, `/`, 홈 디렉토리 등 중요 시스템 경로를 대상으로 하는 `rm`/`rmdir`은 여전히 권한 프롬프트를 트리거합니다. Ask 규칙은 폴백된 명령에도 적용됩니다.
+> Auto-allow 모드에서도 명시적 거부 규칙은 항상 존중되며, `/`, 홈 디렉토리 등 중요 시스템 경로를 대상으로 하는 `rm`/`rmdir`은 여전히 권한 프롬프트를 트리거합니다. `Bash(git push *)` 같은 콘텐츠 범위 ask 규칙은 샌드박스된 명령에 대해서도 여전히 프롬프트를 강제합니다. 단, 단순한 `Bash` ask 규칙 또는 이와 동등한 `Bash(*)` 형태는 샌드박스에서 실행되는 명령에 대해서는 생략되며, 일반 권한 흐름으로 폴백된 명령에 대해서만 적용됩니다.
 
 샌드박스에서 실행할 수 없는 명령(호환되지 않는 도구, 허용되지 않은 호스트 필요 등)은 `dangerouslyDisableSandbox` 매개변수로 재시도할 수 있습니다. 이 이스케이프 해치를 비활성화하려면 `"allowUnsandboxedCommands": false`를 설정하세요(Strict sandbox mode).
 
@@ -249,11 +250,13 @@ sudo dnf install bubblewrap socat
 
 | 동작 | 설명 |
 |------|------|
-| **기본 쓰기** | 작업 디렉토리와 하위 디렉토리에 읽기/쓰기 허용 |
+| **기본 쓰기** | 작업 디렉토리와 하위 디렉토리, 그리고 `$TMPDIR`이 가리키는 세션 임시 디렉토리에 읽기/쓰기 허용 |
 | **기본 읽기** | 전체 컴퓨터 읽기 허용 (일부 디렉토리 제외). 단 `~/.aws/credentials`, `~/.ssh/` 등 자격 증명 파일은 기본적으로 읽기 허용되므로 `denyRead`로 차단해야 함 |
-| **차단** | 작업 디렉토리 외부 파일은 명시적 권한 없이 수정 불가. `.bashrc` 등 셸 설정 파일, `/bin/` 등 시스템 바이너리 포함 |
+| **차단** | 작업 디렉토리와 세션 임시 디렉토리 외부 파일은 명시적 권한 없이 수정 불가. `.bashrc` 등 셸 설정 파일, `/bin/` 등 시스템 바이너리 포함 |
 | **Git Worktree** | 작업 디렉토리가 linked git worktree인 경우, 메인 리포지토리의 공유 `.git` 디렉토리에 쓰기 허용(`git commit` 등). 단 `hooks/`와 `config`에 대한 쓰기는 여전히 차단됨 |
 | **구성 가능** | 설정을 통해 커스텀 허용/차단 경로 정의 가능 |
+
+> Claude Code는 샌드박스된 명령에 대해 `$TMPDIR`을 세션 임시 디렉토리로 설정하므로, 임시 파일을 작성하는 도구가 추가 구성 없이 동작합니다. 비샌드박스 명령은 셸의 `$TMPDIR`을 변경 없이 상속하므로, 샌드박스된 명령과 비샌드박스된 명령이 `$TMPDIR`을 서로 다른 디렉토리로 해석합니다. 두 환경 간에 임시 파일을 전달하려면 작업 디렉토리 하위에 작성하세요.
 
 #### 파일시스템 구성
 
@@ -466,6 +469,7 @@ Claude Code를 격리하는 방법은 경량 per-command 샌드박스부터 완�
 | 팀 전체에 샌드박스 환경 표준화 | Preconfigured dev container를 리포지토리에 커밋 |
 | 로컬 설정 없는 기기에서 사용 | Claude Code on the web |
 | 조직 내 모든 개발자에게 격리 강제 | 관리 설정으로 샌드박스 강제 |
+| Native Windows 호스트에서 작업 | 컨테이너 또는 VM, 또는 WSL2 내부에서 Bash sandbox 실행 |
 
 ### 격리와 권한 모드의 관계
 
@@ -475,7 +479,7 @@ Claude Code를 격리하는 방법은 경량 per-command 샌드박스부터 완�
 |---|----------|-------------|
 | `/sandbox` | Bash 명령이 실행 후 접근할 수 있는 대상 | 샌드박스 경계 자체 (auto-allow 모드) |
 | Auto mode | 각 도구 호출의 실행 여부 | 동작을 검토하는 분류기 |
-| `--dangerously-skip-permissions` | 각 도구 호출의 실행 여부 | 없음. 보호 경로 검사도 생략 |
+| `--dangerously-skip-permissions` | 각 도구 호출의 실행 여부 | 없음. 보호 경로 검사도 생략. 단 명시적 ask 규칙과 `/` 또는 홈 디렉토리 제거는 여전히 프롬프트 |
 
 > 샌드박스의 auto-allow 모드는 auto mode와 별개입니다. auto-allow는 샌드박스 경계가 포함하고 있으므로 Bash 명령을 승인하지만, auto mode는 분류기를 사용하여 동작을 검토합니다. 두 가지는 독립적으로 작동하며 결합할 수 있습니다.
 
@@ -483,13 +487,13 @@ Claude Code를 격리하는 방법은 경량 per-command 샌드박스부터 완�
 
 ### Sandbox Runtime
 
-`@anthropic-ai/sandbox-runtime` 패키지는 전체 프로세스를 Seatbelt 또는 bubblewrap 격리로 래핑합니다. Bash뿐만 아니라 모든 도구, 훅, MCP 서버를 제한합니다.
+`@anthropic-ai/sandbox-runtime` 패키지는 전체 프로세스를 Seatbelt 또는 bubblewrap 격리로 래핑합니다. Bash뿐만 아니라 모든 도구, 훅, MCP 서버를 제한합니다. 이 런타임은 베타 연구 미리보기이며, 패키지가 발전함에 따라 구성 형식이 변경될 수 있습니다.
 
 ```bash
 npx @anthropic-ai/sandbox-runtime claude
 ```
 
-`~/.srt-settings.json`에서 최소한 프로젝트 디렉토리와 Claude Code 구성 경로(`~/.claude`, `~/.claude.json`)에 쓰기 접근을 허용하고, `api.anthropic.com` 등 필요한 네트워크 도메인을 허용하세요.
+이 런타임은 기본적으로 모든 쓰기 및 네트워크 접근을 거부하므로, Claude Code를 통해 실행하기 전에 먼저 구성해야 합니다. `~/.srt-settings.json`(또는 `--settings` 플래그로 전달한 파일)에서 최소한 프로젝트 디렉토리와 Claude Code 구성 경로(`~/.claude`, `~/.claude.json`)에 쓰기 접근을 허용하고, `api.anthropic.com` 등 필요한 네트워크 도메인을 허용하세요.
 
 ### Dev Container
 
@@ -564,6 +568,10 @@ OpenTelemetry 수집기를 통해 설문을 다시 활성화하려면 `CLAUDE_CO
 > Consumer 사용자는 claude.ai/settings/data-privacy-controls에서 언제든지 개인정보 설정을 변경할 수 있습니다.
 >
 > Claude Code on the web 세션은 언제든지 개별 삭제할 수 있습니다. 세션 삭제는 해당 세션의 이벤트 데이터를 영구적으로 제거합니다.
+
+### 데이터 접근
+
+모든 자사(1st-party) 사용자는 로컬 Claude Code와 원격 Claude Code에서 각각 어떤 데이터가 로깅되는지 확인할 수 있습니다. Remote Control 세션은 모든 실행이 로컬 머신에서 이루어지므로 로컬 데이터 흐름을 따릅니다. 원격 Claude Code의 경우, Claude는 Claude Code 세션을 시작한 리포지토리에만 접근합니다. 연결은 했지만 세션을 시작하지 않은 리포지토리에는 Claude가 접근하지 않습니다.
 
 ### 로컬 Claude Code: 데이터 흐름 및 의존성
 
@@ -681,7 +689,7 @@ Claude for Enterprise의 ZDR은 엔터프라이즈 고객에게 zero data retent
 
 ### ZDR 적용 범위
 
-**ZDR이 적용되는 항목**: Claude for Enterprise에서 Claude Code를 통해 이루어지는 모델 추론 호출. 터미널에서 Claude Code를 사용할 때, 전송한 프롬프트와 Claude가 생성한 응답은 Anthropic에 의해 보관되지 않습니다. 사용하는 Claude 모델에 관계없이 적용됩니다.
+**ZDR이 적용되는 항목**: Claude for Enterprise에서 Claude Code를 통해 이루어지는 모델 추론 호출. 터미널에서 Claude Code를 사용할 때, 전송한 프롬프트와 Claude가 생성한 응답은 Anthropic에 의해 보관되지 않습니다. ZDR 조직이 사용할 수 있는 모든 모델에 적용됩니다. 일부 모델은 데이터 보유가 필요하여 ZDR에서 사용할 수 없습니다. 자세한 내용은 아래 [ZDR에서의 모델 가용성](#zdr에서의-모델-가용성)을 참조하세요.
 
 **ZDR이 적용되지 않는 항목**:
 
@@ -707,6 +715,12 @@ ZDR이 Claude Code 조직(Claude for Enterprise)에 대해 활성화되면, 프�
 >
 > 향후 프롬프트나 완성 결과 저장이 필요한 기능도 추가로 비활성화될 수 있습니다.
 
+### ZDR에서의 모델 가용성
+
+Claude Fable 5는 ZDR이 활성화된 조직에서 사용할 수 없습니다. 이 모델 클래스는 데이터 보유를 필요로 하므로, ZDR 조직의 요청은 이 모델로 처리될 수 없습니다. ZDR 조직의 `/model` 선택기에서 해당 모델이 아예 나타나지 않거나, ZDR 비활성화가 필요하다는 알림과 함께 비활성화된 상태로 표시되며, 클라이언트 구성과 무관하게 서버가 이 모델에 대한 요청을 거부합니다.
+
+다른 모델은 ZDR 하에서 계속 사용할 수 있습니다. Fable 5는 기본 모델이 아니며, 사용 가능한 곳에서 Fable 5로 해석되는 `best` 별칭은 사용할 수 없는 조직(Fable 5를 사용할 수 없는 ZDR 조직 포함)에서는 Opus로 해석됩니다.
+
 ### 정책 위반 시 데이터 보유
 
 ZDR이 활성화되어 있어도, Anthropic은 법적 요구 또는 Usage Policy 위반 대응을 위해 데이터를 보유할 수 있습니다. 정책 위반으로 세션이 플래그된 경우, Anthropic은 관련 입력 및 출력을 **최대 2년**간 보유할 수 있습니다. 이는 Anthropic의 표준 ZDR 정책과 일치합니다.
@@ -716,6 +730,12 @@ ZDR이 활성화되어 있어도, Anthropic은 법적 요구 또는 Usage Policy
 Claude for Enterprise에서 Claude Code에 대한 ZDR을 요청하려면 sales 또는 Anthropic 계정 팀에 연락하세요. 계정 팀이 내부적으로 요청을 제출하면, Anthropic이 자격 요건을 확인한 후 조직에 ZDR을 활성화합니다. 모든 활성화 작업은 감사 로그에 기록됩니다.
 
 > 종량제 API 키로 현재 ZDR을 사용 중인 경우, Claude for Enterprise로 전환하여 관리 기능에 접근하면서 ZDR을 유지할 수 있습니다. 계정 팀에 연락하여 마이그레이션을 조율하세요.
+
+---
+
+## Security guidance 플러그인
+
+Security guidance 플러그인(`security-guidance@claude-plugins-official`)은 Claude가 세션 중 자신의 코드 변경사항을 검토하여 일반적인 취약점(injection, 안전하지 않은 역직렬화, 안전하지 않은 DOM API 등)을 찾고, 같은 세션에서 수정하도록 만듭니다. 설치하면 자동으로 실행되며 별도 명령이 없습니다. PR 시점에 동작하는 Code Review의 세션 내 동반자 역할로, 코드가 PR에 도달하기 전에 문제를 줄여줍니다. 자세한 내용은 [Security guidance](https://code.claude.com/docs/en/security-guidance) 문서를 참조하세요.
 
 ---
 

@@ -2,7 +2,7 @@
 
 > CLI 명령어, 플래그, 슬래시 명령어, 대화형 단축키, 키바인딩 설정, 내장 도구 전체 참조
 >
-> **원문**: [CLI Reference](https://code.claude.com/docs/en/cli-reference) | [Commands](https://code.claude.com/docs/en/commands) | [Interactive Mode](https://code.claude.com/docs/en/interactive-mode) | [Keybindings](https://code.claude.com/docs/en/keybindings) | [Tools Reference](https://code.claude.com/docs/en/tools-reference) | [Fullscreen](https://code.claude.com/docs/en/fullscreen)
+> **원문**: [CLI Reference](https://code.claude.com/docs/en/cli-reference) | [Headless](https://code.claude.com/docs/en/headless) | [Commands](https://code.claude.com/docs/en/commands) | [Interactive Mode](https://code.claude.com/docs/en/interactive-mode) | [Keybindings](https://code.claude.com/docs/en/keybindings) | [Tools Reference](https://code.claude.com/docs/en/tools-reference) | [Fullscreen](https://code.claude.com/docs/en/fullscreen)
 >
 > **기존 링크**: [CLI Reference - Anthropic](https://docs.anthropic.com/en/docs/claude-code/cli-reference) | [Interactive Mode - Anthropic](https://docs.anthropic.com/en/docs/claude-code/interactive-mode) | [Slash Commands - Anthropic](https://docs.anthropic.com/en/docs/claude-code/slash-commands) | [SDK - Anthropic](https://docs.anthropic.com/en/docs/claude-code/sdk)
 
@@ -53,6 +53,7 @@ Claude Code의 동작을 커스터마이즈하는 명령줄 플래그입니다. 
 | 플래그 | 설명 | 예시 |
 |--------|------|------|
 | `--add-dir` | Claude가 파일을 읽고 편집할 추가 작업 디렉토리 | `claude --add-dir ../apps ../lib` |
+| `--advisor <model>` | 이 세션에 대해 서버사이드 advisor 도구를 활성화. 모델 별칭 `opus`, `sonnet`, `fable` (v2.1.170+), 또는 전체 모델 ID 사용. 세션의 `advisorModel` 설정보다 우선. Claude Code v2.1.98 이상 필요 | `claude --advisor opus` |
 | `--agent` | 세션에 사용할 에이전트 지정 (`agent` 설정 오버라이드) | `claude --agent my-custom-agent` |
 | `--agents` | JSON으로 커스텀 서브에이전트 동적 정의 | `claude --agents '{"reviewer":{"description":"Reviews code","prompt":"You are a code reviewer"}}'` |
 | `--allow-dangerously-skip-permissions` | `Shift+Tab` 모드 순환에 `bypassPermissions` 추가 (시작 모드는 다르게 지정 가능) | `claude --permission-mode plan --allow-dangerously-skip-permissions` |
@@ -75,7 +76,7 @@ Claude Code의 동작을 커스터마이즈하는 명령줄 플래그입니다. 
 | `--enable-auto-mode` | v2.1.111에서 제거됨. `--permission-mode auto` 사용 | `claude --permission-mode auto` |
 | `--exclude-dynamic-system-prompt-sections` | 시스템 프롬프트의 머신별 섹션을 첫 사용자 메시지로 이동. 프롬프트 캐시 재사용 개선 | `claude -p --exclude-dynamic-system-prompt-sections "쿼리"` |
 | `--exec` | Claude 세션 대신 쉘 명령을 PTY 백그라운드 작업으로 실행 | `claude --bg --exec 'pytest -x'` |
-| `--fallback-model` | 기본 모델 과부하 시 자동 폴백할 모델 지정 (print 모드, 백그라운드 세션에만 적용) | `claude -p --fallback-model sonnet "쿼리"` |
+| `--fallback-model` | 기본 모델 과부하 또는 사용 불가(예: 단종된 모델) 시 자동 폴백할 모델 지정. 쉼표로 구분된 목록을 순서대로 시도. print 모드, 백그라운드 세션에만 적용 | `claude -p --fallback-model sonnet,haiku "쿼리"` |
 | `--fork-session` | 재개 시 새 세션 ID 생성 (`--resume` 또는 `--continue`와 함께 사용) | `claude --resume abc123 --fork-session` |
 | `--from-pr` | 특정 PR에 연결된 세션 재개. PR 번호, GitHub/GitLab/Bitbucket URL 지원 | `claude --from-pr 123` |
 | `--ide` | 시작 시 사용 가능한 IDE가 정확히 하나면 자동 연결 | `claude --ide` |
@@ -89,7 +90,7 @@ Claude Code의 동작을 커스터마이즈하는 명령줄 플래그입니다. 
 | `--max-budget-usd` | API 호출 최대 지출 금액 (print 모드만) | `claude -p --max-budget-usd 5.00 "쿼리"` |
 | `--max-turns` | 에이전트 턴 수 제한 (print 모드만) | `claude -p --max-turns 3 "쿼리"` |
 | `--mcp-config` | JSON 파일 또는 문자열에서 MCP 서버 로드 | `claude --mcp-config ./mcp.json` |
-| `--model` | 세션 모델 설정. 별칭 (`sonnet`, `opus`) 또는 전체 이름. `model` 설정 및 `ANTHROPIC_MODEL` 오버라이드 | `claude --model claude-sonnet-4-6` |
+| `--model` | 세션 모델 설정. 최신 모델의 별칭 (`sonnet`, `opus`, `haiku`, `fable`) 또는 전체 이름. `model` 설정 및 `ANTHROPIC_MODEL` 오버라이드 | `claude --model claude-sonnet-4-6` |
 | `--name`, `-n` | 세션 표시 이름 설정. `/resume` 및 터미널 제목에 표시 | `claude -n "my-feature-work"` |
 | `--no-chrome` | Chrome 브라우저 통합 비활성화 | `claude --no-chrome` |
 | `--no-session-persistence` | 세션 저장을 비활성화하여 디스크에 기록하지 않고 재개 불가. print 모드만. `CLAUDE_CODE_SKIP_PROMPT_HISTORY` 환경변수로 모든 모드에서 동일 효과 | `claude -p --no-session-persistence "쿼리"` |
@@ -105,6 +106,7 @@ Claude Code의 동작을 커스터마이즈하는 명령줄 플래그입니다. 
 | `--remote-control-session-name-prefix` | 자동 생성된 Remote Control 세션 이름의 접두사 | `claude remote-control --remote-control-session-name-prefix dev-box` |
 | `--replay-user-messages` | stdin의 사용자 메시지를 stdout에 재생. `--input-format stream-json` 및 `--output-format stream-json` 필요 | `claude -p --input-format stream-json --output-format stream-json --verbose --replay-user-messages` |
 | `--resume`, `-r` | ID 또는 이름으로 특정 세션 재개, 또는 대화형 선택기 표시 | `claude --resume auth-refactor` |
+| `--safe-mode` | 모든 커스터마이징을 비활성화한 상태로 시작하여 깨진 설정 문제 해결: CLAUDE.md, 스킬, 플러그인, 훅, MCP 서버, 커스텀 명령어 및 에이전트, 출력 스타일, 워크플로우, 커스텀 테마, 커스텀 키바인딩, 상태 라인 및 파일 제안 명령어, LSP 서버, 자동 메모리가 로드되지 않음. 인증, 모델 선택, 빌트인 도구, 권한은 정상 동작(`--bare`와 다른 점). 관리 설정 정책(정책 구성 훅, 상태 라인, 파일 제안 명령어, 관리 플러그인/스킬/CLAUDE.md, 정책 구성 MCP 서버 포함)은 여전히 적용. 커스터마이징이 Fable 5 자동 폴백을 트리거하는 원인인지 확인하는 데 유용. `CLAUDE_CODE_SAFE_MODE` 설정 | `claude --safe-mode` |
 | `--session-id` | 대화에 사용할 특정 세션 ID (유효한 UUID) | `claude --session-id "550e8400-e29b-41d4-a716-446655440000"` |
 | `--setting-sources` | 로드할 설정 소스를 쉼표로 구분 (`user`, `project`, `local`) | `claude --setting-sources user,project` |
 | `--settings` | 설정 JSON 파일 경로 또는 인라인 JSON 문자열 | `claude --settings ./settings.json` |
@@ -147,12 +149,14 @@ Claude Code는 시스템 프롬프트 커스터마이징을 위한 4개의 플�
 | 명령어 | 설명 |
 |--------|------|
 | `/add-dir <경로>` | 현재 세션에 작업 디렉토리 추가 |
+| `/advisor [model\|off]` | advisor 도구를 활성화하거나 비활성화. 작업 중 핵심 순간에 두 번째 모델의 가이던스를 참조. `opus`, `sonnet`, `fable` (v2.1.170+), 또는 전체 모델 ID 사용. 인수 없이 실행하면 선택기 열림. Claude Code v2.1.98 이상 필요 |
 | `/agents` | 에이전트 구성 관리 |
 | `/autofix-pr [프롬프트]` | 현재 브랜치의 PR을 감시하고 CI 실패 또는 리뷰 코멘트 시 자동 수정 |
 | `/background [프롬프트]` | 현재 세션을 백그라운드 에이전트로 분리. 별칭: `/bg` |
 | `/batch <지시사항>` | **스킬.** 코드베이스 전체에 대규모 병렬 변경 오케스트레이션 |
 | `/branch [이름]` | 현재 대화의 분기 생성 |
 | `/btw <질문>` | 대화 기록에 추가하지 않고 빠른 질문 |
+| `/cd <경로>` | 이 세션을 새 작업 디렉토리로 이동. 대화의 프롬프트 캐시가 보존됨: 새 디렉토리의 `CLAUDE.md`가 시스템 프롬프트를 재구성하는 대신 메시지로 추가됨. 세션이 새 디렉토리의 프로젝트 저장소로 재배치되어 `--resume`과 `--continue`가 해당 위치에서 찾음. 이전에 작업하지 않은 디렉토리면 신뢰 여부 확인. 추가 디렉토리 접근 권한만 부여하려면 `/add-dir` 사용. `Cd` 권한 규칙으로 `/cd` 대상 제한 또는 비활성화 가능. Claude Code v2.1.169 이상 필요; 이전 버전은 `Unknown command: /cd` 보고 |
 | `/chrome` | Chrome 설정 구성 |
 | `/claude-api [migrate\|managed-agents-onboard]` | **스킬.** Claude API 참조 자료 로드 |
 | `/clear [이름]` | 새 대화 시작. 별칭: `/reset`, `/new` |
@@ -168,7 +172,7 @@ Claude Code는 시스템 프롬프트 커스터마이징을 위한 4개의 플�
 | `/desktop` | Claude Code Desktop 앱에서 세션 계속. 별칭: `/app` |
 | `/diff` | 대화형 diff 뷰어 열기 |
 | `/doctor` | Claude Code 설치 및 설정 진단 |
-| `/effort [수준\|auto]` | 모델 노력 수준 설정 |
+| `/effort [수준\|auto]` | 모델 노력 수준 설정. `low`, `medium`, `high`, `xhigh`, `max`, 또는 `ultracode` 사용 가능(가용 수준은 모델에 따라 다르며, `max`와 `ultracode`는 세션 전용). `ultracode`는 `xhigh` 추론과 자동 워크플로우 오케스트레이션을 결합한 Claude Code 설정. `auto`는 모델 기본값으로 재설정. 인수 없이 실행하면 인터랙티브 슬라이더 열림 |
 | `/exit` | CLI 종료. 별칭: `/quit` |
 | `/export [파일명]` | 대화를 일반 텍스트로 내보내기 |
 | `/fast [on\|off]` | 패스트 모드 토글 |
@@ -189,7 +193,7 @@ Claude Code는 시스템 프롬프트 커스터마이징을 위한 4개의 플�
 | `/login` | Anthropic 계정 로그인 |
 | `/logout` | Anthropic 계정 로그아웃 |
 | `/loop [간격] [프롬프트]` | **스킬.** 프롬프트 반복 실행. 별칭: `/proactive` |
-| `/mcp` | MCP 서버 연결 및 OAuth 인증 관리 |
+| `/mcp [reconnect <server>\|enable\|disable [<server>\|all]]` | MCP 서버 연결 및 OAuth 인증 관리. 인수 없이 실행하면 인터랙티브 목록을 열고, `reconnect <server>`로 연결이 끊긴 서버 하나를 재연결, 또는 `enable`/`disable`에 서버명이나 `all`을 전달해 대화상자를 열지 않고 연결 상태 변경 |
 | `/memory` | CLAUDE.md 메모리 파일 편집 |
 | `/mobile` | Claude 모바일 앱 QR 코드 표시. 별칭: `/ios`, `/android` |
 | `/model [모델]` | AI 모델 전환 |
@@ -225,7 +229,7 @@ Claude Code는 시스템 프롬프트 커스터마이징을 위한 4개의 플�
 | `/status` | 설정 인터페이스 열기 (상태 탭) |
 | `/statusline` | Claude Code 상태 라인 구성 |
 | `/stickers` | Claude Code 스티커 주문 |
-| `/stop` | 현재 백그라운드 세션 중지 |
+| `/stop` | 현재 백그라운드 세션 중지. 백그라운드 세션에 연결된 경우에만 사용 가능. 트랜스크립트와 워크트리는 유지됨. 중지하지 않고 분리하려면 `/exit` 또는 `←` 사용 |
 | `/tasks` | 백그라운드 작업 목록 및 관리. 별칭: `/bashes` |
 | `/team-onboarding` | 팀 온보딩 가이드 생성 |
 | `/teleport` | Claude Code on the web 세션을 로컬로 가져오기. 별칭: `/tp` |
@@ -236,7 +240,7 @@ Claude Code는 시스템 프롬프트 커스터마이징을 위한 4개의 플�
 | `/ultrareview [PR]` | 클라우드 샌드박스에서 심층 다중 에이전트 코드 리뷰 |
 | `/upgrade` | 상위 플랜으로 업그레이드 |
 | `/usage` | 세션 비용, 플랜 사용량 한도, 활동 통계 표시 |
-| `/usage-credits` | 한도 도달 시 작업 계속을 위한 사용량 크레딧 구성 |
+| `/usage-credits` | 한도 도달 시 작업 계속을 위한 사용량 크레딧 구성. 이전 이름: `/extra-usage` |
 | `/verify` | **스킬.** 코드 변경 검증 |
 | `/voice [hold\|tap\|off]` | 음성 받아쓰기 토글 |
 | `/web-setup` | GitHub 계정을 Claude Code on the web에 연결 |
@@ -260,11 +264,13 @@ Claude Code는 시스템 프롬프트 커스터마이징을 위한 4개의 플�
 | `Ctrl+V` 또는 `Cmd+V` (iTerm2) 또는 `Alt+V` (Windows/WSL) | 클립보드에서 이미지 붙여넣기 | 이미지 삽입 |
 | `Ctrl+B` | 실행 중인 작업 백그라운드로 전환. tmux에서는 두 번 누름 | 백그라운드 |
 | `Ctrl+T` | 작업 목록 토글 | 상태 영역 |
+| `Left`/`Right` 방향키 | 대화상자 탭 전환 | 권한 대화상자 및 메뉴에서 탭 간 이동 |
+| `Up`/`Down` 방향키 또는 `Ctrl+P`/`Ctrl+N` | 커서 이동 또는 명령 기록 탐색 | 입력이 여러 시각적 행에 걸치면(줄바꿈 또는 멀티라인) 먼저 프롬프트 내에서 커서 이동. 커서가 첫 번째 또는 마지막 시각적 행에 도달한 후 다시 누르면 명령 기록 탐색. v2.1.169부터 줄바꿈된 싱글라인 입력도 멀티라인과 동일하게 동작 |
 | `Esc` | Claude 중단 | 현재 응답/도구 호출 중단 |
 | `Esc` + `Esc` | 입력 초안 지우기 또는 되감기 | 입력 있으면 지우고 기록에 저장, 없으면 되감기 메뉴 |
-| `Shift+Tab` 또는 `Alt+M` | 권한 모드 순환 | `default` → `acceptEdits` → `plan` → `auto` → `bypassPermissions` |
+| `Shift+Tab` 또는 `Alt+M` | 권한 모드 순환 | `default`, `acceptEdits`, `plan`, 그리고 활성화한 모드(`auto`, `bypassPermissions` 등)를 순환 |
 | `Option+P` (macOS) / `Alt+P` (Windows/Linux) | 모델 전환 | 프롬프트 유지하며 모델 변경 |
-| `Option+T` (macOS) / `Alt+T` (Windows/Linux) | 확장 사고 토글 | v2.1.132부터 macOS에서 Meta 설정 없이 작동 |
+| `Option+T` (macOS) / `Alt+T` (Windows/Linux) | 확장 사고 토글 | Fable 5에는 효과 없음(항상 확장 사고 사용). v2.1.132부터 macOS에서 Meta 설정 없이 작동 |
 | `Option+O` (macOS) / `Alt+O` (Windows/Linux) | 패스트 모드 토글 | 빠른 응답 모드 |
 
 ### 키보드 단축키 — 텍스트 편집
@@ -323,7 +329,16 @@ Claude Code는 시스템 프롬프트 커스터마이징을 위한 4개의 플�
 - 입력 기록은 작업 디렉토리별로 저장됨
 - `/clear` 실행 시 기록 초기화. 이전 대화는 보존되어 `/resume`으로 접근 가능
 - 동일한 프롬프트를 연속으로 제출하면 하나의 기록 항목으로 기록됨
-- `Ctrl+R`로 대화형 역순 검색 가능. `Ctrl+S`로 범위 순환 (이 세션 → 이 프로젝트 → 모든 프로젝트)
+- 위/아래 방향키로 기록 탐색 가능
+- 참고: history expansion(`!`)은 기본적으로 비활성화됨
+
+`Ctrl+R`로 대화형 역순 검색 가능:
+- 검색 시작: `Ctrl+R` 눌러 역순 기록 검색 활성화
+- 검색어 입력: 이전 명령에서 검색할 텍스트 입력. 일치 결과에서 검색어가 하이라이트됨
+- 일치 항목 탐색: `Ctrl+R` 다시 눌러 더 오래된 일치 항목 순환
+- 범위 변경: 검색은 기본적으로 **모든 프로젝트**의 프롬프트를 대상으로 함. `Ctrl+S`로 범위 순환 (이 세션 → 이 프로젝트 → 전체)
+- 일치 항목 수락: `Tab` 또는 `Esc`로 현재 일치 항목을 수락 후 편집 계속, `Enter`로 즉시 실행
+- 검색 취소: `Ctrl+C`, 또는 빈 검색에서 `Backspace`
 
 ### 백그라운드 Bash 명령
 
@@ -353,12 +368,13 @@ Claude Code는 시스템 프롬프트 커스터마이징을 위한 4개의 플�
 |----|------|
 | `Space`, `Enter`, `Escape` | 답변 닫기 |
 | `Up` / `Down` | 답변 스크롤 |
-| `f` | 새 세션으로 포크 |
+| `c` | 답변을 raw Markdown으로 클립보드에 복사. 소스 텍스트 대신 하드 래핑된 터미널 렌더링을 캡처하는 마우스 선택 대신 사용 |
+| `f` | 새 세션으로 포크. 포크는 부모 대화와 이 질문/답변을 실제 트랜스크립트 턴으로 상속하여 전체 도구 접근으로 계속 가능. 원본 세션은 `/resume`에 유지됨. 로컬 세션에서만 사용 가능 |
 | `x` | 이전 `/btw` 교환 목록 지우기 |
 
 ### 세션 리캡
 
-터미널로 돌아오면 마지막 완료 턴 이후 3분 이상 경과 시 한 줄 요약이 표시됩니다. `/recap`으로 수동 생성. `/config`에서 비활성화 가능.
+터미널로 돌아오면 마지막 완료 턴 이후 3분 이상 경과 시 한 줄 요약이 표시됩니다. 리캡은 세션에 최소 3턴이 있어야 나타나며, 연속으로 두 번 표시되지 않습니다. `/recap`으로 수동 생성. `/config`에서 비활성화 가능. 비대화형 모드에서는 항상 건너뜁니다.
 
 ### PR 리뷰 상태
 
@@ -472,7 +488,7 @@ Claude Code는 키보드 단축키 커스터마이징을 지원합니다. `/keyb
 | `chat:clearInput` | Ctrl+L | 화면 다시 그리기. 풀스크린에서 2초 내 두 번 누르면 `/clear` 실행 |
 | `chat:clearScreen` | Cmd+K | 풀스크린에서 2초 내 두 번 누르면 `/clear` 실행 |
 | `chat:killAgents` | Ctrl+X Ctrl+K | 모든 백그라운드 서브에이전트 종료 |
-| `chat:cycleMode` | Shift+Tab | 권한 모드 순환 |
+| `chat:cycleMode` | Shift+Tab\* | 권한 모드 순환. _\*Windows에서 VT 모드가 비활성화된 경우(Node <24.2.0/<22.17.0, Bun <1.2.23) 기본값은 Meta+M_ |
 | `chat:modelPicker` | Meta+P | 모델 선택기 열기 |
 | `chat:fastMode` | Meta+O | 패스트 모드 토글 |
 | `chat:thinkingToggle` | Meta+T | 확장 사고 토글 |
@@ -508,7 +524,7 @@ Claude Code는 키보드 단축키 커스터마이징을 지원합니다. `/keyb
 
 | 액션 | 기본값 | 설명 |
 |------|--------|------|
-| `permission:toggleDebug` | (없음) | 권한 디버그 정보 토글 |
+| `permission:toggleDebug` | (없음) | 권한 디버그 정보 토글. 이전 기본값인 Ctrl+D는 `app:exit`를 가려 v2.1.146에서 제거됨 |
 
 **Transcript 액션** (Transcript 컨텍스트):
 
@@ -531,7 +547,7 @@ Claude Code는 키보드 단축키 커스터마이징을 지원합니다. `/keyb
 
 | 액션 | 기본값 | 설명 |
 |------|--------|------|
-| `task:background` | Ctrl+B | 현재 작업 백그라운드 전환 |
+| `task:background` | Ctrl+B, Ctrl+X Ctrl+B | 현재 작업 백그라운드 전환. `Ctrl+X Ctrl+B` chord는 v2.1.169 이상 필요하며 tmux 접두사 충돌을 회피 |
 
 **Theme 액션** (ThemePicker 컨텍스트):
 
@@ -593,6 +609,17 @@ Claude Code는 키보드 단축키 커스터마이징을 지원합니다. `/keyb
 | `diff:nextFile` | Down, J | 다음 파일; 상세 뷰에서 한 줄 아래로 스크롤 |
 | `diff:viewDetails` | Enter | diff 세부사항 보기 |
 | `diff:back` | (컨텍스트별) | diff 뷰어에서 뒤로 |
+
+diff 상세 뷰(detail view)는 표준 스크롤 액션에 pager 스타일 키를 별도로 바인딩합니다. 이 바인딩은 `DiffDialog` 컨텍스트의 일부이며 상세 뷰에서만 적용되며, 아래 Scroll 액션에 있는 `Scroll` 컨텍스트 기본값은 변경되지 않습니다.
+
+| 액션 | 기본값 | 설명 |
+|------|--------|------|
+| `scroll:pageUp` | PageUp | 뷰포트 절반 위로 스크롤 |
+| `scroll:pageDown` | PageDown | 뷰포트 절반 아래로 스크롤 |
+| `scroll:fullPageUp` | Shift+Space, B | 뷰포트 전체 위로 스크롤 |
+| `scroll:fullPageDown` | Space | 뷰포트 전체 아래로 스크롤 |
+| `scroll:top` | G, Home | 맨 위로 이동 |
+| `scroll:bottom` | Shift+G, End | 맨 아래로 이동 |
 
 **Model Picker 액션** (ModelPicker 컨텍스트):
 
@@ -918,7 +945,7 @@ Claude Code가 코드베이스를 이해하고 수정하는 데 사용하는 빌
 | `CronList` | 세션의 모든 예약된 작업 나열 | 아니요 |
 | `Edit` | 특정 파일에 대한 타겟 편집 | 예 |
 | `EnterPlanMode` | 코딩 전 접근 방식 설계를 위한 계획 모드 전환 | 아니요 |
-| `EnterWorktree` | 격리된 git worktree를 생성하고 전환 | 아니요 |
+| `EnterWorktree` | 격리된 git worktree를 생성하고 전환. 새로 생성 대신 기존 worktree로 전환하려면 `path` 전달(현재 저장소의 기존 worktree). 워크트리 세션 내부, 또는 `isolation: worktree`처럼 작업 디렉토리가 고정된 서브에이전트에서는 `path` 형식만 사용 가능하며 대상은 `.claude/worktrees/` 하위여야 함 | 아니요 |
 | `ExitPlanMode` | 계획을 승인받고 계획 모드 종료 | 예 |
 | `ExitWorktree` | 워크트리 세션을 종료하고 원래 디렉토리로 복귀 | 아니요 |
 | `Glob` | 패턴 매칭으로 파일 찾기 | 아니요 |

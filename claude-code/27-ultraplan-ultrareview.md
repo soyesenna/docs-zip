@@ -1,6 +1,6 @@
 # Ultraplan & Ultrareview — 클라우드 기반 계획 수립 및 심층 코드 리뷰
 
-> **원문**: [Plan in the cloud with ultraplan](https://code.claude.com/docs/en/ultraplan) | [Find bugs with ultrareview](https://code.claude.com/docs/en/ultrareview)
+> **원문**: [Plan in the cloud with ultraplan](https://code.claude.com/docs/en/ultraplan) | [Find bugs with ultrareview](https://code.claude.com/docs/en/ultrareview) | [Code Review](https://code.claude.com/docs/en/code-review)
 
 이 문서는 Claude Code의 클라우드 기반 두 가지 고급 기능을 다룹니다. **Ultraplan**은 계획 작업을 Claude Code on the web 세션으로 위임하여 브라우저에서 리뷰·수정한 뒤 원격 또는 로컬에서 실행하는 기능이며, **Ultrareview**는 다중 에이전트 플릿이 클라우드 샌드박스에서 병렬로 코드를 리뷰하고 각 발견 사항을 독립적으로 재현·검증하는 심층 코드 리뷰 기능입니다.
 
@@ -15,12 +15,12 @@
 | **다중 에이전트** | 단일 Claude 세션이 계획 초안 작성 | 다수의 reviewer agent가 병렬로 리뷰 |
 | **로컬 리소스** | 터미널을 사용하지 않음 | 터미널을 사용하지 않음 |
 | **리뷰 방식** | 브라우저에서 인라인 코멘트, 이모지 반응 | 검증된 발견 사항을 세션에 알림으로 표시 |
-| **명령어** | `/ultraplan` | `/ultrareview` |
+| **명령어** | `/ultraplan` | `/code-review ultra` |
 
 ### 공통 사항
 
 - 모두 Anthropic 클라우드 인프라에서 실행되므로 **Amazon Bedrock, Google Cloud Vertex AI, Microsoft Foundry**에서는 사용할 수 없습니다
-- 모두 **Claude Code on the web 계정**이 필요합니다. Ultraplan은 **GitHub 저장소**가 필요하지만, Ultrareview는 인자 없이 실행하는 기본 모드(브랜치 diff 리뷰)에서는 GitHub 없이도 동작하며, PR 모드에서만 `github.com` 원격이 필요합니다
+- 모두 **Claude Code on the web 계정**이 필요합니다. Ultraplan은 **GitHub 저장소**가 필요하지만, Ultrareview는 인자 없이 실행하는 기본 모드(브랜치 diff 리뷰)에서는 GitHub 없이도 동작하며, PR 모드에서만 `github.com` 또는 관리자가 Claude Code에 연결한 **GitHub Enterprise Server** 인스턴스가 필요합니다
 - Ultraplan은 Claude.ai 계정 인증이 필요하며, Ultrareview도 Claude.ai 계정 인증이 필요합니다 (API 키만으로는 불가)
 - **Ultrareview**는 **Zero Data Retention**이 활성화된 조직에서는 사용할 수 없습니다. Ultraplan에는 이 제한이 공식 문서에 명시되어 있지 않습니다
 
@@ -29,6 +29,8 @@
 ## Ultraplan
 
 Ultraplan은 계획 작업을 로컬 CLI에서 Claude Code on the web 세션으로 위임합니다. Claude가 클라우드에서 계획을 작성하는 동안 터미널에서 다른 작업을 계속할 수 있습니다. 계획이 완료되면 브라우저에서 열어 특정 섹션에 코멘트를 남기고, 수정을 요청하고, 실행 위치를 선택할 수 있습니다.
+
+Ultraplan은 Claude Code on the web 계정과 GitHub 저장소가 필요합니다. Anthropic 클라우드 인프라에서 실행되므로 Amazon Bedrock, Google Cloud Vertex AI, Microsoft Foundry에서는 사용할 수 없습니다. 클라우드 세션은 계정의 기본 cloud environment에서 실행되며, 아직 cloud environment가 없으면 ultraplan이 처음 시작될 때 자동으로 생성합니다.
 
 ### Ultraplan이 제공하는 이점
 
@@ -108,7 +110,7 @@ Remote Control이 활성화된 경우, ultraplan 시작 시 연결이 해제됩�
 
 ## Ultrareview
 
-Ultrareview는 Claude Code on the web 인프라에서 실행되는 심층 코드 리뷰입니다. `/ultrareview`를 실행하면 Claude Code가 원격 샌드박스에서 reviewer agent 플릿을 시작하여 브랜치 또는 pull request의 버그를 찾습니다.
+Ultrareview는 Claude Code on the web 인프라에서 실행되는 심층 코드 리뷰입니다. `/code-review ultra`를 실행하면 Claude Code가 원격 샌드박스에서 reviewer agent 플릿을 시작하여 브랜치 또는 pull request의 버그를 찾습니다.
 
 로컬 `/review`와 비교한 ultrareview의 장점:
 
@@ -129,29 +131,29 @@ git 저장소 내의 CLI에서 리뷰를 시작합니다.
 | 모드 | 설명 |
 | --- | --- |
 | **기본 (브랜치)** | 인자 없이 실행 시 현재 브랜치와 기본 브랜치 간 diff를 리뷰. 커밋되지 않은 변경과 스테이지된 변경도 포함 |
-| **PR 모드** | PR 번호를 전달하면 원격 샌드박스가 GitHub에서 직접 PR을 클론. 로컬 작업 트리를 번들링하지 않음. `github.com` 원격이 필요 |
+| **PR 모드** | PR 번호를 전달하면 원격 샌드박스가 호스트에서 직접 PR을 클론. 로컬 작업 트리를 번들링하지 않음. `github.com` 또는 관리자가 Claude Code에 연결한 **GitHub Enterprise Server** 인스턴스에서 동작 |
 
 실행 전 Claude Code가 확인 대화상자를 표시합니다. 여기에는 리뷰 범위(브랜치 리뷰 시 파일 및 라인 수 포함), 남은 무료 실행 횟수, 예상 비용이 포함됩니다. 확인 후 리뷰는 백그라운드에서 계속되며 세션을 계속 사용할 수 있습니다.
 
-이 명령은 `/ultrareview`로 호출할 때만 실행됩니다. Claude가 자체적으로 ultrareview를 시작하지 않습니다.
+이 명령은 `/code-review ultra`로 호출할 때만 실행됩니다. Claude가 자체적으로 ultrareview를 시작하지 않습니다.
 
 ### 가격 및 무료 실행
 
-Ultrareview는 프랜차이즈에 포함된 사용량이 아닌 **extra usage**에 대해 청구되는 프리미엄 기능입니다.
+Ultrareview는 플랜에 포함된 사용량이 아닌 **usage credits**에 대해 청구되는 프리미엄 기능입니다.
 
 | 요금제 | 무료 실행 | 무료 소진 후 |
 | --- | --- | --- |
-| **Pro** | 2026년 5월 5일까지 3회 무료 | extra usage로 청구 |
-| **Max** | 2026년 5월 5일까지 3회 무료 | extra usage로 청구 |
-| **Team 및 Enterprise** | 없음 | extra usage로 청구 |
+| **Pro** | 3회 무료 | usage credits로 청구 |
+| **Max** | 3회 무료 | usage credits로 청구 |
+| **Team 및 Enterprise** | 없음 | usage credits로 청구 |
 
 - Pro 및 Max 구독자는 기능 체험용으로 3회의 무료 ultrareview 실행을 받습니다
-- 이 3회는 **계정당 일회성 할당**이며, 갱신되지 않고 2026년 5월 5일에 만료됩니다
-- 무료 실행을 모두 사용했거나 무료 기간이 종료된 후에는 각 리뷰가 extra usage로 청구되며, 변경 규모에 따라 일반적으로 **$5 ~ $20** 소요
+- 이 3회는 **계정당 일회성 할당**이며 갱신되지 않습니다
+- 무료 실행을 모두 사용했거나 무료 기간이 종료된 후에는 각 리뷰가 usage credits로 청구되며, 변경 규모에 따라 일반적으로 **$5 ~ $20** 소요
 - 원격 세션이 시작되면 1회로 계산되므로, 중간에 중지하거나 완료되지 않은 리뷰도 무료 실행을 사용합니다
-- 유료 리뷰의 경우 실행된 부분에 대해서만 extra usage가 청구됩니다
-- Ultrareview는 무료 실행 외에 항상 extra usage로 청구되므로, 계정 또는 조직에 **extra usage가 활성화**되어 있어야 합니다. 비활성화된 경우 Claude Code가 실행을 차단하고 결제 설정 링크를 제공합니다
-- `/extra-usage`를 실행하여 현재 설정을 확인하거나 변경할 수 있습니다
+- 유료 리뷰의 경우 실행된 부분에 대해서만 usage credits가 청구됩니다
+- Ultrareview는 무료 실행 외에 항상 usage credits로 청구되므로, 계정 또는 조직에 **usage credits가 활성화**되어 있어야 합니다. 비활성화된 경우 Claude Code가 실행을 차단하고 결제 설정 링크를 제공합니다
+- `/usage-credits`를 실행하여 현재 설정을 확인하거나 변경할 수 있습니다
 
 ### 실행 중인 리뷰 추적
 
@@ -163,7 +165,7 @@ Ultrareview는 프랜차이즈에 포함된 사용량이 아닌 **extra usage**�
 
 ### 비대화형으로 Ultrareview 실행
 
-CI나 스크립트에서 대화형 세션 없이 ultrareview를 시작하려면 `claude ultrareview` 서브커맨드를 사용합니다. 이 서브커맨드는 `/ultrareview`와 동일한 리뷰를 시작하고, 원격 리뷰가 완료될 때까지 대기한 후 발견 사항을 stdout에 출력하고 종료 코드 0(성공) 또는 1(실패)로 종료합니다.
+CI나 스크립트에서 대화형 세션 없이 ultrareview를 시작하려면 `claude ultrareview` 서브커맨드를 사용합니다. 이 서브커맨드는 `/code-review ultra`와 동일한 리뷰를 시작하고, 원격 리뷰가 완료될 때까지 대기한 후 발견 사항을 stdout에 출력하고 종료 코드 0(성공) 또는 1(실패)로 종료합니다.
 
 ```
 claude ultrareview
@@ -192,23 +194,38 @@ claude ultrareview origin/main
 
 서브커맨드를 중단해도 원격 리뷰는 계속 실행됩니다. stderr에 출력된 세션 URL을 브라우저에서 열어 진행 상황을 확인할 수 있습니다.
 
-GitHub pull request에 대한 자동 리뷰의 경우 **Code Review**가 저장소와 직접 통합되어 CLI 단계 없이 인라인 PR 코멘트로 발견 사항을 게시합니다.
+GitHub pull request에 대한 자동 리뷰의 경우 **Code Review**(별도의 관리형 서비스)가 저장소와 직접 통합되어 CLI 단계 없이 인라인 PR 코멘트로 발견 사항을 게시합니다. PR이 열리거나 푸시될 때, 또는 수동 요청 시 다수의 특화 에이전트가 전체 코드베이스 문맥에서 diff를 병렬 분석한 뒤 검증 단계로 가양성을 걸러냅니다. 발견 사항은 심각도(🔴 Important / 🟡 Nit / 🟣 Pre-existing)로 태깅되어 인라인 코멘트로 달리며, 병합을 차단하지 않습니다. `@claude review`(이후 푸시 시 리뷰 구독) 또는 `@claude review once`(일회성) 코멘트로 수동 트리거할 수 있고, `CLAUDE.md`·`REVIEW.md` 파일로 무엇을 플래그할지 커스터마이즈할 수 있습니다. 발견 사항은 인라인 코멘트 외에 __Claude Code Review__ check run 출력(심각도별 요약 표)과 __Files changed__ 탭의 어노테이션으로도 확인할 수 있습니다.
 
 ---
 
-## /review와 /ultrareview 비교
+## /review와 /code-review ultra 비교
 
 두 명령어 모두 코드를 리뷰하지만 워크플로우의 다른 단계를 대상으로 합니다.
 
-|  | `/review` | `/ultrareview` |
+|  | `/review` | `/code-review ultra` |
 | --- | --- | --- |
 | **실행 위치** | 로컬 세션 | 원격 클라우드 샌드박스 |
 | **깊이** | 단일 패스 리뷰 | 독립 검증이 포함된 다중 에이전트 플릿 |
 | **소요 시간** | 수 초 ~ 수 분 | 약 5~10분 |
-| **비용** | 일반 사용량에 포함 | 무료 실행 후 건당 약 $5 ~ $20 (extra usage) |
+| **비용** | 일반 사용량에 포함 | 무료 실행 후 건당 약 $5 ~ $20 (usage credits) |
 | **적합한 상황** | 작업 중 빠른 피드백 | 본격적인 변경을 병합하기 전 확신이 필요할 때 |
 
-작업 중 빠른 피드백에는 `/review`를, 본격적인 변경을 병합하기 전 단일 리뷰가 놓칠 수 있는 문제를 포착하려면 `/ultrareview`를 사용하세요.
+작업 중 빠른 피드백에는 `/review`를, 본격적인 변경을 병합하기 전 단일 리뷰가 놓칠 수 있는 문제를 포착하려면 `/code-review ultra`를 사용하세요.
+
+### /code-review 명령어 계열
+
+`/code-review`는 GitHub App 설치 없이 터미널에서 diff를 리뷰하는 로컬 명령어입니다(이전 명칭 `/simplify`, v2.1.147 이전). 정확성 버그와 재사용·단순화·효율 정리를 보고하며, 기본적으로 현재 브랜치의 upstream 대비 선행 커밋과 작업 트리의 커밋되지 않은 변경을 커버합니다.
+
+| 인자/플래그 | 설명 |
+| --- | --- |
+| `--comment` | 발견 사항을 인라인 PR 코멘트로 게시 |
+| `--fix` | 리뷰 후 발견 사항을 작업 트리에 적용 |
+| 노력도 (`low` ~ `max`) | 낮은 노력도일수록 더 적고 확신이 높은 발견만 반환, `high`~`max`는 더 넓은 커버리지(불확실한 발견 포함). 인자가 없으면 세션의 현재 노력도 사용 |
+| 대상 (target) | 파일 경로, PR 번호, 브랜치명, 또는 `main...my-feature` 같은 ref 범위. ref 범위는 upstream 설정과 무관하게 병합 시점의 커밋 diff를 리뷰 |
+
+`/code-review ultra --fix`는 클라우드에서 더 깊은 ultrareview를 실행한 뒤, 결과가 세션에 돌아오면 발견 사항을 작업 트리에 적용하는 통합 경로입니다. 이때 ultrareview는 자체 범위(현재 브랜치 vs 저장소 기본 브랜치 + 커밋되지 않은/스테이지된 변경)를 사용합니다.
+
+> v2.1.154부터 `/simplify`는 버그 탐지 없이 정리만 적용하는 별도의 클린업 전용 리뷰로 동작합니다. 버그 탐지용으로 `/simplify`를 스크립팅했다면 `/code-review --fix`로 전환하세요(기능은 동일).
 
 ---
 
@@ -216,5 +233,10 @@ GitHub pull request에 대한 자동 리뷰의 경우 **Code Review**가 저장�
 
 - [Claude Code on the web](https://code.claude.com/docs/en/web) — 원격 세션과 클라우드 샌드박스 작동 방식
 - [Plan mode](https://code.claude.com/docs/en/planning) — 로컬 세션에서 계획 모드 작동 방식
+- [Plan complex changes with ultraplan](https://code.claude.com/docs/en/ultraplan) — ultrareview의 계획 수립 대응 기능 (상호 참조)
 - [Remote Control](https://code.claude.com/docs/en/remote-control) — claude.ai/code 인터페이스를 로컬 세션과 함께 사용
+- [Code Review](https://code.claude.com/docs/en/code-review) — GitHub PR에 대한 자동 리뷰, 심각도 마커, `CLAUDE.md`/`REVIEW.md` 커스터마이징, check run 출력
+- [GitHub Actions](https://code.claude.com/docs/en/ci) · [GitLab CI/CD](https://code.claude.com/docs/en/ci) · [GitHub Enterprise Server](https://code.claude.com/docs/en/code-review) — 자체 CI 인프라 및 자체 호스팅 GitHub 인스턴스에서 Claude 실행
+- [Memory](https://code.claude.com/docs/en/memory) — `CLAUDE.md` 파일이 Claude Code 전반에 걸쳐 동작하는 방식
+- [Analytics](https://code.claude.com/docs/en/analytics) — Code Review 활동 및 지출 추적 (코드 리뷰를 넘어선 Claude Code 사용량)
 - [비용 관리](https://code.claude.com/docs/en/costs) — 사용량 추적 및 지출 한도 설정

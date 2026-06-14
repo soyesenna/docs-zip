@@ -1,17 +1,12 @@
 # 플랫폼 및 통합
 
-> **출처**
-> - https://code.claude.com/docs/en/platforms
-> - https://code.claude.com/docs/en/desktop
-> - https://code.claude.com/docs/en/desktop-quickstart
-> - https://code.claude.com/docs/en/claude-code-on-the-web
-> - https://code.claude.com/docs/en/web-quickstart
-> - https://code.claude.com/docs/en/remote-control
+> 원문: https://code.claude.com/docs/en/platforms | https://code.claude.com/docs/en/desktop | https://code.claude.com/docs/en/desktop-quickstart | https://code.claude.com/docs/en/claude-code-on-the-web | https://code.claude.com/docs/en/web-quickstart | https://code.claude.com/docs/en/remote-control | https://code.claude.com/docs/en/slack | https://code.claude.com/docs/en/voice-dictation | https://code.claude.com/docs/en/deep-links | https://code.claude.com/docs/en/third-party-integrations
+>
+> **추가 참조**
 > - https://code.claude.com/docs/en/chrome
 > - https://code.claude.com/docs/en/channels
+> - https://code.claude.com/docs/en/channels-reference
 > - https://code.claude.com/docs/en/devcontainer
-> - https://code.claude.com/docs/en/slack
-> - https://code.claude.com/docs/en/voice-dictation
 
 Claude Code는 동일한 엔진을 모든 환경에서 실행하지만, 각 플랫폼은 서로 다른 작업 방식에 맞게 튜닝되어 있다. 이 문서는 Claude Code를 다양한 환경에서 사용하는 방법과 외부 서비스와의 통합 방법을 정리한다.
 
@@ -275,7 +270,11 @@ Claude의 대응 방식:
 
 ### Pre-fill Sessions
 
-claude.ai/code URL에 쿼리 파라미터를 추가하여 새 세션의 프롬프트, 리포지토리, 환경을 미리 채울 수 있다.
+링크로부터 Claude Code 세션을 시작하는 방법은 대상 플랫폼에 따라 세 가지로 구분된다. Web(claude.ai/code) 세션은 `https://claude.ai/code` URL의 쿼리 파라미터를 사용하고, CLI 세션은 `claude-cli://` 딥 링크를 사용하며, Mobile/Desktop 앱은 별도의 `claude://` 체계를 사용한다.
+
+#### Web 세션 Pre-fill (claude.ai/code)
+
+claude.ai/code URL에 쿼리 파라미터를 추가하여 새 Web 세션의 프롬프트, 리포지토리, 환경을 미리 채울 수 있다. 이 파라미터들은 Web 세션 전용이며 CLI 딥 링크와는 다른 체계다.
 
 | 파라미터 | 설명 |
 | --- | --- |
@@ -287,6 +286,28 @@ claude.ai/code URL에 쿼리 파라미터를 추가하여 새 세션의 프롬�
 ```
 https://claude.ai/code?prompt=Fix%20the%20login%20bug&repositories=acme/webapp
 ```
+
+#### CLI 세션 Deep Links (claude-cli://)
+
+CLI 세션은 `claude-cli://` 커스텀 URL 체계를 사용한다. 딥 링크는 Claude Code를 새 터미널 창에서 열며, working directory와 prompt를 미리 채운다. 링크를 클릭하면 운영체제가 `claude-cli://` 핸들러를 인식해 Claude Code를 시작하고, 지정한 디렉토리에서 프롬프트가 입력 상자에 채워진 상태로 세션이 열린다. 프롬프트는 채워지기만 할 뿐 `Enter`를 누르기 전까지는 전송되지 않는다.
+
+| 파라미터 | 설명 |
+| --- | --- |
+| `q` | 입력 상자에 미리 채울 프롬프트 텍스트. URL 인코딩 필요. 줄바꿈은 `%0A`. 최대 5,000자 |
+| `cwd` | working directory로 사용할 절대 경로. 네트워크/UNC 경로는 거부됨 |
+| `repo` | GitHub `owner/name` 슬러그. Claude Code가 이전에 본 로컬 클론으로 해석 |
+
+`cwd`와 `repo`는 working directory를 설정하는 두 가지 방식이다. 둘 다 전달하면 `cwd`가 우선하고 `repo`는 무시된다.
+
+```
+claude-cli://open?repo=acme/payments&q=Investigate%20the%20failed%20deploy
+```
+
+딥 링크는 러북, 모니터링 알림, 대시보드, CI 실패 알림 등 링크가 들어갈 수 있는 곳이면 어디든 삽입할 수 있다. Claude Code는 최초 인터랙티브 세션 시작 시 macOS, Linux, Windows에 `claude-cli://` 핸들러를 자동 등록한다. 등록을 완전히 막으려면 `settings.json`에서 `disableDeepLinkRegistration`을 `"disable"`로 설정한다. VS Code 확장은 `vscode://anthropic.claude-code/open` 체계로 별도 핸들러를 등록한다.
+
+#### Mobile / Desktop 앱 딥 링크
+
+Mobile 앱과 Desktop 앱은 `claude://` 체계를 사용하며, CLI의 `claude-cli://` 및 Web의 `https://claude.ai/code` 파라미터와는 별개다. 자세한 내용은 각 앱의 딥 링크 문서를 참조.
 
 ### 리소스 한계
 
@@ -385,8 +406,8 @@ Claude는 브라우저 작업을 위해 새 탭을 열고, 로그인 상태를 �
 
 ### 사전 요구 사항
 
-- **Google Chrome 또는 Microsoft Edge** 브라우저
-- Claude in Chrome 확장 v1.0.36 이상 (Chrome Web Store에서 두 브라우저 모두 설치 가능)
+- **Google Chrome 또는 Microsoft Edge** 브라우저 (Arc, Brave 등 다른 Chromium 기반 브라우저는 지원되지 않음)
+- Claude in Chrome 확장 v1.0.36 이상 (Chrome Web Store에서 Chrome과 Edge 모두 설치 가능)
 - Claude Code v2.0.73 이상
 - 직접 Anthropic 플랜 (Pro, Max, Team, Enterprise)
 
@@ -396,20 +417,37 @@ CLI에서 `/chrome`을 실행하여 연결 상태 확인, 권한 관리, 확장 
 
 ---
 
-## Channels
+## Channels (research preview)
+
+> Channels는 research preview 기능이다. 가용성이 점진적으로 rollout 중이며, `--channels` 플래그 문법과 프로토콜 계약은 피드백에 따라 변경될 수 있다. Team/Enterprise 조직은 관리자가 명시적으로 활성화해야 사용 가능하다.
 
 ### 개요
 
 Channels는 MCP 서버를 통해 실행 중인 Claude Code 세션에 메시지, 알림, webhook을 푸시하는 기능이다. CI 결과, 채팅 메시지, 모니터링 이벤트를 전달하여 자리 비움 중에도 Claude가 반응할 수 있게 한다.
 
+채널은 Claude Code와 동일한 머신에서 실행되는 MCP 서버다. Claude Code가 채널을 서브프로세스로 spawn하고 stdio로 통신한다. 단방향 채널은 알림/webhook/모니터링 이벤트를 전달만 하고, 양방향 채널(예: 채팅 브릿지)은 reply 도구를 노출해 Claude가 메시지를 되돌려 보낼 수 있다. 신뢰할 수 있는 발신자 경로가 있는 채널은 권한 프롬프트를 원격으로 릴레이하는 옵션도 제공한다.
+
+### 요구 사항
+
+- Claude Code v2.1.80 이상
+- `@modelcontextprotocol/sdk` 패키지와 Node.js 호환 런타임 (Bun, Node, Deno 모두 가능)
+- 채널 플러그인은 Bun 스크립트 기반
+- claude.ai Team/Enterprise: 관리자가 `channelsEnabled` 활성화 필요. Console(API 키 인증): 기본 허용
+- 모든 세션은 `--channels` 플래그로 채널을 명시적으로 opt-in해야 활성화됨
+
 ### 지원 채널
 
-- **Telegram**: 채널 플러그인 설치로 이벤트 푸시
-- **Discord**: 채널 플러그인 설치로 이벤트 푸시
-- **iMessage**: 채널 플러그인 설치로 이벤트 푸시
-- **커스텀 서버**: 직접 MCP 서버를 구축하여 이벤트 푸시
+| 채널 | 설명 |
+| --- | --- |
+| **Telegram** | 채널 플러그인으로 이벤트 푸시. 발신자 allowlist로 게이트 |
+| **Discord** | 채널 플러그인으로 이벤트 푸시. 발신자 allowlist로 게이트 |
+| **iMessage** | Messages 데이터베이스를 직접 읽고 AppleScript로 응답. macOS 전용, 봇 토큰 불필요 |
+| **fakechat** | localhost에서 실행되는 공식 데모 채널. 인증이나 외부 서비스 없이 채팅 UI로 테스트. 브라우저에서 입력한 메시지가 Claude Code 세션에 도착 |
+| **커스텀 서버** | 직접 MCP 서버를 구축하여 이벤트 푸시 |
 
-Claude는 CLI에서 실행되며, 채널 플러그인을 설치하거나 직접 구축할 수 있다.
+Telegram과 Discord는 페어링으로 allowlist를 부트스트랩한다(봇에 메시지 전송 → 페어링 코드 응답 → 세션에서 승인 → 발신자 ID 추가). iMessage는 자기 자신에게 보낸 메시지를 자동 통과시키고 다른 연락처는 handle로 추가한다.
+
+research preview 중에는 승인된 allowlist에 있는 플러그인만 등록할 수 있다. 커스텀 채널을 테스트하려면 `--dangerously-load-development-channels` 플래그가 필요하다.
 
 ---
 
@@ -463,6 +501,29 @@ COPY managed-settings.json /etc/claude-code/managed-settings.json
 ```
 
 특정 Claude Code 버전을 고정하려면 Dockerfile에서 `npm install -g @anthropic-ai/claude-code@X.Y.Z`를 사용하고 `DISABLE_AUTOUPDATER`를 설정한다.
+
+### 클라우드 프로바이더 모델 버전 핀
+
+Bedrock, Vertex AI, Foundry, Claude Platform on AWS를 통해 배포할 때는 모델 버전을 핀해야 사용자가 상호작용할 모델을 제어할 수 있다. 핀하지 않으면 모델 별칭이 프로바이더의 기본값으로 해석되어 최신 릴리스에 뒤처지거나 계정에서 아직 활성화되지 않았을 수 있다. 다음 환경 변수로 모델 버전을 핀한다.
+
+| 환경 변수 | 설명 |
+| --- | --- |
+| `ANTHROPIC_DEFAULT_FABLE_MODEL` | fable에 사용할 모델. 2026년 6월 기준 Fable 5가 최신 프리미어 모델 |
+| `ANTHROPIC_DEFAULT_OPUS_MODEL` | opus에 사용할 모델 |
+| `ANTHROPIC_DEFAULT_SONNET_MODEL` | sonnet에 사용할 모델 |
+| `ANTHROPIC_DEFAULT_HAIKU_MODEL` | haiku에 사용할 모델 |
+
+dev container에서는 `containerEnv`로 설정한다.
+
+```json
+"containerEnv": {
+  "CLAUDE_CODE_USE_BEDROCK": "1",
+  "ANTHROPIC_DEFAULT_FABLE_MODEL": "...",
+  "ANTHROPIC_DEFAULT_OPUS_MODEL": "...",
+  "ANTHROPIC_DEFAULT_SONNET_MODEL": "...",
+  "ANTHROPIC_DEFAULT_HAIKU_MODEL": "..."
+}
+```
 
 ### 네트워크 제한
 
@@ -521,10 +582,13 @@ Claude Code CLI에서 프롬프트를 타이핑 대신 말로 입력할 수 있�
 
 ### 요구 사항
 
-- claude.ai 계정 인증 필요 (API 키, Bedrock, Vertex AI, Foundry에서는 사용 불가)
+- **버전**: 음성 입력은 Claude Code v2.1.69 이상 필요. Tap 모드는 v2.1.116 이상 필요. `claude --version`으로 확인 가능
+- **인증**: claude.ai 계정 인증 필요. API 키, Bedrock, Vertex AI, Foundry에서는 사용 불가
 - HIPAA 규정이 활성화된 조직에서는 사용 불가
-- 로컬 마이크 접근 필요 (Web, SSH 세션에서는 사용 불가)
-- 전사는 메시지나 토큰을 소비하지 않음
+- **오디오**: 녹음된 오디오를 Anthropic 서버로 스트리밍해 전사하며 로컬에서 처리하지 않음
+- 로컬 마이크 접근 필요 (Web, SSH 세션에서는 사용 불가). WSL에서는 WSLg 필요 (WSL1은 네이티브 Windows 사용)
+- VS Code 확장도 음성 입력을 지원하나 VS Code Remote(SSH, Dev Containers, Codespaces)에서는 마이크가 로컬에 있어 사용 불가
+- 전사는 Claude 메시지나 토큰을 소비하지 않으며 `/usage` 한도에도 포함되지 않음
 
 ### 활성화
 
@@ -544,6 +608,18 @@ Claude Code CLI에서 프롬프트를 타이핑 대신 말로 입력할 수 있�
 **Hold 모드** (기본값): `Space`를 누르고 있는 동안 녹음. 놓으면 녹음 중지.
 
 **Tap 모드**: `Space`를 한 번 눌러 녹음 시작, 다시 눌러 전송. 프롬프트가 비어 있을 때만 첫 탭이 녹음을 시작한다. 15초 침묵 또는 2분 총 녹음 시 자동 중지.
+
+### dictation 언어 변경
+
+음성 입력은 Claude 응답 언어를 제어하는 동일한 `language` 설정을 사용한다. `language`가 비어 있으면 영어가 기본값이다. `/config`에서 변경하거나 설정 파일에 직접 지정한다. BCP 47 언어 코드 또는 언어 이름 둘 다 사용 가능하다.
+
+```
+{
+  "language": "japanese"
+}
+```
+
+`language` 설정이 지원 목록에 없으면 `/voice` 활성화 시 경고를 표시하고 dictation은 영어로 폴백한다. Claude의 텍스트 응답은 이 폴백의 영향을 받지 않는다.
 
 ### 지원 언어
 
@@ -608,7 +684,8 @@ Computer Use는 `computer-use`라는 내장 MCP 서버로 제공된다. 기본�
 | --- | --- | --- | --- | --- |
 | **Dispatch** | 모바일 앱에서 작업 메시지 | 로컬 머신 (Desktop) | 모바일 앱과 Desktop 페어링 | 자리 비움 중 작업 위임 |
 | **Remote Control** | claude.ai/code 또는 모바일 앱에서 세션 제어 | 로컬 머신 (CLI/VS Code) | `claude remote-control` 실행 | 다른 기기에서 진행 중인 작업 조정 |
-| **Channels** | Telegram, Discord, iMessage 등에서 이벤트 푸시 | 로컬 머신 (CLI) | 채널 플러그인 설치 또는 직접 구축 | CI 실패 등 외부 이벤트 대응 |
+| **Channels** (research preview) | Telegram, Discord, iMessage, fakechat 등에서 이벤트 푸시 | 로컬 머신 (CLI) | 채널 플러그인 설치 또는 직접 구축 | CI 실패 등 외부 이벤트 대응 |
+| **Deep Links** | `claude-cli://` 링크 클릭 또는 셸에서 `open`/`xdg-open` | 로컬 머신 (CLI) | 핸들러 자동 등록, 별도 설치 불필요 | 러북/알림/대시보드에서 원클릭으로 세션 시작 |
 | **Slack** | 팀 채널에서 `@Claude` 멘션 | Anthropic 클라우드 | Slack 앱 설치 + Claude Code on the web 활성화 | 팀 채팅에서 PR 및 리뷰 |
 | **Scheduled tasks** | 일정 설정 | CLI, Desktop, 클라우드 | 빈도 선택 | 일일 리뷰 등 반복 자동화 |
 
@@ -618,7 +695,9 @@ Computer Use는 `computer-use`라는 내장 MCP 서버로 제공된다. 기본�
 
 | 통합 | 기능 | 용도 |
 | --- | --- | --- |
-| **Chrome** | 브라우저를 로그인된 세션으로 제어 | 웹 앱 테스트, 폼 작성, API 없는 사이트 자동화 |
+| **Chrome** | 브라우저를 로그인된 세션으로 제어 (Chrome, Edge만 지원) | 웹 앱 테스트, 폼 작성, API 없는 사이트 자동화 |
+| **Deep Links** | `claude-cli://` 링크로 CLI 세션 시작 | 런북, 알림, 대시보드에서 원클릭 세션 시작 |
+| **Channels** (research preview) | MCP 서버로 실행 중인 세션에 이벤트 푸시 | Telegram, Discord, iMessage, fakechat에서 이벤트 전달 |
 | **GitHub Actions** | CI 파이프라인에서 Claude 실행 | 자동 PR 리뷰, 이슈 분류, 정기 유지보수 |
 | **GitLab CI/CD** | GitLab용 GitHub Actions 동일 기능 | GitLab CI 기반 자동화 |
 | **Code Review** | 모든 PR을 자동으로 리뷰 | 휴먼 리뷰 전 버그 포착 |

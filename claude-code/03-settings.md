@@ -2,7 +2,7 @@
 
 > 설정 파일 계층, 사용 가능한 설정, 권한, 샌드박스, 워크트리, 어트리뷰션, 환경 변수, 글로벌 구성
 
-**원문**: [Claude Code settings](https://code.claude.com/docs/en/settings) | [Environment variables](https://code.claude.com/docs/en/env-vars) | [Permissions](https://code.claude.com/docs/en/permissions) | [Permission modes](https://code.claude.com/docs/en/permission-modes) | [Auto mode config](https://code.claude.com/docs/en/auto-mode-config) | [Terminal config](https://code.claude.com/docs/en/terminal-config) | [Network config](https://code.claude.com/docs/en/network-config)
+**원문**: [Claude Code settings](https://code.claude.com/docs/en/settings) | [Environment variables](https://code.claude.com/docs/en/env-vars) | [Permissions](https://code.claude.com/docs/en/permissions) | [Permission modes](https://code.claude.com/docs/en/permission-modes) | [Auto mode config](https://code.claude.com/docs/en/auto-mode-config) | [Terminal config](https://code.claude.com/docs/en/terminal-config) | [Network config](https://code.claude.com/docs/en/network-config) | [Debug your config](https://code.claude.com/docs/en/debug-your-config)
 
 ---
 
@@ -96,16 +96,17 @@ Claude Code는 설정 파일을 감시하고 변경 시 자동으로 다시 로�
 | 키 | 설명 | 예시 |
 |----|------|------|
 | `$schema` | JSON 스키마 참조. 추가 시 VS Code, Cursor 등에서 자동완성 및 인라인 검증 활성화. 스키마는 주기적으로 업데이트되며 최신 CLI 릴리스의 필드를 포함하지 않을 수 있음 | `"https://json.schemastore.org/claude-code-settings.json"` |
+| `advisorModel` | 서버 사이드 advisor 도구용 모델. `"opus"`, `"sonnet"`, `"fable"` (v2.1.170+) 별칭 또는 전체 모델 ID 허용. `/advisor` 실행 시 자동 기록됨. 설정 해제 시 advisor 비활성화. v2.1.98+ 필요 | `"opus"` |
 | `agent` | 메인 스레드를 명명된 서브에이전트로 실행. `claude agents`에서 디스패치되는 세션의 기본 에이전트도 설정 | `"code-reviewer"` |
 | `alwaysThinkingEnabled` | 모든 세션에 대해 확장 thinking을 기본 활성화. 일반적으로 `/config` 명령으로 구성. thinking을 강제로 끄려면 `env`에 `CLAUDE_CODE_DISABLE_THINKING` 설정 | `true` |
 | `apiKeyHelper` | `/bin/sh`에서 실행할 커스텀 스크립트. 생성된 인증 값이 `X-Api-Key` 및 `Authorization: Bearer` 헤더로 전송됨 | `/bin/generate_temp_api_key.sh` |
 | `attribution` | git 커밋 및 PR의 어트리뷰션 커스터마이즈. 아래 어트리뷰션 설정 참조 | `{"commit": "...", "pr": ""}` |
-| `autoMemoryEnabled` | 자동 메모리 활성화. `false` 시 자동 메모리 디렉토리 읽기/쓰기 안 함 (기본값: `true`) | `false` |
-| `autoMemoryDirectory` | 자동 메모리 저장소의 커스텀 디렉토리. 절대 경로 또는 `~/` 접두사 허용 | `"~/my-memory-dir"` |
+| `autoMemoryEnabled` | 자동 메모리 활성화. `false` 시 자동 메모리 디렉토리 읽기/쓰기 안 함 (기본값: `true`). 세션 중 `/memory`로 토글 가능. 환경변수 `CLAUDE_CODE_DISABLE_AUTO_MEMORY`로 비활성화 가능 | `false` |
+| `autoMemoryDirectory` | 자동 메모리 저장소의 커스텀 디렉토리. 절대 경로 또는 `~/` 접두사 허용. 프로젝트/로컬 설정에서는 복제된 저장소가 이 파일을 제공할 수 있으므로 workspace trust dialog 수락 후에만 적용됨 | `"~/my-memory-dir"` |
 | `autoScrollEnabled` | 전체화면 렌더링에서 새 출력을 따라 자동 스크롤 (기본값: `true`) | `false` |
 | `autoUpdatesChannel` | 업데이트 채널. `"stable"`은 약 1주일 뒤 버전, `"latest"` (기본값)는 최신 릴리스 | `"stable"` |
 | `autoMode` | auto 모드 분류기가 차단/허용하는 항목 커스터마이즈. `environment`, `allow`, `soft_deny`, `hard_deny` 배열 포함. **공유 프로젝트 설정에서는 읽지 않음** | `{"soft_deny": ["$defaults", "Never run terraform apply"]}` |
-| `availableModels` | `/model`, `--model`, `ANTHROPIC_MODEL`로 선택 가능한 모델 제한. Default 옵션에는 영향 없음 | `["sonnet", "haiku"]` |
+| `availableModels` | `/model`, `--model`, `ANTHROPIC_MODEL`로 선택 가능한 모델 제한. Default 옵션에는 영향 없음. Managed 설정에서 security-enforcement 동작: 개별 비문자열 항목은 제거되고 유효 부분집합이 적용됨 (v2.1.175+) | `["sonnet", "haiku"]` |
 | `awaySummaryEnabled` | 몇 분 자리 비운 후 세션 요약 표시 (기본값: `true`) | `false` |
 | `cleanupPeriodDays` | 마지막 활동 날짜 기준으로 세션 파일을 로컬에 보관할 기간 (기본값: 30일, 최소 1) | `20` |
 | `companyAnnouncements` | 시작 시 사용자에게 표시할 공지. 여러 개 제공 시 무작위 순환 | `["Welcome to Acme Corp!"]` |
@@ -113,6 +114,7 @@ Claude Code는 설정 파일을 감시하고 변경 시 자동으로 다시 로�
 | `deniedMcpServers` | managed-settings.json에 설정 시 명시적으로 차단되는 MCP 서버 거부 목록. 모든 스코프에 적용. 거부 목록이 허용 목록보다 우선 | `[{"serverName": "filesystem"}]` |
 | `disableAgentView` | `true`로 설정 시 백그라운드 에이전트 및 에이전트 뷰 비활성화 | `true` |
 | `disableAllHooks` | 모든 hooks 및 커스텀 상태 라인 비활성화 | `true` |
+| `disableBundledSkills` | `true` 시 Claude Code 번들 스킬/워크플로우 완전 제거. 빌트인 슬래시 명령(`/init` 등)은 타이핑 가능하나 모델에 숨김. 플러그인, `.claude/skills/`, `.claude/commands/` 스킬은 영향 없음. 환경변수 `CLAUDE_CODE_DISABLE_BUNDLED_SKILLS=1`과 동등 | `true` |
 | `disableAutoMode` | `"disable"`으로 설정 시 auto 모드 활성화 방지. Shift+Tab 순환에서 제거 | `"disable"` |
 | `disableDeepLinkRegistration` | `"disable"`으로 설정 시 `claude-cli://` 프로토콜 핸들러 등록 방지 | `"disable"` |
 | `disableRemoteControl` | Remote Control 비활성화 (v2.1.128+) | `true` |
@@ -124,6 +126,7 @@ Claude Code는 설정 파일을 감시하고 변경 시 자동으로 다시 로�
 | `enabledMcpjsonServers` | `.mcp.json` 파일에서 승인할 특정 MCP 서버 목록 | `["memory", "github"]` |
 | `disabledMcpjsonServers` | `.mcp.json` 파일에서 거부할 특정 MCP 서버 목록 | `["filesystem"]` |
 | `env` | 모든 세션 및 하위 프로세스에 적용할 환경 변수 | `{"FOO": "bar"}` |
+| `fallbackModel` | 기본 모델이 과부하/사용불가 시 순차 시도할 폴백 모델 체인. Claude Code가 체인의 다음 가용 모델로 전환 후 턴 나머지를 실행하며 알림 표시. `"default"`는 기본 모델로 확장. 체인은 최대 3개 모델로 제한, 초과 항목은 무시. 대부분의 배열 설정과 달리 스코프 간 병합되지 않고, 정의한 최상위 스코프가 전체 체인 제공. `--fallback-model` 플래그로 세션 재정의 | `["claude-sonnet-4-6", "claude-haiku-4-5"]` |
 | `fastModePerSessionOptIn` | `true` 시 fast mode가 세션 간 유지되지 않음. 매 세션마다 `/fast`로 활성화 필요 | `true` |
 | `feedbackSurveyRate` | 세션 품질 설문 표시 확률 (0-1). `0`으로 완전 억제 | `0.05` |
 | `fileSuggestion` | `@` 파일 자동완성을 위한 커스텀 명령 구성. 아래 파일 제안 설정 참조 | `{"type": "command", "command": "~/.claude/file-suggestion.sh"}` |
@@ -172,6 +175,7 @@ Claude Code는 설정 파일을 감시하고 변경 시 자동으로 다시 로�
 | `viewMode` | 시작 시 기본 트랜스크립트 뷰 모드: `"default"`, `"verbose"`, `"focus"` | `"verbose"` |
 | `voice` | 음성 받아쓰기 설정: `enabled`, `mode` (`"hold"` 또는 `"tap"`), `autoSubmit` | `{"enabled": true, "mode": "tap"}` |
 | `voiceEnabled` | `voice.enabled`의 레거시 별칭. `voice` 객체 사용 권장 | `true` |
+| `wheelScrollAccelerationEnabled` | 전체화면 렌더링에서 빠른 스크롤 시 마우스 휠 스크롤 속도 가속화 토글 (기본값: `true`). `false` 시 휠 노치당 일정한 스크롤 속도. v2.1.174+ 필요 | `false` |
 | `workflowKeywordTriggerEnabled` | 프롬프트에서 `ultracode` 키워드가 동적 워크플로우를 트리거할지 여부 (기본값: `true`) | `false` |
 
 ### Managed 전용 설정
@@ -190,14 +194,40 @@ Claude Code는 설정 파일을 감시하고 변경 시 자동으로 다시 로�
 | `channelsEnabled` | 조직의 채널 허용 | `true` |
 | `claudeMd` | 조직 관리 메모리로 CLAUDE.md 형식 지침 주입 | `"Always run make lint before committing."` |
 | `claudeMdExcludes` | 로딩에서 제외할 CLAUDE.md 파일의 글롭 패턴 또는 절대 경로 | `["**/vendor/**/CLAUDE.md"]` |
+| `enforceAvailableModels` | `true` 시 Default 모델도 `availableModels` 허용목록으로 제한. v2.1.175+ | `true` |
 | `forceRemoteSettingsRefresh` | CLI 시작 차단 후 원격 managed 설정 새로고침. 실패 시 종료 | `true` |
-| `parentSettingsBehavior` | 부모 프로세스가 제공한 설정의 처리 방식: `"first-wins"` (기본값) 또는 `"merge"` | `"merge"` |
+| `parentSettingsBehavior` | (Managed만) Agent SDK나 IDE 확장 등 embedding host 프로세스가 프로그래밍 방식으로 제공한 설정이, admin이 배포한 managed tier도 함께 존재할 때 적용 여부 제어. `"first-wins"` (기본값): parent-supplied 설정이 폐기되고 admin tier만 적용. `"merge"`: parent-supplied 설정이 admin tier 아래에 적용되며, policy를 tighten만 하고 loosen할 수 없도록 필터링. admin tier가 없으면 효과 없음. v2.1.133+ 필요 | `"merge"` |
 | `pluginSuggestionMarketplaces` | 컨텍스트 설치 제안에 사용할 마켓플레이스 이름 | `["acme-corp-plugins"]` |
 | `pluginTrustMessage` | 플러그인 신뢰 경고에 추가할 커스텀 메시지 | `"All plugins approved by IT"` |
 | `policyHelper` | 시작 시 managed 설정을 동적으로 계산하는 실행 파일 | `{"path": "/usr/local/bin/claude-policy"}` |
 | `strictKnownMarketplaces` | 플러그인 마켓플레이스 소스 허용목록 (엄격 정책) | `[{"source": "github", "repo": "acme-corp/plugins"}]` |
 | `strictPluginOnlyCustomization` | 스킬, 에이전트, hook, MCP 서버를 플러그인 및 managed 소스로만 제한 | `["skills", "hooks"]` |
 | `wslInheritsWindowsSettings` | WSL에서 Windows 정책 체인의 managed 설정도 읽기 | `true` |
+
+### Managed 설정의 invalid entries 처리
+
+Managed 설정은 관대하게 파싱됩니다. Managed 구성에 스키마 검증에 실패하는 항목이 있으면 Claude Code는 해당 항목을 제거하고 경고를 기록한 뒤 나머지 유효한 policy를 모두 적용합니다. 단일 오타가 조직의 나머지 policy를 비활성화하지 않습니다. 이 동작은 세 가지 전달 메커니즘(서버 관리 설정, MDM으로 배포된 plist/레지스트리 정책, `managed-settings.json` 파일)에 일관되게 적용됩니다. v2.1.169+ 필요.
+
+Security-enforcement 필드는 invalid 상태로 존재할 때 통째로 제거되는 대신 필드별로 처리됩니다:
+
+| 필드 | invalid일 때 동작 |
+|------|------------------|
+| `allowedMcpServers` | 빈 허용목록으로 적용되어 값이 수정될 때까지 어떤 MCP 서버도 허용되지 않음. 개별 invalid 항목은 제거되고 유효 부분집합 적용 |
+| `allowManagedMcpServersOnly` | `true`로 취급 |
+| `availableModels` | 빈 허용목록으로 적용되어 값이 수정될 때까지 Default 모델만 가용. 개별 비문자열 항목은 제거되고 유효 부분집합 적용 (v2.1.175+) |
+| `enforceAvailableModels` | `true`로 취급 (v2.1.175+) |
+| `forceLoginOrgUUID` | 값이 수정될 때까지 어떤 조직도 로그인 허용 안 함 |
+| `deniedMcpServers` | 개별 invalid 항목은 제거되고 유효 부분집합 적용. 전체가 invalid인 값은 모든 서버를 차단할 수 있으므로 경고와 함께 폐기 |
+
+> `requiredMinimumVersion`과 `requiredMaximumVersion`은 의도적으로 fail open 설계: invalid 값은 적용 대신 제거되어 잘못된 policy push가 Claude Code 시작을 막지 않음.
+
+검증 오류는 세 곳에 노출됩니다:
+
+- 인터랙티브 세션: 시작 시 invalid 항목을 나열하는 다이얼로그 표시
+- `-p` 헤드리스 실행: stderr에 요약 출력
+- `claude doctor`: 각 invalid 항목을 소스 및 필드와 함께 나열
+
+> Policy 변경 사항은 fleet-wide 배포 전 테스트 머신에서 `claude doctor`로 검증하세요. 이 관대함은 Managed 설정에만 적용되며, User/Project/Local 설정 파일은 검증 실패 시 전체가 거부되고 보고됩니다.
 
 ---
 
@@ -247,7 +277,7 @@ deny 규칙은 어느 스코프에서 설정되든 다른 모든 스코프의 al
 
 | 환경 | 전환 방법 |
 |------|-----------|
-| CLI | `Shift+Tab`으로 `default` -> `acceptEdits` -> `plan` 순환. `auto`는 계정 요건 충족 시, `bypassPermissions`는 `--dangerously-skip-permissions` 시작 시 순환에 포함 |
+| CLI | `Shift+Tab`으로 `default` -> `acceptEdits` -> `plan` 순환. `auto`는 계정 요건 충족 시 순환에 opt-in 프롬프트와 함께 표시. `bypassPermissions`는 `--dangerously-skip-permissions` 시작 시 순환에 포함. `--allow-dangerously-skip-permissions`는 순환에 모드만 추가하고 활성화하지 않음. `dontAsk`는 순환에 나타나지 않고 `--permission-mode dontAsk`로만 설정 |
 | 시작 시 | `claude --permission-mode plan` |
 | 기본값 | `defaultMode` 설정 사용 |
 | VS Code | 프롬프트 상자 하단 모드 표시기 클릭 |
@@ -263,8 +293,10 @@ Auto 모드는 권한 프롬프트 없이 Claude가 실행할 수 있도록 합�
 |------|------|
 | **플랜** | 모든 플랜 |
 | **관리자** | Team/Enterprise에서 관리자가 Claude Code 관리자 설정에서 활성화해야 함. `permissions.disableAutoMode`를 `"disable"`로 설정하면 잠금 가능 |
-| **모델** | Anthropic API: Claude Opus 4.6+, Sonnet 4.6+. Bedrock/Vertex/Foundry: Claude Opus 4.7+, Opus 4.8만 |
+| **모델** | Anthropic API: Claude Opus 4.6+, Sonnet 4.6+. Bedrock/Vertex/Foundry: Claude Opus 4.7+, Opus 4.8만. Sonnet 4.5, Opus 4.5, Haiku, claude-3 모델 등 구형 모델은 모든 프로바이더에서 미지원 |
 | **프로바이더** | Anthropic API에서 기본 사용 가능. Bedrock, Vertex AI, Foundry에서는 `CLAUDE_CODE_ENABLE_AUTO_MODE` 설정 필요 |
+
+> VS Code의 `claudeCode.initialPermissionMode` 설정은 `auto`를 허용하지 않습니다.
 
 **기본 차단/허용 동작:**
 
@@ -291,7 +323,9 @@ Auto 모드는 권한 프롬프트 없이 Claude가 실행할 수 있도록 합�
 
 이 변수를 설정하면 `Shift+Tab` 순환에 `auto` 모드가 나타납니다. 기본 시작 모드로 설정하려면 `~/.claude/settings.json`에서 `defaultMode: "auto"`도 함께 설정합니다.
 
-**Auto 모드 폴백:** 분류기가 동일한 작업을 3회 연속 또는 총 20회 차단하면 auto 모드가 일시 중지되고 권한 프롬프트가 재개됩니다. 사용자가 프롬프트를 승인하면 auto 모드가 재개됩니다.
+**Auto 모드 폴백:** 분류기가 동일한 작업을 3회 연속 또는 총 20회 차단하면 auto 모드가 일시 중지되고 권한 프롬프트가 재개됩니다. 사용자가 프롬프트를 승인하면 auto 모드가 재개됩니다. 이 임계값은 구성할 수 없습니다. 허용된 모든 작업은 연속 카운터를 리셋하지만 총 카운터는 세션 동안 유지되며 자체 한도가 트리거될 때만 리셋됩니다. 비인터랙티브 모드(`-p` 플래그)에서는 프롬프트할 사용자가 없으므로 반복 차단이 세션을 abort시킵니다.
+
+**대화에서 명시한 boundary:** 분류기는 사용자가 대화에서 명시한 boundary를 차단 신호로 처리합니다. 예를 들어 "don't push" 또는 "wait until I review before deploying"라고 말하면, 분류기는 기본 규칙이 허용하더라도 일치하는 작업을 차단합니다. boundary는 후속 메시지에서 해제할 때까지 유지되며, Claude가 조건이 충족되었다고 판단해도 해제되지 않습니다. boundary는 규칙으로 저장되지 않고 분류기가 매 검사마다 transcript에서 재판독하므로, context compaction이 명시한 메시지를 제거하면 boundary가 손실될 수 있습니다. hard guarantee가 필요하면 deny 규칙을 추가하세요.
 
 **Auto 모드 구성:** `autoMode` 설정으로 분류기의 차단/허용 규칙을 커스터마이즈할 수 있습니다. 자세한 내용은 아래 Auto Mode Configuration 섹션을 참조하세요.
 
@@ -307,6 +341,10 @@ claude --permission-mode dontAsk
 
 `bypassPermissions` 모드는 권한 프롬프트와 안전 검사를 모두 건너뜁니다. v2.1.126부터 보호 경로 쓰기도 프롬프트 없이 실행됩니다. 파일시스템 루트나 홈 디렉토리 삭제(`rm -rf /`, `rm -rf ~`)만 모델 오류 방지 회로 차단기로 프롬프트가 유지됩니다. 인터넷 접근이 없는 격리된 컨테이너, VM, dev container에서만 사용하세요.
 
+> 명시적 ask 규칙은 이 모드에서도 여전히 프롬프트를 강제합니다. Deny 규칙과 명시적 ask 규칙은 `bypassPermissions`를 포함한 모든 모드에서 적용됩니다.
+
+> Cloud sessions(Claude Code on the web)에서는 `defaultMode: "bypassPermissions"`가 설정 파일에서 무시됩니다. 저장소의 체크인된 설정이 클라우드 세션을 bypass-permissions 모드로 시작할 수 없도록 하기 위함이며, 세션은 모드 드롭다운에 표시된 모드로 조용히 시작됩니다.
+
 Linux와 macOS에서는 root 또는 `sudo`로 이 모드를 시작할 수 없습니다:
 
 ```
@@ -319,14 +357,38 @@ Linux와 macOS에서는 root 또는 `sudo`로 이 모드를 시작할 수 없습
 claude --permission-mode bypassPermissions
 # 또는
 claude --dangerously-skip-permissions
+# 순환에 모드만 추가하고 활성화하지 않음
+claude --allow-dangerously-skip-permissions
 ```
+
+`--allow-dangerously-skip-permissions` 변형은 활성화하지 않고 Shift+Tab 순환에만 모드를 추가합니다.
 
 ### 보호 경로
 
 `bypassPermissions`를 제외한 모든 모드에서 다음 경로에 대한 쓰기는 자동 승인되지 않습니다:
 
-- `.git`, `.config/git`, `.vscode`, `.idea`, `.husky`, `.cargo`, `.devcontainer`, `.yarn`, `.mvn`, `.claude` (`.claude/worktrees` 제외)
-- `.gitconfig`, `.gitmodules`, `.bashrc`, `.zshrc`, `.profile`, `.npmrc`, `.yarnrc`, `.bazelrc`, `.pre-commit-config.yaml`, `.devcontainer.json`, `.mcp.json`, `.claude.json` 등
+| 모드 | 보호 경로 쓰기 동작 |
+|------|-------------------|
+| `default`, `acceptEdits`, `plan` | 프롬프트 |
+| `auto` | 분류기로 라우팅 |
+| `dontAsk` | 거부 |
+| `bypassPermissions` | 허용 |
+
+보호 디렉토리:
+
+- `.git`, `.config/git`, `.vscode`, `.idea`, `.husky`, `.cargo`, `.devcontainer`, `.yarn`, `.mvn`, `.claude` (`.claude/worktrees` 제외). 각각 자체 git worktree를 관리
+
+보호 파일:
+
+- `.gitconfig`, `.gitmodules`
+- `.bashrc`, `.bash_profile`, `.bash_login`, `.bash_aliases`, `.bash_logout`, `.zshrc`, `.zprofile`, `.zshenv`, `.zlogin`, `.zlogout`, `.profile`, `.envrc`
+- `.npmrc`, `.yarnrc`, `.yarnrc.yml`, `.pnp.cjs`, `.pnp.loader.mjs`, `.pnpmfile.cjs`, `bunfig.toml`, `.bunfig.toml`
+- `.bazelrc`, `.bazelversion`, `.bazeliskrc`
+- `.pre-commit-config.yaml`, `lefthook.yml`, `lefthook.yaml`, `.lefthook.yml`, `.lefthook.yaml`
+- `gradle-wrapper.properties`, `maven-wrapper.properties`
+- `.devcontainer.json`
+- `.ripgreprc`, `pyrightconfig.json`
+- `.mcp.json`, `.claude.json`
 
 ### 권한 예시
 
@@ -517,8 +579,10 @@ Enter 키로 메시지가 제출됩니다. 줄바꿈을 추가하려면 `Ctrl+J`
 | 터미널 | Shift+Enter 줄바꿈 |
 |--------|-------------------|
 | Ghostty, Kitty, iTerm2, WezTerm, Warp, Apple Terminal, Windows Terminal | 추가 설정 없이 작동 |
-| VS Code, Cursor, Alacritty, Zed | `/terminal-setup` 한 번 실행 필요 |
+| VS Code, Cursor, Devin Desktop, Alacritty, Zed | `/terminal-setup` 한 번 실행 필요 |
 | gnome-terminal, JetBrains IDE | 미지원. `Ctrl+J` 또는 `\` + Enter 사용 |
+
+> VS Code, Cursor, Devin Desktop, Alacritty, Zed에서 `/terminal-setup`은 Shift+Enter 및 기타 키바인딩을 터미널 설정 파일에 기록합니다. 기존 바인딩은 그대로 유지됩니다. 호스트 터미널에서 직접 실행하세요(tmux나 screen 내부가 아님). VS Code, Cursor, Devin Desktop에서는 `terminal.integrated.gpuAcceleration`을 `"off"`로, `terminal.integrated.mouseWheelScrollSensitivity`도 설정하여 전체화면 모드에서 스크롤을 부드럽게 합니다.
 
 ### macOS Option 키 단축키
 
@@ -593,9 +657,76 @@ set -as terminal-features 'xterm*:extkeys'
 
 Claude Code는 `~/.claude/themes/` 디렉토리를 감시하며 파일 변경 시 자동으로 리로드합니다.
 
+색상 값은 `#rrggbb`, `#rgb`, `rgb(r,g,b)`, `ansi256(n)`, 또는 `ansi:<name>`(`<name>`은 `red`, `cyanBright` 등 16개 표준 ANSI 색상 이름 중 하나)을 허용합니다. 알 수 없는 토큰과 invalid 색상 값은 무시되어 오타가 렌더링을 망가뜨리지 않습니다.
+
+#### 색상 토큰 참조
+
+아래는 `overrides`에 설정 가능한 토큰 그룹입니다. `/theme`의 인터랙티브 에디터에서 동일한 토큰을 라이브 프리뷰로 보여줍니다.
+
+**텍스트 및 악센트 색상:**
+
+| 토큰 | 제어 |
+|------|------|
+| `claude` | 기본 브랜드 악센트. 스피너와 어시스턴트 라벨 텍스트에 사용 |
+| (기본값) | 기본 전경 텍스트 |
+| `inverseText` | 색상 배경 위에 그려지는 텍스트 (상태 배지 등) |
+| `inactive` | 힌트, 타임스탬프, 비활성 항목 등 보조 텍스트 |
+| `subtle` | 희미한 테두리와 강조 낮춘 보조 텍스트 |
+| `suggestion` | 자동완성 제안 및 피커 선택 강조 |
+| `permission` | 권한 프롬프트와 피커를 포함한 다이얼로그 테두리 |
+| `remember` | 메모리 및 CLAUDE.md 표시기 |
+
+**상태 색상:**
+
+| 토큰 | 제어 |
+|------|------|
+| `success` | 성공 메시지 및 통과한 검사 |
+| `error` | 오류 메시지 및 실패 |
+| `warning` | 경고, 주의 메시지, auto 모드 테두리 |
+| `merged` | 병합된 pull request 상태 |
+
+**입력 상자 및 모드 표시기:**
+
+| 토큰 | 제어 |
+|------|------|
+| `promptBorder` | 기본 권한 모드의 입력 상자 테두리 |
+| `planMode` | plan 모드 악센트 및 테두리 |
+| `autoAccept` | accept-edits 모드 악센트 및 테두리 |
+| `bashBorder` | `!` 셸 명령 입력 시 입력 상자 테두리 |
+| `ide` | IDE 연결 표시기 |
+| `fastMode` | fast 모드 표시기 |
+
+**diff 렌더링:**
+
+| 토큰 | 제어 |
+|------|------|
+| `diffAdded` / `diffRemoved` | 추가/제거된 줄의 배경 |
+| `diffAddedDimmed` / `diffRemovedDimmed` | 추가/제거 근처 변경되지 않은 컨텍스트 배경 |
+| `diffAddedWord` / `diffRemovedWord` | 추가/제거된 줄 내 단어 수준 강조 |
+
+**전체화면 모드** (전체화면 렌더링 모드에서만 적용, 메시지에 배경 채움):
+
+| 토큰 | 제어 |
+|------|------|
+| `userMessageBackground` | transcript의 사용자 메시지 뒤 배경 |
+| `userMessageBackgroundHover` | 호버/확장 중인 메시지 뒤 배경 |
+| `messageActionsBackground` | 액션 바 열릴 때 선택된 메시지 뒤 배경 |
+| `bashMessageBackgroundColor` | transcript의 `!` 셸 명령 항목 뒤 배경 |
+| `memoryBackgroundColor` | transcript의 `#` 메모 항목 뒤 배경 |
+| `selectionBg` | 마우스로 선택한 텍스트 배경 |
+
+**사용량 미터 및 스피커 라벨:**
+
+| 토큰 | 제어 |
+|------|------|
+| `rate_limit_fill` / `rate_limit_empty` | `/usage` 뷰 사용량 미터의 채워진/비워진 부분 |
+| `briefLabelYou` / `briefLabelClaude` | 사용자/Claude 메시지 라벨 색상 |
+
+**shimmer 변형 및 서브에이전트 색상:** 여러 토큰은 스피너 애니메이션 그라디언트에서 사용하는 더 밝은 색상을 제공하는 shimmer 짝을 가집니다(`claude`/`claudeShimmer`, `warning`/`warningShimmer`, `permission`/`permissionShimmer`, `promptBorder`/`promptBorderShimmer`, `inactive`/`inactiveShimmer`, `fastMode`/`fastModeShimmer`). 각 서브에이전트와 병렬 작업은 transcript에서 구분하기 위해 8개의 명명된 색상 중 하나로 표시되며, 토큰 이름은 `<color>_FOR_SUBAGENTS_ONLY` 패턴을 따릅니다(`<color>`는 `red`, `blue`, `green`, `yellow`, `purple`, `orange`, `pink`, `cyan`). `ultrathink`와 `ultraplan` 키워드는 7색 무지개 그라디언트로 렌더링되며 `rainbow_<color>` 및 `rainbow_<color>_shimmer` 패턴을 따릅니다(`<color>`는 `red`, `orange`, `yellow`, `green`, `blue`, `indigo`, `violet`).
+
 ### Vim 편집 모드
 
-`editorMode`를 `"vim"`으로 설정하거나 `/config` > Editor mode에서 활성화합니다. `hjkl` 이동, `v`/`V` 선택, `d`/`c`/`y` 텍스트 객체 등 NORMAL 및 VISUAL 모션의 일부를 지원합니다. Vim 모션은 keybindings 파일에서 리매핑할 수 없습니다.
+`editorMode`를 `"vim"`으로 설정하거나 `/config` > Editor mode에서 활성화합니다. `hjkl` 이동, `v`/`V` 선택, `d`/`c`/`y` 텍스트 객체 등 NORMAL 및 VISUAL 모션의 일부를 지원합니다. Vim 모션은 keybindings 파일에서 리매핑할 수 없습니다. visual mode 등 세부 지원 범위는 공식 terminal-config 문서의 Vim keybindings 참조를 확인하세요.
 
 INSERT 모드에서 Enter는 일반 Vim과 달리 프롬프트를 제출합니다. 줄바꿈에는 NORMAL 모드에서 `o`/`O` 또는 `Ctrl+J`를 사용하세요.
 
@@ -626,18 +757,24 @@ export HTTPS_PROXY=https://proxy.example.com:8080
 # HTTP 프록시
 export HTTP_PROXY=http://proxy.example.com:8080
 
-# 프록시 우회
+# 프록시 우회 - 공백 구분 형식
+export NO_PROXY="localhost 192.168.1.1 example.com .example.com"
+# 프록시 우회 - 쉼표 구분 형식 (둘 다 지원)
 export NO_PROXY="localhost,192.168.1.1,example.com,.example.com"
 
 # 모든 요청에 대해 프록시 우회
 export NO_PROXY="*"
 ```
 
+> Claude Code는 SOCKS 프록시를 지원하지 않습니다.
+
 기본 인증 필요 시 URL에 자격 증명을 포함:
 
 ```bash
 export HTTPS_PROXY=http://username:password@proxy.example.com:8080
 ```
+
+고급 인증(NTLM, Kerberos 등)이 필요한 프록시의 경우 인증 방식을 지원하는 LLM Gateway 서비스 사용을 고려하세요.
 
 ### CA 인증서
 
@@ -678,6 +815,12 @@ export CLAUDE_CODE_CLIENT_KEY_PASSPHRASE="your-passphrase"  # 선택
 | `raw.githubusercontent.com` | `/release-notes` 피드, 릴리스 노트, 플러그인 마켓플레이스 설치 수 |
 
 > Amazon Bedrock, Google Vertex AI, Microsoft Foundry 사용 시 모델 트래픽과 인증은 `api.anthropic.com` 대신 해당 프로바이더로 전송됩니다. WebFetch 도구는 `skipWebFetchPreflight: true` 설정이 없으면 도메인 안전 검사를 위해 여전히 `api.anthropic.com`을 호출합니다.
+
+### GitHub Enterprise 연동
+
+Claude Code on the web과 Code Review는 Anthropic 관리 인프라에서 저장소에 연결합니다. GitHub Enterprise Cloud 조직이 IP 주소로 접근을 제한하는 경우, 설치된 GitHub Apps에 대해 IP allow list inheritance를 활성화하세요. Claude GitHub App이 자체 IP 범위를 등록하므로, 이 설정을 켜면 수동 구성 없이 접근이 허용됩니다. 방화벽 allowlist에 범위를 수동으로 추가하거나 다른 방화벽을 구성하려면 Anthropic API IP addresses 문서를 참조하세요.
+
+방화벽 뒤의 self-hosted GitHub Enterprise Server 인스턴스의 경우, 동일한 Anthropic API IP 주소를 allowlist에 추가하세요.
 
 ---
 
@@ -815,14 +958,18 @@ Claude Code의 동작을 제어하는 환경 변수 목록입니다. `settings.j
 | `ANTHROPIC_DEFAULT_HAIKU_MODEL` | Haiku 클래스 모델 ID |
 | `ANTHROPIC_DEFAULT_SONNET_MODEL` | Sonnet 클래스 모델 ID |
 | `ANTHROPIC_DEFAULT_OPUS_MODEL` | Opus 클래스 모델 ID |
+| `ANTHROPIC_DEFAULT_FABLE_MODEL` | Fable 클래스 모델 ID |
+| `ANTHROPIC_DEFAULT_FABLE_MODEL_NAME` | Fable 모델의 표시 이름 |
+| `ANTHROPIC_DEFAULT_FABLE_MODEL_DESCRIPTION` | Fable 모델의 표시 설명 |
+| `ANTHROPIC_DEFAULT_FABLE_MODEL_SUPPORTED_CAPABILITIES` | Fable 모델이 지원하는 기능 목록 |
 | `ANTHROPIC_SMALL_FAST_MODEL` | [DEPRECATED] 백그라운드 작업용 Haiku 클래스 모델 이름 |
 | `ANTHROPIC_SMALL_FAST_MODEL_AWS_REGION` | Bedrock/Mantle 사용 시 Haiku 클래스 모델의 AWS 리전 재정의 |
 | `CLAUDE_CODE_SUBAGENT_MODEL` | 서브에이전트 모델 구성 |
 | `CLAUDE_CODE_MAX_OUTPUT_TOKENS` | 대부분의 요청에 대한 최대 출력 토큰 수 |
-| `MAX_THINKING_TOKENS` | 확장 thinking 토큰 예산 재정의. `0`으로 설정 시 thinking 비활성화 |
+| `MAX_THINKING_TOKENS` | 확장 thinking 토큰 예산 재정의. `0`으로 설정 시 Anthropic API에서 thinking 비활성화. 단 Fable 5는 thinking을 끌 수 없으므로 예외. 서드파티 프로바이더에서는 `0`이 thinking 파라미터를 생략 |
 | `CLAUDE_CODE_EFFORT_LEVEL` | effort level 설정. 값: `low`, `medium`, `high`, `xhigh`, `max`, `auto` |
-| `CLAUDE_CODE_DISABLE_ADAPTIVE_THINKING` | `1`로 설정 시 Opus 4.6/Sonnet 4.6에서 적응형 추론 비활성화 |
-| `CLAUDE_CODE_DISABLE_THINKING` | `1`로 설정 시 확장 thinking 강제 비활성화 |
+| `CLAUDE_CODE_DISABLE_ADAPTIVE_THINKING` | `1`로 설정 시 Opus 4.6/Sonnet 4.6에서 적응형 추론 비활성화하고 `MAX_THINKING_TOKENS`가 제어하는 고정 thinking 예산으로 폴백. v2.1.111부터 항상 적응형 추론을 사용하는 Fable 5 및 Opus 4.7 이상에는 효과 없음 |
+| `CLAUDE_CODE_DISABLE_THINKING` | `1`로 설정 시 API 요청에서 thinking 파라미터를 아예 생략. 프록시/게이트웨이 호환성 옵션. Fable 5는 thinking을 끌 수 없으므로 효과 없음. Anthropic API에서 확장 thinking을 명시적으로 끄려면 `MAX_THINKING_TOKENS=0` 사용 권장 |
 
 ### AWS Bedrock
 
@@ -856,6 +1003,8 @@ Claude Code의 동작을 제어하는 환경 변수 목록입니다. `settings.j
 | `VERTEX_REGION_CLAUDE_4_6_OPUS` | Claude Opus 4.6 리전 재정의 |
 | `VERTEX_REGION_CLAUDE_4_6_SONNET` | Claude Sonnet 4.6 리전 재정의 |
 | `VERTEX_REGION_CLAUDE_4_7_OPUS` | Claude Opus 4.7 리전 재정의 (v2.1.111+) |
+| `VERTEX_REGION_CLAUDE_4_8_OPUS` | Claude Opus 4.8 리전 재정의 (v2.1.154+) |
+| `VERTEX_REGION_CLAUDE_FABLE_5` | Claude Fable 5 리전 재정의 (v2.1.170+) |
 | `VERTEX_REGION_CLAUDE_HAIKU_4_5` | Claude Haiku 4.5 리전 재정의 |
 
 ### Microsoft Foundry
@@ -882,6 +1031,7 @@ Claude Code의 동작을 제어하는 환경 변수 목록입니다. `settings.j
 | `TASK_MAX_OUTPUT_LENGTH` | 서브에이전트 출력 잘림 전 최대 문자 수 (기본값: 32000, 최대: 160000) |
 | `CLAUDE_CODE_FILE_READ_MAX_OUTPUT_TOKENS` | 파일 읽기의 토큰 한도 재정의 |
 | `API_TIMEOUT_MS` | API 요청 타임아웃 (밀리초, 기본값: 600000 = 10분) |
+| `API_FORCE_IDLE_TIMEOUT` | 스트리밍 모델 응답에서 바이트가 도착하지 않을 때 5분 idle 타임아웃을 abort시키는 동작 재정의 (v2.1.169+). `0`은 타임아웃 비활성화(느린 게이트웨이나 로컬 모델이 청크 간 5분 이상 멈출 때). `1`은 모든 프로바이더에 타임아웃 강제. 미설정 시 direct Anthropic API 및 Claude Platform on AWS 연결에서는 비활성, 다른 프로바이더에서는 기본 활성 |
 | `MAX_STRUCTURED_OUTPUT_RETRIES` | `--json-schema` 검증 실패 시 재시도 횟수 (기본값: 5) |
 
 ### 컨텍스트 및 압축
@@ -936,12 +1086,21 @@ Claude Code의 동작을 제어하는 환경 변수 목록입니다. `settings.j
 | `DISABLE_AUTOUPDATER` | `1`로 설정 시 자동 업데이트 비활성화 |
 | `DISABLE_UPDATES` | `1`로 설정 시 모든 업데이트 차단 (`claude update`, `claude install` 포함) |
 | `DISABLE_COST_WARNINGS` | `1`로 설정 시 비용 경고 메시지 비활성화 |
+| `DISABLE_DOCTOR_COMMAND` | `1`로 설정 시 `/doctor` 명령 숨김. 사용자가 설치 진단을 실행하지 않아야 하는 managed 배포에 유용 |
 | `DISABLE_ERROR_REPORTING` | `1`로 설정 시 Sentry 오류 보고 옵트아웃 |
+| `DISABLE_EXTRA_USAGE_COMMAND` | `1`로 설정 시 rate limit 초과 사용량 추가 구매용 `/usage-credits` 명령 숨김 |
+| `DISABLE_FEEDBACK_COMMAND` | `1`로 설정 시 `/feedback` 명령 비활성화. 별칭 `DISABLE_BUG_COMMAND`도 허용 |
+| `DISABLE_INSTALL_GITHUB_APP_COMMAND` | `1`로 설정 시 `/install-github-app` 명령 숨김. 서드파티 프로바이더(Bedrock, Vertex, Foundry) 사용 시 이미 숨겨짐 |
+| `DISABLE_LOGIN_COMMAND` | `1`로 설정 시 `/login` 명령 숨김. API 키나 `apiKeyHelper`로 외부 인증 처리 시 유용 |
+| `DISABLE_LOGOUT_COMMAND` | `1`로 설정 시 `/logout` 명령 숨김 |
+| `DISABLE_UPGRADE_COMMAND` | `1`로 설정 시 `/upgrade` 명령 숨김. 자체 채널을 운영하고 사용자가 자가 업데이트하지 않아야 할 때 |
 | `DISABLE_TELEMETRY` | `1`로 설정 시 원격 측정 옵트아웃 |
 | `DO_NOT_TRACK` | `1`로 설정 시 원격 측정 옵트아웃 (`DISABLE_TELEMETRY`와 동일) |
 | `DISABLE_GROWTHBOOK` | `1`로 설정 시 GrowthBook 기능 플래그 가져오기 비활성화 |
 | `DISABLE_PROMPT_CACHING` | `1`로 설정 시 모든 모델의 프롬프트 캐싱 비활성화 |
 | `DISABLE_INTERLEAVED_THINKING` | `1`로 설정 시 interleaved-thinking 베타 헤더 전송 방지 |
+| `CLAUDE_CODE_DISABLE_ADVISOR_TOOL` | `1`로 설정 시 advisor 도구 비활성화. `/advisor` 명령과 `--advisor` 플래그 사용 불가, `advisorModel` 무시. v2.1.98+ 필요 |
+| `CLAUDE_CODE_SAFE_MODE` | `1`로 설정 시 safe mode 시작: CLAUDE.md, 스킬, 플러그인, hooks, MCP 서버, 커스텀 명령/에이전트, 출력 스타일, 워크플로우, 커스텀 테마, 커스텀 키바인딩, statusLine 및 파일 제안 명령, LSP 서버, 자동 메모리 로드 안 함. `--safe-mode` 플래그와 동등. Managed 설정 policy는 policy로 구성된 hooks, statusLine 등 포함 여전히 적용 |
 | `CLAUDE_CODE_ENABLE_AUTO_MODE` | `1`로 설정 시 Bedrock, Vertex, Foundry에서 auto 모드 사용 가능 (v2.1.158+) |
 | `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC` | `DISABLE_AUTOUPDATER` + `DISABLE_FEEDBACK_COMMAND` + `DISABLE_ERROR_REPORTING` + `DISABLE_TELEMETRY`와 동일 |
 | `CLAUDE_CODE_DISABLE_AGENT_VIEW` | `1`로 설정 시 백그라운드 에이전트 및 에이전트 뷰 비활성화 |
@@ -951,7 +1110,10 @@ Claude Code의 동작을 제어하는 환경 변수 목록입니다. `settings.j
 | `CLAUDE_CODE_DISABLE_WORKFLOWS` | `1`로 설정 시 워크플로우 비활성화 |
 | `CLAUDE_CODE_DISABLE_CRON` | `1`로 설정 시 예약 작업 비활성화 |
 | `CLAUDE_CODE_DISABLE_BACKGROUND_TASKS` | `1`로 설정 시 모든 백그라운드 작업 기능 비활성화 |
+| `CLAUDE_CODE_DISABLE_BUNDLED_SKILLS` | `1`로 설정 시 Claude Code 번들 스킬/워크플로우 완전 제거. `disableBundledSkills` 설정과 동등 |
 | `CLAUDE_CODE_DISABLE_FAST_MODE` | `1`로 설정 시 fast mode 비활성화 |
+| `CLAUDE_CODE_ENABLE_OPUS_4_7_FAST_MODE` | [제거됨] v2.1.142에서 제거. fast mode 기본값이 Opus 4.6에서 Opus 4.7로 이동 |
+| `CLAUDE_CODE_OPUS_4_6_FAST_MODE_OVERRIDE` | [no-op] v2.1.160에서 제거되어 현재 no-op. 이전에는 fast mode를 현재 기본값 대신 Claude Opus 4.6에 고정. Opus 4.6에서 fast mode를 실행하려면 `/model`로 먼저 모델 선택 후 `/fast` |
 | `CLAUDE_CODE_DISABLE_FEEDBACK_SURVEY` | `1`로 설정 시 세션 품질 설문 비활성화 |
 | `CLAUDE_CODE_DISABLE_ATTACHMENTS` | `1`로 설정 시 첨부 파일 처리 비활성화 |
 | `CLAUDE_CODE_DISABLE_LEGACY_MODEL_REMAP` | `1`로 설정 시 Opus 4.0/4.1 자동 리매핑 방지 |
@@ -1005,9 +1167,13 @@ Claude Code의 동작을 제어하는 환경 변수 목록입니다. `settings.j
 | `CLAUDE_CODE_REMOTE` | 클라우드 세션으로 실행 중일 때 자동으로 `true`로 설정 |
 | `CLAUDE_CODE_REMOTE_SESSION_ID` | 클라우드 세션에서 자동으로 설정되는 세션 ID |
 | `CLAUDECODE` | Claude Code가 생성한 하위 프로세스에서 `1`로 설정됨 |
+| `CLAUDE_CODE_CHILD_SESSION` | Claude Code가 Bash, PowerShell, Monitor 도구, hook 명령, statusLine 명령으로 spawn한 하위 프로세스에서 `1`로 설정. stdio MCP 서버 하위 프로세스에는 설정되지 않음. `CLAUDECODE`와 달리 IDE 확장이 아닌 Claude Code 자체 spawn 경로에서만 설정되어 nested session을 top-level과 안정적으로 구분. v2.1.172+ |
+| `CLAUDE_CODE_FORCE_SESSION_PERSISTENCE` | `1`로 설정 시 다른 Claude Code 세션 내부에서 시작된 경우에도 transcript 영속성, 프롬프트 기록, `claude agents` 등록 강제. tmux 서버 등에서 상속된 `CLAUDE_CODE_CHILD_SESSION` 값이 실제 top-level 세션을 nested로 잘못 분류할 때 사용. v2.1.169 이하에서도 적용되며, v2.1.170/v2.1.171에서는 제거된 nested-session 감지를 override하므로 효과 없음 |
 | `CLAUDE_CODE_SKIP_PROMPT_HISTORY` | `1`로 설정 시 프롬프트 기록 및 세션 기록 디스크 기록 건너뛰기 |
 | `CLAUDE_CODE_RESUME_INTERRUPTED_TURN` | `1`로 설정 시 이전 세션이 턴 중간에 종료된 경우 자동 재개 |
 | `CLAUDE_CODE_RESUME_PROMPT` | 턴 중간에 종료된 세션 재개 시 삽입할 계속 메시지 재정의 |
+| `CLAUDE_CODE_SIMPLE` | `1`로 설정 시 최소 시스템 프롬프트와 Bash, 파일 읽기, 파일 편집 도구만 사용. `--mcp-config`의 MCP 도구는 여전히 가용. hooks, 스킬, 플러그인, MCP 서버, 자동 메모리, CLAUDE.md의 auto-discovery 비활성화. OAuth 토큰과 키체인 자격 증명을 읽지 않으므로 Anthropic 인증은 `ANTHROPIC_API_KEY` 또는 `--settings`의 `apiKeyHelper`에서 와야 함. `--bare` 플래그와 동등 |
+| `CLAUDE_CODE_SIMPLE_SYSTEM_PROMPT` | `1`로 설정 시 모든 모델에서 더 짧은 시스템 프롬프트와 축약된 도구 설명 사용. `0`, `false`, `no`, `off`로 옵트아웃 가능. 전체 도구 세트, hooks, MCP 서버, CLAUDE.md discovery는 유지 |
 | `CLAUDE_CODE_EXIT_AFTER_STOP_DELAY` | 쿼리 루프 유휴 후 자동 종료까지의 대기 시간 (밀리초) |
 | `CLAUDE_CODE_MAX_RETRIES` | 실패한 API 요청 재시도 횟수 재정의 (기본값: 10) |
 | `CLAUDE_CODE_MAX_TURNS` | 명시적 한계가 없을 때 에이전트 턴 수 상한 |
@@ -1066,6 +1232,7 @@ Claude Code의 동작을 제어하는 환경 변수 목록입니다. `settings.j
 | `CLAUDE_CODE_DISABLE_POLICY_SKILLS` | `1`로 설정 시 시스템 수준 managed 스킬 디렉토리 로딩 건너뛰기 |
 | `CLAUDE_CODE_SYNC_SKILLS` | `1`로 설정 시 첫 번째 쿼리 전 claude.ai 스킬 다운로드 |
 | `CLAUDE_CODE_SYNC_SKILLS_WAIT_TIMEOUT_MS` | 초기 스킬 동기화 대기 타임아웃 (기본값: 5000) |
+| `CLAUDE_CODE_SYNC_SKILLS_INSTALL_TIMEOUT_MS` | `CLAUDE_CODE_SYNC_SKILLS` 설정 시 세션 중 스킬 재동기화 타임아웃 (밀리초, 기본값: 30000). 호스트가 세션 중 스킬 리로드를 요청할 때 트리거되는 다운로드에 적용. 초과 시 재동기화 중지, 나머지 다운로드는 백그라운드에서 계속 |
 | `CLAUDE_CODE_SYNC_PLUGIN_INSTALL` | `1`로 설정 시 비대화형 모드에서 플러그인 설치 완료 대기 |
 | `CLAUDE_CODE_SYNC_PLUGIN_INSTALL_TIMEOUT_MS` | 동기 플러그인 설치 타임아웃 (밀리초) |
 | `CLAUDE_CODE_PLUGIN_CACHE_DIR` | 플러그인 루트 디렉토리 재정의 |
@@ -1095,6 +1262,7 @@ Claude Code의 동작을 제어하는 환경 변수 목록입니다. `settings.j
 | `OTEL_METRICS_INCLUDE_SESSION_ID` | `false`로 설정 시 메트릭에서 세션 ID 제외 |
 | `OTEL_METRICS_INCLUDE_VERSION` | `true`로 설정 시 메트릭에 Claude Code 버전 포함 |
 | `CLAUDE_CODE_PROPAGATE_TRACEPARENT` | `1`로 설정 시 커스텀 프록시에 W3C 트레이스 컨텍스트 전파 |
+| `CLAUDE_CODE_ENABLE_FEEDBACK_SURVEY_FOR_OTEL` | `1`로 설정 시 Anthropic행 nonessential traffic이 차단된 경우 "How is Claude doing?" 세션 품질 설문을 자체 OpenTelemetry collector로 라우팅. 설문 평점은 구성된 collector로 OTEL 이벤트로만 전송되며 Anthropic에는 어떤 설문 데이터도 전송되지 않음. `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC`, `DISABLE_TELEMETRY`, `DO_NOT_TRACK` 중 하나 설정 시 적용 |
 
 ### OAuth 인증
 
@@ -1114,6 +1282,8 @@ Claude Code의 동작을 제어하는 환경 변수 목록입니다. `settings.j
 | `USE_BUILTIN_RIPGREP` | `0`으로 설정 시 Claude Code 내장 `rg` 대신 시스템 설치된 `rg` 사용 |
 | `CLAUDE_CODE_TMPDIR` | 내부 임시 파일에 사용할 임시 디렉토리 재정의 |
 | `CLAUDE_CODE_GIT_BASH_PATH` | (Windows만) Git Bash 실행 파일 경로 |
+| `CLAUDE_CODE_ADDITIONAL_DIRECTORIES_CLAUDE_MD` | `1`로 설정 시 `--add-dir`로 지정한 디렉토리에서 메모리 파일 로드. `CLAUDE.md`, `.claude/CLAUDE.md`, `.claude/rules/*.md`, `CLAUDE.local.md` 로드. 기본적으로 추가 디렉토리는 메모리 파일을 로드하지 않음 |
+| `CLAUDE_CODE_ALWAYS_ENABLE_EFFORT` | `1`로 설정 시 Claude Code가 모델 ID를 effort-capable로 인식하지 못해도 모든 요청에 effort 파라미터 전송. LLM 게이트웨이나 서드파티 프로바이더를 통해 커스텀 식별자로 모델을 서비스할 때 사용. Claude 3 모델, Sonnet 4.0/4.5, Opus 4.0/4.1, Haiku 4.5 등 effort 파라미터를 거부하는 모델은 영향 없음 |
 | `CLAUDE_CODE_NEW_INIT` | `1`로 설정 시 `/init`이 대화형 설정 흐름 실행 |
 | `CLAUDE_CODE_ENABLE_GATEWAY_MODEL_DISCOVERY` | `1`로 설정 시 게이트웨이의 `/v1/models`에서 `/model` 피커 채움 |
 | `CLAUDE_CODE_ENABLE_PROMPT_SUGGESTION` | `false`로 설정 시 프롬프트 제안 비활성화 |
@@ -1121,7 +1291,7 @@ Claude Code의 동작을 제어하는 환경 변수 목록입니다. `settings.j
 | `CLAUDE_CODE_GLOB_HIDDEN` | `false`로 설정 시 Glob 결과에서 dotfiles 제외 |
 | `CLAUDE_CODE_GLOB_NO_IGNORE` | `false`로 설정 시 Glob이 `.gitignore` 패턴 존중 |
 | `CLAUDE_CODE_GLOB_TIMEOUT_SECONDS` | Glob 도구 파일 검색 타임아웃 (초, 기본값: 20) |
-| `CLAUDE_CODE_DISABLE_GIT_INSTRUCTIONS` | `1`로 설정 시 빌트인 git 워크플로우 지침 제거 |
+| `CLAUDE_CODE_DISABLE_GIT_INSTRUCTIONS` | `1`로 설정 시 시스템 프롬프트에서 빌트인 커밋/PR 워크플로우 지침 및 git 상태 스냅샷 제거. 자체 git 워크플로우 스킬 사용 시 유용. `includeGitInstructions` 설정보다 우선 |
 | `CLAUDE_CODE_STOP_HOOK_BLOCK_CAP` | Stop/SubagentStop hook이 턴 종료를 연속 차단할 수 있는 최대 횟수 (기본값: 8) |
 | `CLAUDE_CODE_SESSIONEND_HOOKS_TIMEOUT_MS` | SessionEnd hook 시간 예산 재정의 (밀리초) |
 | `CLAUDE_CODE_DISABLE_INSTALLATION_CHECKS` | `1`로 설정 시 설치 경고 비활성화 |
@@ -1271,6 +1441,12 @@ Claude Code는 마켓플레이스를 통해 배포되는 플러그인 시스템�
 ## 활성 설정 확인
 
 Claude Code 내에서 `/status`를 실행하여 활성 설정 소스를 확인할 수 있습니다. Status 탭에 Claude Code가 현재 세션에 로드한 각 계층이 나열됩니다. Managed 설정이 적용 중인 경우 전달 채널도 표시됩니다 (예: `Enterprise managed settings (remote)`, `(plist)`, `(HKLM)`, `(file)`).
+
+### `/doctor`로 설정 검증
+
+`/doctor` 명령은 설정 파일을 검증하고 invalid keys와 스키마 오류, 설치 건강 상태를 진단합니다. `/doctor`가 문제를 보고하면 `f` 키를 눌러 진단 보고서를 Claude에 보내 수정 단계를 안내받을 수 있습니다. Managed 설정의 invalid entries도 소스 및 필드와 함께 나열됩니다. Policy 변경 사항은 fleet-wide 배포 전 테스트 머신에서 `claude doctor`로 검증하는 것을 권장합니다.
+
+자세한 트러블슈팅 절차는 [Debug your configuration](https://code.claude.com/docs/en/debug-your-config)을 참조하세요. CLAUDE.md, hooks, MCP 서버, 스킬이 적용되지 않는 원인을 좁히려면 `/context`, `/memory`, `/hooks`, `/mcp`, `/permissions` 명령으로 실제 로드된 항목을 확인합니다.
 
 ---
 

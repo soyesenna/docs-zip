@@ -1,6 +1,6 @@
 # 14. 빠른 시작 가이드 (Quickstart)
 
-> **참조**: [Quickstart - Claude Code Docs](https://code.claude.com/docs/en/quickstart)
+> **원문**: [Quickstart - Claude Code Docs](https://code.claude.com/docs/en/quickstart)
 
 ---
 
@@ -102,7 +102,7 @@ cd /path/to/your/project
 claude
 ```
 
-시작하면 환영 화면, 최근 대화 목록, 최신 업데이트가 표시됩니다. `/help`를 입력하면 사용 가능한 명령어를 확인할 수 있고, `/resume`으로 이전 대화를 이어갈 수 있습니다.
+시작하면 Claude Code 프롬프트가 표시되며, 그 위에 버전, 현재 모델, 작업 디렉토리가 표시됩니다. `/help`를 입력하면 사용 가능한 명령어를 확인할 수 있고, `/resume`으로 이전 대화를 이어갈 수 있습니다.
 
 ---
 
@@ -225,7 +225,7 @@ Claude Code가 관련 코드를 찾고, 컨텍스트를 파악하여, 솔루션�
 | `claude -r` | 이전 대화 선택 재개 | `claude -r` |
 | `/clear` | 대화 기록 삭제 | `/clear` |
 | `/help` | 사용 가능한 명령어 보기 | `/help` |
-| `exit` 또는 Ctrl+D | Claude Code 종료 | `exit` |
+| `/exit` 또는 Ctrl+D | Claude Code 종료 | `/exit` |
 
 ---
 
@@ -258,5 +258,5 @@ Claude Code가 관련 코드를 찾고, 컨텍스트를 파악하여, 솔루션�
 | 방법 | 설명 |
 |------|------|
 | Claude Code 내부 | `/help` 입력 또는 "어떻게..." 질문 |
-| 공식 문서 | https://docs.anthropic.com/en/docs/claude-code |
+| 공식 문서 | https://code.claude.com/docs |
 | 커뮤니티 | Discord에서 팁과 지원 |

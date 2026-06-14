@@ -2,7 +2,7 @@
 
 > 기업 환경 설정, 관리형 정책, 비용/사용량 모니터링, 규정 준수
 
-**원문**: https://code.claude.com/docs/en/admin-setup, https://code.claude.com/docs/en/server-managed-settings, https://code.claude.com/docs/en/costs, https://code.claude.com/docs/en/monitoring-usage, https://code.claude.com/docs/en/analytics, https://code.claude.com/docs/en/amazon-bedrock, https://code.claude.com/docs/en/google-vertex-ai, https://code.claude.com/docs/en/microsoft-foundry, https://code.claude.com/docs/en/llm-gateway, https://code.claude.com/docs/en/third-party-integrations
+**원문**: https://code.claude.com/docs/en/admin-setup | https://code.claude.com/docs/en/server-managed-settings | https://code.claude.com/docs/en/costs | https://code.claude.com/docs/en/monitoring-usage | https://code.claude.com/docs/en/analytics | https://code.claude.com/docs/en/llm-gateway | https://code.claude.com/docs/en/claude-platform-on-aws
 
 ---
 
@@ -19,9 +19,10 @@ Claude Code는 여러 API 제공자를 통해 Claude에 연결한다. 선택에 
 | Claude for Teams / Enterprise | Claude Code와 claude.ai를 하나의 시트당 구독으로 통합. 인프라 운영 불필요. 기본 권장 |
 | Claude Console | API 우선 또는 사용량 기반(Pay-as-you-go) 과금 선호 시 |
 | Amazon Bedrock | 기존 AWS 규정 준수 통제와 요금 청구를 상속받으려는 경우 |
-| Claude Platform on AWS | AWS Marketplace 과금으로 Claude API 기능을 사용하려는 경우 |
 | Google Vertex AI | 기존 GCP 규정 준수 통제와 요금 청구를 상속받으려는 경우 |
 | Microsoft Foundry | 기존 Azure 규정 준수 통제와 요금 청구를 상속받으려는 경우 |
+
+> Claude Platform on AWS는 AWS Marketplace 과금으로 Anthropic 운영 Claude API를 직접 사용하는 별도 배포 경로다. provider 표의 5개 제공자와는 별도 페이지로 존재하며, 자세한 구성은 아래 "Claude Platform on AWS" 섹션을 참조.
 
 일부 Claude Code 기능은 Claude.ai 계정이 필요하다. Claude Code on the Web, Routines, Code Review, Remote Control, Chrome 확장은 Console API 키나 클라우드 제공자 자격 증명만으로는 사용할 수 없다.
 
@@ -52,11 +53,11 @@ plist와 HKLM 레지스트리 위치는 관리자 권한이 필요해 변조에 
 | 권한 잠금 | 관리형 권한 규칙만 적용, `--dangerously-skip-permissions` 비활성화 | `allowManagedPermissionRulesOnly`, `permissions.disableBypassPermissionsMode` |
 | 샌드박싱 | OS 수준 파일시스템·네트워크 격리 + 도메인 허용 목록 | `sandbox.enabled`, `sandbox.network.allowedDomains` |
 | 관리형 정책 CLAUDE.md | 모든 세션에 로드되는 조직 전체 지침 | 관리형 정책 경로의 파일 |
-| MCP 서버 제어 | 서버 allowlist/denylist 또는 고정 서버 세트 배포 | `allowedMcpServers`, `deniedMcpServers`, `allowManagedMcpServersOnly` |
+| MCP 서버 제어 | 서버 allowlist/denylist 또는 고정 서버 세트 배포 | `allowedMcpServers`, `deniedMcpServers`, `allowManagedMcpServersOnly`, 또는 배포된 `managed-mcp.json` 파일 |
 | 플러그인 마켓플레이스 제어 | 마켓플레이스 소스 제한 | `strictKnownMarketplaces`, `blockedMarketplaces` |
 | 커스터마이징 잠금 | 스킬·에이전트·훅·MCP를 플러그인 또는 관리형 설정에서만 로드 | `strictPluginOnlyCustomization` |
 | 훅 제한 | 관리형 훅만 로드, HTTP 훅 URL 제한 | `allowManagedHooksOnly`, `allowedHttpHookUrls` |
-| 에이전트 뷰 비활성화 | `claude agents`, `--bg`, `/background` 비활성화 | `disableAgentView` |
+| 에이전트 뷰 비활성화 | `claude agents`, `--bg`, `/background`, on-demand supervisor 비활성화 | `disableAgentView` |
 | 버전 하한선 | 자동 업데이트가 조직 최소 버전 미만 설치 방지 | `minimumVersion` |
 
 ### 검증 및 온보딩
@@ -86,10 +87,30 @@ plist와 HKLM 레지스트리 위치는 관리자 권한이 필요해 변조에 
 
 서버 관리형과 엔드포인트 관리형 모두 Claude Code 설정 계층에서 최상위 티어를 차지한다. 관리 티어 내에서는 비어있지 않은 구성을 처음으로 전달하는 소스가 적용된다. 서버 관리형이 먼저 확인되고, 엔드포인트 관리형이 그 다음이다. 소스 간 병합은 없다.
 
+### 설정 전달 검증
+
+설정이 적용 중인지 확인하려면:
+
+- 사용자에게 Claude Code를 다시 시작하도록 안내. 설정에 보안 승인 다이얼로그를 트리거하는 항목이 포함된 경우, 시작 시 관리형 설정을 설명하는 프롬프트가 표시된다.
+- 관리형 권한 규칙이 활성인지 확인하려면 사용자가 `/permissions`를 실행하여 유효 권한 규칙을 확인.
+- `/status`로 활성 관리 소스를 확인.
+
 ### 가져오기 및 캐싱 동작
 
 - **첫 실행(캐시 없음)**: 설정을 비동기로 가져온다. 가져오기 실패 시 관리형 설정 없이 계속 진행
 - **후속 실행(캐시 있음)**: 캐시된 설정이 즉시 적용되고, 백그라운드에서 새 설정을 가져온다
+
+### 전달된 설정의 무효 항목 (v2.1.169+)
+
+전달된 payload는 다른 관리 소스와 동일한 규칙으로 관용 파싱된다. payload에 스키마 검증에 실패하는 항목이 포함된 경우, Claude Code는 해당 항목을 제거(strip)하고 검증 에러를 표시한 뒤 나머지 유효한 설정을 모두 적용한다. Claude Code v2.1.169 이상 필요.
+
+서버 관리형 전달은 다음 동작을 추가한다:
+
+- `~/.claude/remote-settings.json` 캐시는 무효 항목이 제거된 salvage된 payload를 저장한다. 원시 무효 payload는 영구 저장되지 않는다.
+- payload에서 salvage 가능한 필드가 하나도 없으면, Claude Code는 마지막으로 수락된 캐시 설정을 유지하고 fatal error를 기록한다.
+- 보안 승인 다이얼로그는 salvage된 payload를 평가하므로, 제거된 무효 항목은 승인 대상으로 제출되거나 실행되지 않는다.
+
+전달 문제를 디버깅하려면 `claude --debug-file <path>`를 실행하고 로그에서 `Remote settings`를 검색하라. payload 변경 사항은 조직에 롤아웃하기 전에 테스트 장비에서 `claude doctor`로 검증하라.
 
 ### 폐쇄형 강제(fail-closed) 시작
 
@@ -307,9 +328,11 @@ LLM 게이트웨이는 Claude Code와 모델 제공자 사이의 중앙 집중�
 | `X-Claude-Code-Agent-Id` | 요청을 발행한 하위 에이전트/팀원의 식별자 |
 | `X-Claude-Code-Parent-Agent-Id` | 요청 에이전트를 생성한 상위 에이전트의 식별자 |
 
+두 에이전트 ID 헤더는 영구 사용자/장치 ID가 아닌 spawn마다 고유한 임시 식별자다. Claude Code는 또한 시스템 프롬프트에 클라이언트 버전과 대화에서 파생된 지문이 포함된 짧은 attribution 블록을 앞에 추가한다. Anthropic API는 처리 전 이 블록을 제거하므로 자체 prompt cache에는 영향이 없다. 게이트웨이가 전체 요청 본문에 키를 둔 자체 prompt cache를 구현하는 경우, 이 블록을 생략하려면 `CLAUDE_CODE_ATTRIBUTION_HEADER=0`을 설정하라. 추가로 `ANTHROPIC_CUSTOM_HEADERS`에 지정된 헤더들도 함께 전송된다.
+
 ### 모델 검색
 
-`CLAUDE_CODE_ENABLE_GATEWAY_MODEL_DISCOVERY=1`을 설정하면 Claude Code가 게이트웨이의 `/v1/models` 엔드포인트를 쿼리하여 `/model` 선택기에 모델을 추가한다. v2.1.129 이상 필요. Anthropic Messages 형식에만 적용된다. 검색 요청은 `ANTHROPIC_AUTH_TOKEN`을 Bearer 토큰으로, 또는 `ANTHROPIC_API_KEY`를 `x-api-key` 헤더로 전송한다. `claude` 또는 `anthropic`으로 시작하는 모델만 선택기에 추가된다.
+`CLAUDE_CODE_ENABLE_GATEWAY_MODEL_DISCOVERY=1`을 설정하면 Claude Code가 게이트웨이의 `/v1/models` 엔드포인트를 쿼리하여 `/model` 선택기에 모델을 추가한다. v2.1.129 이상 필요. Anthropic Messages 형식에만 적용된다( Bedrock/Vertex 패스스루 엔드포인트 및 `ANTHROPIC_BASE_URL`이 없거나 `api.anthropic.com`인 경우에는 실행되지 않는다). 검색 요청은 `ANTHROPIC_AUTH_TOKEN`을 Bearer 토큰으로, 또는 `ANTHROPIC_API_KEY`를 `x-api-key` 헤더로 전송하며, `ANTHROPIC_CUSTOM_HEADERS`의 헤더도 함께 보낸다. `claude` 또는 `anthropic`으로 시작하는 모델만 선택기에 추가되며, 각 항목은 "From gateway"로 라벨링되고 응답에 `display_name` 필드가 있으면 이를 사용한다. 결과는 `~/.claude/cache/gateway-models.json`에 캐시되고 매 시작 시 새로고침된다. 요청이 실패하거나 게이트웨이가 `/v1/models`를 구현하지 않으면, 이전 시작의 캐시 목록 또는 내장 모델 목록으로 폴백한다.
 
 ### 동적 API 키 (apiKeyHelper)
 
@@ -375,6 +398,90 @@ export ANTHROPIC_AWS_WORKSPACE_ID=wrkspc_01ABCDEFGHIJKLMN
 export CLAUDE_CODE_SKIP_ANTHROPIC_AWS_AUTH=1
 export CLAUDE_CODE_USE_ANTHROPIC_AWS=1
 ```
+
+> Claude Desktop 앱은 자체 호스팅 게이트웨이에 대해 자체 구성 키를 사용하는 Cowork on 3P research preview를 통해서도 게이트웨이에 연결할 수 있다.
+
+---
+
+## 5.5 Claude Platform on AWS
+
+Claude Platform on AWS는 AWS 인증, IAM 접근 통제, AWS Marketplace 과금을 사용하는 Anthropic 운영 Claude API다. 요청은 Anthropic API에 직접 도달하므로 동일한 모델과 기능을 동일한 릴리스 일정으로 사용할 수 있다.
+
+### 사전 요구 사항
+
+- AWS Marketplace를 통한 활성 Claude Platform on AWS 구독
+- AWS 연결 Anthropic 조직의 workspace와 해당 workspace ID
+- Anthropic 서비스 호출 권한이 있는 IAM 보안 주체, 또는 workspace 범위 API 키
+- SigV4 인증을 원하는 경우 환경, `~/.aws/credentials`, 또는 연결된 IAM 역할의 AWS 자격 증명 (AWS CLI는 SSO 로그인 플로우에만 필요)
+
+### AWS 자격 증명 구성
+
+두 가지 인증 방법을 지원한다.
+
+| 방법 | 설명 |
+| --- | --- |
+| Option A: SigV4 | 환경 변수, `~/.aws/credentials`, IAM 역할, AWS SSO 등 표준 AWS 자격 증명 체인으로 SigV4 서명. SSO 자격 증명이 세션 중 만료되면 `settings.json`의 `awsAuthRefresh`에 로그인 명령을 지정해 재실행 후 재시도 |
+| Option B: workspace API 키 | 장기 비밀인 workspace API 키를 `ANTHROPIC_AWS_API_KEY`로 설정. `x-api-key` 헤더로 전송되며 SigV4보다 우선 적용 |
+
+```bash
+# Option A: SigV4 (SSO)
+aws sso login --profile my-profile
+export AWS_PROFILE=my-profile
+
+# Option B: workspace API 키
+export ANTHROPIC_AWS_API_KEY=sk-ant-xxxxx
+```
+
+`awsAuthRefresh` 설정 예시:
+
+```json
+{
+  "awsAuthRefresh": "aws sso login --profile my-profile"
+}
+```
+
+### Claude Code 라우팅 구성
+
+```bash
+export CLAUDE_CODE_USE_ANTHROPIC_AWS=1
+export ANTHROPIC_AWS_WORKSPACE_ID=wrkspc_01ABCDEFGHIJKLMN
+export AWS_REGION=us-east-1
+```
+
+`ANTHROPIC_AWS_WORKSPACE_ID`는 필수이며 모든 요청에 `anthropic-workspace-id` 헤더로 전송된다. base URL은 `AWS_REGION`에서 `https://aws-external-anthropic.{region}.api.aws`로 자동 계산된다. URL을 직접 재정의하려면 `ANTHROPIC_AWS_BASE_URL`을 설정한다.
+
+Claude Platform on AWS는 AWS 자격 증명이 환경에 있어도 opt-in이다. Bedrock과 Foundry가 제공자 라우팅에서 우선순위를 가지므로, 설정되어 있다면 `CLAUDE_CODE_USE_BEDROCK`과 `CLAUDE_CODE_USE_FOUNDRY`를 해제해야 한다.
+
+### 모델 버전 고정
+
+Claude Platform on AWS는 직접 Claude API와 동일한 모델 ID를 사용한다. 기본 별칭 `fable`, `opus`, `sonnet`, `haiku`는 Claude Code의 내장 기본값으로 해결되며, `ANTHROPIC_DEFAULT_OPUS_MODEL` 없이 `opus` 별칭은 Opus 4.7로 해결된다. 팀 배포 시 새 릴리스가 모두를 한 번에 이동시키지 않도록 모델 ID를 명시적으로 고정하라.
+
+```bash
+export ANTHROPIC_DEFAULT_FABLE_MODEL=claude-fable-5
+export ANTHROPIC_DEFAULT_OPUS_MODEL=claude-opus-4-7
+export ANTHROPIC_DEFAULT_SONNET_MODEL=claude-sonnet-4-6
+export ANTHROPIC_DEFAULT_HAIKU_MODEL=claude-haiku-4-5
+```
+
+Prompt caching은 자동으로 활성화된다. 5분 기본값 대신 1시간 캐시 TTL을 요청하려면 `ENABLE_PROMPT_CACHING_1H=1`을 설정한다. API는 1시간 캐시 쓰기를 더 높은 요율로 청구한다.
+
+### Agent SDK
+
+Agent SDK는 CLI와 동일한 환경 변수를 읽으므로, Claude Code 하위 프로세스를 spawn하는 프로그램은 호출 전에 `CLAUDE_CODE_USE_ANTHROPIC_AWS`, `ANTHROPIC_AWS_WORKSPACE_ID`, 그리고 `ANTHROPIC_AWS_API_KEY` 또는 AWS 자격 증명을 export하여 Claude Platform on AWS를 대상으로 지정할 수 있다.
+
+### 프록시 라우팅
+
+`ANTHROPIC_AWS_BASE_URL`을 프록시 주소로 설정해 트래픽을 라우팅한다. 게이트웨이가 자체적으로 요청에 서명하는 경우 `CLAUDE_CODE_SKIP_ANTHROPIC_AWS_AUTH=1`을 설정해 Claude Code가 미서명 요청을 보내게 하고, 게이트웨이가 자체 토큰을 요구하면 `ANTHROPIC_AUTH_TOKEN`에 설정한다.
+
+### /status 트러블슈팅
+
+`/status`를 실행하여 해결된 제공자와 명시적으로 구성된 workspace ID, region, base URL 재정의, auth-skip 설정을 확인한다.
+
+| 증상 | 원인 및 해결 |
+| --- | --- |
+| 모든 요청에서 `403 Forbidden` 또는 `AccessDenied` | IAM 보안 주체에 workspace의 Anthropic 서비스 호출 권한이 없음. 역할 확인. `ANTHROPIC_AWS_API_KEY`를 설정한 경우 키가 SigV4보다 우선하므로 만료 키가 동일한 에러를 유발 — 키 재생성 또는 변수 해제 |
+| missing-workspace 에러 | `ANTHROPIC_AWS_WORKSPACE_ID`가 unset/empty. AWS 자격 증명으로부터 추론되지 않음. AWS Console의 Workspaces에서 ID 확인 후 export |
+| 요청이 여전히 `api.anthropic.com`으로 전송 | `CLAUDE_CODE_USE_ANTHROPIC_AWS`가 unset이거나 truthy로 파싱되지 않음. `1`로 설정 후 `/status`로 확인. `CLAUDE_CODE_USE_BEDROCK` 또는 `CLAUDE_CODE_USE_FOUNDRY`도 설정된 경우 Claude Platform on AWS보다 우선 |
 
 ---
 
@@ -465,7 +572,16 @@ Bedrock, Vertex AI, Foundry를 사용할 때는 모델 트래픽과 인증이 �
 
 ### 모델 버전 고정 권장
 
-Bedrock, Vertex AI, Foundry 또는 Claude Platform on AWS로 배포하는 경우, `ANTHROPIC_DEFAULT_OPUS_MODEL`, `ANTHROPIC_DEFAULT_SONNET_MODEL`, `ANTHROPIC_DEFAULT_HAIKU_MODEL`로 특정 모델 버전을 고정하라. 고정하지 않으면 모델 별칭이 최신 버전으로 해결되며, Anthropic 업데이트 시 계정에 아직 활성화되지 않은 버전일 수 있다.
+Bedrock, Vertex AI, Foundry 또는 Claude Platform on AWS로 배포하는 경우, 특정 모델 버전을 고정하라. 고정하지 않으면 모델 별칭이 최신 버전으로 해결되며, Anthropic 업데이트 시 계정에 아직 활성화되지 않은 버전일 수 있다. Claude Platform on AWS에서는 `ANTHROPIC_DEFAULT_OPUS_MODEL` 없이 `opus` 별칭이 Opus 4.7로 해결된다.
+
+| 환경 변수 | 역할 |
+| --- | --- |
+| `ANTHROPIC_DEFAULT_FABLE_MODEL` | `fable` 별칭 고정 (예: `claude-fable-5`). 현재 기본값은 opus 별칭 → Opus 4.7 |
+| `ANTHROPIC_DEFAULT_OPUS_MODEL` | `opus` 별칭 고정 (예: `claude-opus-4-7`) |
+| `ANTHROPIC_DEFAULT_SONNET_MODEL` | `sonnet` 별칭 고정 (예: `claude-sonnet-4-6`) |
+| `ANTHROPIC_DEFAULT_HAIKU_MODEL` | `haiku` 별칭 고정 (예: `claude-haiku-4-5`) |
+
+> Fable 5는 항상 extended thinking을 사용하므로 thinking 비활성화를 사용할 수 없다.
 
 ---
 
@@ -595,7 +711,8 @@ Claude Code는 API 토큰 소비량에 따라 요금이 청구된다. 구독 플
 
 - `/usage` 명령: 현재 세션의 토큰 사용량, 비용 추정치, 기간 표시
 - Claude Console의 Usage 페이지에서 공식 청구 확인 가능
-- Pro, Max, Team, Enterprise에서 `/usage`는 스킬, 하위 에이전트, 플러그인, MCP 서버별 사용량 분석도 제공
+- Pro, Max, Team, Enterprise에서 `/usage`는 스킬, 하위 에이전트, 플러그인, MCP 서버별 사용량 분석도 제공. `d` 또는 `w`를 눌러 최근 24시간과 최근 7일 간 전환. 수치는 이 장비의 로컬 세션 기록에서 근사 계산되므로 다른 장치나 claude.ai의 사용량은 포함되지 않는다.
+- VS Code 확장에서는 동일한 분석이 Account & usage 다이얼로그의 Day/Week 토글로 표시된다. Claude Code v2.1.174 이상 필요.
 
 ### 팀 비용 관리
 
@@ -618,14 +735,16 @@ Claude Code는 API 토큰 소비량에 따라 요금이 청구된다. 구독 플
 
 | 전략 | 방법 |
 | --- | --- |
-| 컨텍스트 관리 | 작업 전환 시 `/clear` 사용, `/compact`로 맞춤 압축 지침 제공 |
-| 모델 선택 | 대부분 Sonnet으로 충분. Opus는 복잡한 아키텍처 결정에 예약. `/model`로 중간 전환 |
+| 컨텍스트 관리 | 작업 전환 시 `/clear` 사용, `/compact`로 맞춤 압축 지침 제공. 세션을 나중에 쉽게 찾도록 `/rename`으로 이름 지정 후 clear하고 `/resume`으로 복귀 |
+| 모델 선택 | 대부분 Sonnet으로 충분. Opus는 복잡한 아키텍처 결정에 예약. `/model`로 중간 전환. 단순 하위 에이전트 작업에는 subagent 구성에서 `model: haiku` 지정 |
 | MCP 서버 최적화 | 사용하지 않는 서버 비활성화 (`/mcp`), CLI 도구 우선 |
+| 타입 언어 코드 인텔리전스 플러그인 | LSP 기반 정밀 심볼 네비게이션(go-to-definition 등)으로 불필요한 파일 읽기를 줄임. 단일 go-to-definition 호출이 grep + 후보 파일 다수 읽기를 대체. 설치된 언어 서버가 편집 후 타입 에러도 자동 보고 |
 | 훅 및 스킬 활용 | 대용량 파일 전처리, 도메인 지식 온디맨드 로드 |
 | CLAUDE.md 최적화 | 200줄 미만 유지, 전문 지침은 스킬로 이동 |
-| Extended Thinking 조정 | `/effort`로 노력 수준 조정, `MAX_THINKING_TOKENS`로 예산 제한 |
+| Extended Thinking 조정 | `/effort`로 노력 수준 조정, `MAX_THINKING_TOKENS`로 예산 제한. 단, Fable 5는 항상 extended thinking을 사용하므로 비활성화 불가 |
 | 하위 에이전트에 위임 | 장황한 출력은 하위 에이전트 컨텍스트에 격리 |
 | 구체적인 프롬프트 | "improve this codebase"보다 "auth.ts의 login 함수에 입력 검증 추가"가 효율적 |
+| 복잡 작업 효율적 수행 | Shift+Tab으로 plan 모드 진입 후 구현, 잘못된 방향이면 Escape로 즉시 중단, `/rewind` 또는 Escape 두 번 눌러 체크포인트 복원, 검증 타겟(테스트 케이스·스크린샷·예상 출력) 제공, 파일 하나 작성 후 테스트하는 증분 접근 |
 
 ### 에이전트 팀 토큰 비용
 
@@ -660,33 +779,41 @@ Claude Code는 조직이 개발자 사용 패턴을 이해하고, 기여 메트�
 
 ### 대시보드 접근
 
-| 플랜 | 대시보드 URL | 포함 내용 |
-| --- | --- | --- |
-| Claude for Teams / Enterprise | claude.ai/analytics/claude-code | 사용량 메트릭, 기여 메트릭(GitHub 연동), 리더보드, 데이터 내보내기 |
-| API (Claude Console) | platform.claude.com/claude-code | 사용량 메트릭, 지출 추적, 팀 인사이트 |
+| 플랜 | 대시보드 URL | 포함 내용 | 접근 권한 |
+| --- | --- | --- | --- |
+| Claude for Teams / Enterprise | claude.ai/analytics/claude-code | 사용량 메트릭, 기여 메트릭(GitHub 연동), 리더보드, 데이터 내보내기 | Admin, Owner |
+| API (Claude Console) | platform.claude.com/claude-code | 사용량 메트릭, 지출 추적, 팀 인사이트 | `UsageView` 권한 필요 (Developer, Billing, Admin, Owner, Primary Owner 역할에 부여) |
 
 ### 요약 메트릭
 
 | 메트릭 | 설명 |
 | --- | --- |
 | PRs with CC | Claude Code로 작성된 코드가 1줄 이상 포함된 병합된 PR 총수 |
-| Lines of code with CC | Claude Code 지원으로 작성된 코드의 총 줄 수 (유효 줄만 계산) |
+| Lines of code with CC | Claude Code 지원으로 작성된 코드의 총 줄 수. 정규화 후 3자 이상이고 빈 줄·괄호/단순 구두점만 있는 줄을 제외한 "effective lines"만 계산 |
 | PRs with Claude Code (%) | 전체 병합 PR 중 Claude Code 지원 코드가 포함된 PR의 비율 |
 | Suggestion accept rate | Edit, Write, NotebookEdit 도구 사용에 대한 수락률 |
-| Lines of code accepted | Claude Code가 작성하고 사용자가 수락한 총 코드 줄 수 |
+| Lines of code accepted | Claude Code가 작성하고 사용자가 수락한 총 코드 줄 수. 거부된 제안은 제외되며 이후 삭제는 추적하지 않음 |
 
 ### 기여 메트릭 활성화
 
 기여 메트릭은 GitHub 조직 연결이 필요하다. Owner 역할이 필요하며, GitHub 관리자가 GitHub 앱을 설치해야 한다. 데이터는 활성화 후 24시간 이내에 나타난다. GitHub Cloud 및 GitHub Enterprise Server를 지원한다.
 
-### PR 속성(Attribion)
+### PR 속성(Attribution)
 
 1. 병합된 PR에서 추가된 줄을 추출
 2. 해당 파일을 편집한 Claude Code 세션을 시간 윈도우 내에서 식별 (병합일 기준 21일 전 ~ 2일 후)
 3. 다중 전략으로 PR 줄과 Claude Code 출력을 매칭
 4. AI 지원 줄 수와 총 줄 수로 메트릭 계산
 
+비교 전 줄은 정규화된다: 공백을 trim하고, 다중 공백을 축소하며, 따옴표를 표준화하고, 소문자로 변환한다. Claude Code 지원 줄이 포함된 병합 PR은 GitHub에서 `claude-code-assisted` 라벨로 표시된다.
+
 **제외 파일**: lock 파일, 생성된 코드, 빌드 디렉토리, 테스트 픽스처, 1,000자 이상 줄
+
+**속성 참고 사항**:
+
+- 개발자가 20% 이상 차이로 코드를 실질적으로 재작성한 경우 Claude Code로 귀속되지 않는다
+- 21일 윈도우 외부의 세션은 고려되지 않는다
+- 알고리즘은 속성 수행 시 PR 소스/대상 브랜치를 고려하지 않는다
 
 ### API 고객 분석
 
@@ -774,6 +901,17 @@ OTLP 익스포터의 클라이언트 인증서 구성은 해당 신호에 사용
 | `OTEL_METRICS_INCLUDE_VERSION` | `app.version` 속성 포함 | `false` |
 | `OTEL_METRICS_INCLUDE_ACCOUNT_UUID` | `user.account_uuid` 및 `user.account_id` 속성 포함 | `true` |
 | `OTEL_METRICS_INCLUDE_ENTRYPOINT` | `app.entrypoint` 속성 포함 | `false` |
+| `OTEL_METRICS_INCLUDE_RESOURCE_ATTRIBUTES` | `OTEL_RESOURCE_ATTRIBUTES`의 키를 metric datapoint 속성으로 포함 | `true` |
+
+### 다중 팀 조직 지원
+
+여러 팀이나 부서가 있는 조직은 `OTEL_RESOURCE_ATTRIBUTES` 환경 변수로 커스텀 속성을 추가해 그룹을 구분할 수 있다.
+
+```bash
+export OTEL_RESOURCE_ATTRIBUTES="department=engineering,team.id=platform,cost_center=eng-123"
+```
+
+이 커스텀 속성은 모든 메트릭과 이벤트에 포함되어 팀/부서별 필터링, 비용 센터별 비용 추적, 팀별 대시보드와 알림을 지원한다. Claude Code는 이 값을 OTLP resource 블록으로 전송하는 것과 별도로 모든 metric datapoint와 event record에 속성으로 첨부한다. 커스텀 키는 표준 속성(`user.id`, `session.id` 등)을 덮어쓰지 않으며, 충돌 시 내장 값을 유지한다. resource 블록에만 전송하고 datapoint 라벨에서 생략하려면 `OTEL_METRICS_INCLUDE_RESOURCE_ATTRIBUTES=false`를 설정한다.
 
 ### 동적 헤더 헬퍼
 
@@ -808,6 +946,7 @@ OTLP 익스포터의 클라이언트 인증서 구성은 해당 신호에 사용
 | `claude_code.tool_result` | 도구 실행 완료 시 |
 | `claude_code.api_request` | Claude API 요청 시 |
 | `claude_code.api_error` | API 요청 실패 시 |
+| `claude_code.api_refusal` | API 요청이 `stop_reason: "refusal"`을 반환할 때. refusal은 성공 응답 스트림에 도달하므로 `api_error` 이벤트가 발생하지 않아 이 이벤트로 빈도를 추적 |
 | `claude_code.api_request_body` | `OTEL_LOG_RAW_API_BODIES` 설정 시 API 요청 본문 (인라인 모드: 60KB 잘림, 파일 모드: `body_ref` 경로) |
 | `claude_code.api_response_body` | `OTEL_LOG_RAW_API_BODIES` 설정 시 API 응답 본문 |
 | `claude_code.tool_decision` | 도구 권한 결정 시 |
@@ -845,7 +984,48 @@ claude_code.interaction
 
 `llm_request`, `tool.execution`, `hook` 스팬은 실패 기록 시 OpenTelemetry 상태 `ERROR`를 설정한다. 기본적으로 사용자 프롬프트 텍스트, 도구 입력 세부 정보, 도구 내용은 제거(redact)된다. 포함하려면 `OTEL_LOG_USER_PROMPTS=1`, `OTEL_LOG_TOOL_DETAILS=1`, `OTEL_LOG_TOOL_CONTENT=1`을 설정하라.
 
+`claude_code.hook` 스팬은 detailed beta tracing이 활성일 때만 내보내지며, 추적 익스포터 구성에 더해 `ENABLE_BETA_TRACING_DETAILED=1`과 `BETA_TRACING_ENDPOINT`가 필요하다. 대화형 CLI 세션에서는 조직이 이 기능에 대해 allowlist에 등록되어 있어야 한다. Agent SDK 및 비대화형 `-p` 세션은 이 게이트가 없다. `CLAUDE_CODE_ENHANCED_TELEMETRY_BETA`만 설정된 경우에는 발생하지 않는다.
+
+### 분산 추적 TRACEPARENT 전파
+
 추적 활성 시 Bash 및 PowerShell 하위 프로세스는 활성 도구 실행 스팬의 W3C trace context를 포함하는 `TRACEPARENT` 환경 변수를 자동으로 상속한다. Agent SDK 및 `-p` 비대화형 세션에서는 `TRACEPARENT` 및 `TRACESTATE`를 자체 환경에서 읽어 외부 프로세스의 분산 추적을 Claude Code 스팬 아래에 배치할 수 있다. 대화형 세션은 CI 또는 컨테이너 환경의 앰비언트 값을 우연히 상속하지 않도록 인바운드 `TRACEPARENT`를 무시한다.
+
+Claude Code가 Anthropic API에 직접 연결된 경우, 각 모델 요청은 `claude_code.llm_request` 스팬 컨텍스트로 설정된 W3C `traceparent` 헤더를 전송하며, API의 `traceresponse` 헤더는 span link로 기록된다. 이 둘이 함께 Claude Code의 클라이언트 측 스팬을 규정 준수 매개체를 통한 서버 측 추적과 연결한다. 아웃바운드 HTTP MCP 요청도 동일하게 `traceparent`를 전송한다. 헤더는 서드파티 제공자에게는 전송되지 않는다.
+
+기본적으로 모델 및 HTTP MCP 요청의 `traceparent` 헤더는 `ANTHROPIC_BASE_URL`이 unset이거나 Anthropic API를 가리킬 때만 전송된다(일부 프록시가 인식하지 못하는 헤더를 거부하기 때문). 하위 프로세스 `TRACEPARENT` 변수도 동일한 스위치로 제어된다. 커스텀 `ANTHROPIC_BASE_URL` 프록시로 Claude Code를 실행하면서 trace context를 전파하려면 `CLAUDE_CODE_PROPAGATE_TRACEPARENT=1`을 설정한다.
+
+### 권한 모드 변경 이벤트 상세
+
+`permission_mode_changed` 이벤트는 다음 속성을 포함한다:
+
+- `from_mode`: 이전 권한 모드 (예: `default`, `plan`, `acceptEdits`, `auto`, `bypassPermissions`)
+- `to_mode`: 새 권한 모드
+- `trigger`: 변경 원인. `shift_tab`, `exit_plan_mode`, `auto_gate_denied`, `auto_opt_in` 중 하나. SDK/bridge에서 발생한 전환 시 absent
+
+### 비용/토큰 카운터 속성
+
+`claude_code.cost.usage`와 `claude_code.token.usage` 메트릭은 다음 컨텍스트 속성을 포함한다:
+
+| 속성 | 설명 |
+| --- | --- |
+| `effort` | 요청에 적용된 노력 수준: `low`, `medium`, `high`, `xhigh`, `max`. 모델이 effort를 지원하지 않으면 absent |
+| `agent.name` | 요청을 발행한 하위 에이전트 유형. 내장 에이전트명과 공식 마켓플레이스 플러그인 에이전트명은 그대로 표시. 그 외 사용자 정의는 `custom`으로 대체 |
+| `skill.name` | 요청에 활성인 스킬. 내장/번들/사용자 정의/공식 마켓플레이스 스킬명은 그대로, 서드파티 플러그인 스킬은 `third-party`로 대체 |
+| `plugin.name` | 활성 스킬/하위 에이전트를 제공하는 플러그인. 공식 마켓플레이스는 그대로, 서드파티는 `third-party` |
+| `marketplace.name` | 소유 플러그인이 설치된 마켓플레이스. 공식 마켓플레이스 플러그인만 해당 |
+| `mcp_server.name` | 해당 턴에 MCP 도구를 실행한 서버. 내장/claude.ai 프록시/공식 레지스트리는 그대로, 사용자 구성은 `custom` |
+| `mcp_tool.name` | 해당 턴에 실행된 MCP 도구. `mcp_server.name`과 동일한 마스킹 적용 |
+
+### 플러그인/훅 이벤트 속성
+
+`plugin_loaded`, `hook_registered`, `hook_execution_start`, `hook_execution_complete` 이벤트는 다음 속성을 포함한다:
+
+| 속성 | 설명 |
+| --- | --- |
+| `safe_mode` | 세션이 `--safe-mode`로 시작된 경우 `true`, 그 외 `false`. Claude Code v2.1.169 이상 필요 |
+| `host_owned_mcp` | SDK 호스트가 플러그인의 MCP 연결을 관리하고 Claude Code가 플러그인의 MCP 서버 구성 읽기를 건너뛴 경우 `true`. v2.1.172 이상 필요 (plugin_loaded만) |
+
+`skill_activated` 이벤트는 워크플로 스킬의 경우 `skill.kind: "workflow"` 속성을 포함한다(해당하지 않으면 absent).
 
 ### 보안 감사
 

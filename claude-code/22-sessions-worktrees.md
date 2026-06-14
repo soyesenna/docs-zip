@@ -1,9 +1,6 @@
 # Sessions, Worktrees, Checkpointing & Deep Links
 
-> 출처: https://code.claude.com/docs/en/sessions
-> https://code.claude.com/docs/en/worktrees
-> https://code.claude.com/docs/en/checkpointing
-> https://code.claude.com/docs/en/deep-links
+> 원문: https://code.claude.com/docs/en/sessions | https://code.claude.com/docs/en/worktrees | https://code.claude.com/docs/en/checkpointing | https://code.claude.com/docs/en/deep-links
 
 ---
 
@@ -27,12 +24,14 @@ Desktop 앱, 웹 버전, VS Code 확장 프로그램은 각각 자체 session �
 
 #### Session picker 검색 범위
 
-Session은 프로젝트 디렉터리별로 저장됩니다. 기본적으로 현재 worktree의 대화형 session과 `/add-dir`로 추가된 다른 디렉터리의 session을 보여줍니다.
+Session은 프로젝트 디렉터리별로 저장됩니다. 기본적으로 현재 worktree의 대화형 session과 `/add-dir`로 추가된 다른 디렉터리의 session을 보여줍니다. v2.1.169부터 `/cd`로 session을 이동하면 새 디렉터리의 project storage로 재배치되어, 이후 해당 디렉터리의 picker에 나타납니다.
 
 | 단축키 | 동작 |
 | --- | --- |
 | `Ctrl+W` | 같은 리포지터리의 모든 worktree로 확대 |
 | `Ctrl+A` | 이 머신의 모든 프로젝트로 확대 |
+
+같은 리포지터리의 다른 worktree에 있는 session을 선택하면 그 자리에서 재개됩니다. 관련 없는 다른 프로젝트의 session을 선택하면 `cd` 및 resume 명령어가 클립보드에 복사됩니다.
 
 이름으로 재개 시 현재 리포지터리와 그 worktree 전체에서 검색합니다.
 
@@ -93,7 +92,7 @@ claude --continue --fork-session
 
 원본 session은 변경되지 않고 session picker에 그대로 남습니다. `/branch` 확인 메시지에는 새 branch의 session ID와 원본 session ID가 모두 출력됩니다. 원본으로 돌아가려면 `/resume`에 원본 ID를 전달하거나 session picker를 사용하세요.
 
-"allow for this session"으로 승인한 권한은 새 branch로 이어지지 않습니다.
+"allow for this session"으로 승인한 권한은 새 branch로 이어지지 않습니다. 분기(fork) 없이 두 터미널에서 같은 session을 재개하면 양쪽의 메시지가 하나의 transcript에 인터리브됩니다.
 
 ### 세션 내 컨텍스트 관리
 
@@ -126,13 +125,15 @@ Git worktree는 리포지터리 기록과 remote를 공유하면서 자체 파�
 
 | 명령어 | 동작 |
 | --- | --- |
-| `claude --worktree feature-auth` 또는 `claude -w feature-auth` | `.claude/worktrees/feature-auth/`에 격리된 worktree 생성 후 Claude 시작 |
+| `claude --worktree feature-auth` 또는 `claude -w feature-auth` | 리포지터리 루트의 `.claude/worktrees/feature-auth/` 경로에, `worktree-feature-auth`라는 새 branch로 worktree를 생성하고 Claude 시작 |
 | `claude --worktree bugfix-123` | 다른 터미널에서 두 번째 격리 session 시작 |
 | `claude --worktree` (이름 생략) | `bright-running-fox` 같은 임의 이름 자동 생성 |
 
+기본적으로 worktree는 리포지터리 루트의 `.claude/worktrees/<value>/` 경로에, `worktree-<value>`라는 새 branch로 생성됩니다. 다른 위치에 생성하려면 `WorktreeCreate` hook을 설정하세요.
+
 세션 중에 Claude에게 "work in a worktree"라고 요청하면 `EnterWorktree` 도구로 worktree를 생성합니다. Worktree 내부에서 `EnterWorktree`에 대상 경로를 전달하여 `.claude/worktrees/` 아래의 다른 worktree로 직접 전환할 수 있습니다.
 
-**주의**: 디렉터리에서 `--worktree`를 처음 사용하기 전에 해당 디렉터리에서 `claude`를 한 번 실행하여 workspace trust 대화상자를 수락해야 합니다. 수락하지 않은 상태에서 `--worktree`를 사용하면 에러가 발생합니다.
+**주의**: 디렉터리에서 `--worktree`를 처음 사용하기 전에 해당 디렉터리에서 `claude`를 한 번 실행하여 workspace trust 대화상자를 수락해야 합니다. 수락하지 않은 상태에서 `--worktree`를 사용하면 에러가 발생하며, 먼저 해당 디렉터리에서 `claude`를 실행하라는 안내가 나타납니다. 단, `-p`를 함께 사용한 비대화형 실행은 trust 검사를 건너뛰므로 `claude -p --worktree`는 검사 없이 진행됩니다.
 
 ### Base branch 선택
 
@@ -154,7 +155,7 @@ Git worktree는 리포지터리 기록과 remote를 공유하면서 자체 파�
 
 `baseRef`는 `"fresh"` 또는 `"head"`만 허용하며, 임의의 git ref는 지원하지 않습니다.
 
-특정 Pull Request에서 분기하려면 PR 번호 앞에 `#`을 붙이거나 전체 GitHub PR URL을 전달합니다:
+특정 Pull Request에서 분기하려면 PR 번호 앞에 `#`을 붙이거나 전체 GitHub PR URL을 전달합니다. Claude Code는 `origin`에서 `pull/<number>/head`를 fetch한 뒤 `.claude/worktrees/pr-<number>` 경로에 worktree를 생성합니다:
 
 ```
 claude --worktree "#1234"
@@ -183,7 +184,7 @@ Subagent가 자체 worktree에서 실행되도록 하여 병렬 편집 충돌을
 - Claude에게 "use worktrees for your agents"라고 요청
 - 또는 커스텀 subagent의 frontmatter에 `isolation: worktree` 추가
 
-각 subagent는 임시 worktree를 받으며, 변경 사항 없이 종료되면 자동으로 제거됩니다.
+각 subagent는 임시 worktree를 받으며, 변경 사항 없이 종료되면 자동으로 제거됩니다. Subagent worktree는 `--worktree`와 동일한 base branch를 사용하므로, `worktree.baseRef`를 `"head"`로 설정하지 않는 한 리포지터리의 기본 branch에서 분기합니다.
 
 ### Worktree 정리
 
@@ -196,6 +197,8 @@ Subagent가 자체 worktree에서 실행되도록 하여 병렬 편집 충돌을
 | 비대화형 실행 (`--worktree` + `-p`) | 종료 프롬프트가 없으므로 자동 정리되지 않음. `git worktree remove`로 수동 제거 |
 
 Subagent 및 백그라운드 session용 worktree는 `cleanupPeriodDays` 설정 기간이 지나고 변경 사항이 없으면 자동 제거됩니다. `--worktree`로 직접 생성한 worktree는 자동 제거에서 제외됩니다.
+
+Agent가 실행 중일 때 Claude는 해당 worktree에 `git worktree lock`을 걸어 동시 정리(concurrent cleanup)가 제거하지 못하게 합니다. Lock은 agent가 종료되면 해제됩니다. 정리 sweep이 계속 유지하는 worktree를 제거하려면 `git worktree remove`를 실행하며, 커밋되지 않은 변경이나 추적되지 않는 파일이 있으면 `--force`를 추가합니다.
 
 ### 수동으로 worktree 관리
 
@@ -269,7 +272,7 @@ Rewind 메뉴는 session 중 보낸 각 프롬프트를 나열합니다. 원하�
 | Restore code and conversation | 코드와 대화 모두 해당 시점으로 복원 |
 | Restore conversation | 대화만 해당 시점으로 되감기, 현재 코드는 유지 |
 | Restore code | 파일 변경만 되돌리기, 대화는 유지 |
-| Summarize from here | 선택한 메시지 이후의 대화를 요약으로 압축. 이전 메시지는 그대로 유지 |
+| Summarize from here | 선택한 메시지부터 이후의 대화를 요약으로 압축하여 context window 공간 확보. 이전 메시지는 그대로 유지 |
 | Summarize up to here | 선택한 메시지 이전의 대화를 요약으로 압축. 이후 메시지는 그대로 유지 |
 | Never mind | 변경 없이 메시지 목록으로 돌아가기 |
 
@@ -284,7 +287,7 @@ Summarize up to here를 선택하면 대화 끝에 머물며 입력 필드는 �
 | Restore | 상태를 되돌립니다: 코드 변경, 대화 기록 또는 둘 모두를 실행 취소 |
 | Summarize | 디스크의 파일은 변경하지 않고 대화의 일부를 AI 생성 요약으로 압축 |
 
-요약 시 원본 메시지는 session transcript에 보존되므로 Claude가 필요시 세부 사항을 참조할 수 있습니다. 요약이 집중할 내용을 안내하는 선택적 지시어를 입력할 수 있습니다.
+요약 시 원본 메시지는 session transcript에 보존되므로 Claude가 필요시 세부 사항을 참조할 수 있습니다. 요약이 집중할 내용을 안내하는 선택적 지시어를 입력할 수 있습니다. 이 동작은 `/compact`와 비슷하지만 대상을 지정할 수 있다는 점이 다릅니다. 전체 대화를 요약하는 대신 선택한 메시지를 기준으로 어느 쪽을 압축할지 선택합니다.
 
 ### 주요 활용 사례
 
@@ -329,19 +332,19 @@ Deep link는 URL이므로 링크가 들어갈 수 있는 곳 어디나 배치할
 
 Deep link는 자동으로 어떤 것도 실행하지 않습니다. 디렉터리를 선택하고 프롬프트 상자를 채울 뿐입니다. Enter를 누르기 전까지 모델에 아무것도 전달되지 않습니다.
 
-1,000자가 넘는 프롬프트의 경우 배너에서 전체 텍스트를 스크롤하여 검토하라고 안내합니다.
+Session이 열리면 입력창 위에 external link가 이 session을 시작했다는 banner와 선택된 directory가 표시됩니다. 선택된 directory의 permission rules, `CLAUDE.md`, trust prompt는 다른 session과 동일하게 적용됩니다. 1,000자가 넘는 프롬프트의 경우 배너에서 전체 텍스트를 스크롤하여 검토하라고 안내합니다. 긴 프롬프트는 지시 사항을 화면 밖으로 밀어낼 수 있기 때문입니다.
 
 ### 링크 구성
 
-모든 deep link는 `claude-cli://open`으로 시작합니다. 이 경로만 handler가 허용합니다.
+모든 deep link는 `claude-cli://open`으로 시작합니다. 이 경로만 handler가 허용합니다. 파라미터 없이 minimal form(`claude-cli://open`)을 사용하면 홈 디렉터리에서 빈 프롬프트로 Claude Code를 엽니다.
 
 | 매개변수 | 설명 |
 | --- | --- |
 | `q` | 프롬프트 상자에 미리 입력할 텍스트. URL 인코딩 필요. 줄바꿈은 `%0A`. 최대 5,000자 |
 | `cwd` | 작업 디렉터리로 사용할 절대 경로. 네트워크 및 UNC 경로는 거부됨 |
-| `repo` | GitHub `owner/name` slug. Claude Code가 이전에 본 로컬 clone으로 해석 |
+| `repo` | GitHub `owner/name` slug. Claude Code가 이전에 본 로컬 clone으로 해석. 일치하는 clone이 없으면 홈 디렉터리에서 대신 열림 |
 
-`cwd`와 `repo`를 모두 전달하면 `cwd`가 우선하며 `repo`는 무시됩니다.
+`cwd`와 `repo`를 모두 전달하면 `cwd`가 우선하며 `repo`는 무시됩니다. `cwd` 경로가 존재하지 않더라도 마찬가지입니다.
 
 예시:
 
@@ -370,6 +373,8 @@ Check recent commits to main and the last successful build.
 - 여러 clone과 worktree가 별도로 추적됨
 - Claude Code를 최소 한 번 실행한 경로만 찾을 수 있음
 - 어떤 branch가 checkout되어 있는지는 변경하지 않음
+
+시작된 session은 선택한 경로와 해당 clone이 remote에서 마지막으로 fetch한 시간을 함께 표시하므로, 오래된(stale) 코드를 보고 있는지 판단할 수 있습니다.
 
 ### 런북에 링크 임베드
 
@@ -426,5 +431,5 @@ VS Code 확장 프로그램은 `vscode://anthropic.claude-code/open`에 자체 h
 | --- | --- |
 | 링크 클릭해도 반응 없음 | 해당 머신에서 대화형 `claude` session을 한 번 실행한 후 다시 시도. Linux에서 데스크탑 환경이 없으면 `xdg-open`이 처리할 수 없음 |
 | 링크가 일반 텍스트로 렌더링됨 | 일부 Markdown 렌더러가 `http`/`https`만 허용. GitHub에서는 code block에 URL을 넣어 브라우저 주소창에 직접 붙여넣기 하도록 안내 |
-| 홈 디렉터리에서 열림 | `repo`는 Claude Code가 이미 본 clone만 해석. clone에서 `claude`를 한 번 실행하여 경로를 기록시키거나 `cwd` 사용 |
+| 홈 디렉터리에서 열림 | `repo`는 Claude Code가 이미 본 clone만 해석하며, 일치하는 clone이 없으면 홈 디렉터리에서 대신 열림. clone에서 `claude`를 한 번 실행하여 경로를 기록시키거나 `cwd` 사용 |
 | 잘못된 터미널이 열림 | macOS: 선호하는 터미널에서 `claude`를 한 번 실행. Linux: `$TERMINAL` 환경변수 설정. Windows: Windows Terminal 설치 |

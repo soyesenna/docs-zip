@@ -2,7 +2,7 @@
 
 > 공식 프로그래밍 SDK — TypeScript/Python으로 Claude Code 에이전트 빌드
 
-**원문**: https://code.claude.com/docs/en/agent-sdk/overview (및 하위 페이지 전체)
+**원문**: https://code.claude.com/docs/en/agent-sdk/overview | https://code.claude.com/docs/en/agent-sdk/quickstart | https://code.claude.com/docs/en/agent-sdk/typescript | https://code.claude.com/docs/en/agent-sdk/python | https://code.claude.com/docs/en/agent-sdk/migration-guide | https://code.claude.com/docs/en/agent-sdk/custom-tools
 
 > **2026년 6월 15일 공지**: 구독 플랜에서 Agent SDK 및 `claude -p` 사용량이 기존 대화형 사용량 한도와 분리된 새로운 월간 Agent SDK 크레딧에서 차감된다. 자세한 내용은 Claude 플랜별 Agent SDK 사용 가이드를 참조.
 
@@ -109,7 +109,7 @@ for await (const message of query({
 | `acceptEdits` | 파일 편집 및 파일시스템 명령 자동 승인 | 신뢰된 개발 워크플로 |
 | `dontAsk` | `allowedTools` 외의 모든 요청 거부 | 잠긴 헤드리스 에이전트 |
 | `auto` (TS만) | 모델 분류기가 승인/거부 결정 | 안전 가드레일이 있는 자율 에이전트 |
-| `bypassPermissions` | 모든 권한 프롬프트 생략 | 샌드박스 CI, 완전 신뢰 환경 |
+| `bypassPermissions` | 권한 검사를 건너뛰되 명시적 ask 규칙은 여전히 프롬프트 | 샌드박스 CI, 완전 신뢰 환경 |
 | `default` | `canUseTool` 콜백으로 승인 처리 | 커스텀 승인 플로우 |
 | `plan` | 읽기 전용 도구만 실행 | 코드 수정 없이 분석/계획 |
 
@@ -162,7 +162,7 @@ function query({
 | `fallbackModel` | `string` | `undefined` | 주 모델 실패 시 폴백 모델 |
 | `maxTurns` | `number` | `undefined` | 최대 도구 사용 턴 수 |
 | `maxBudgetUsd` | `number` | `undefined` | 최대 비용 (USD) |
-| `effort` | `'low'/'medium'/'high'/'xhigh'/'max'` | `'high'` | 추론 노력 수준 |
+| `effort` | `'low'/'medium'/'high'/'xhigh'/'max'` | `Model default` | 추론 노력 수준. adaptive thinking과 연동해 사고 깊이 조절 |
 | `systemPrompt` | `string \| {type:'preset', preset:'claude_code', append?, excludeDynamicSections?}` | `undefined` | 시스템 프롬프트 |
 | `mcpServers` | `Record<string, McpServerConfig>` | `{}` | MCP 서버 설정 |
 | `agents` | `Record<string, AgentDefinition>` | `undefined` | 프로그래밍 방식 서브에이전트 |
@@ -187,6 +187,24 @@ function query({
 | `env` | `Record<string, string>` | `process.env` | 환경 변수 |
 | `betas` | `SdkBeta[]` | `[]` | 베타 기능 활성화 |
 | `agent` | `string` | `undefined` | 메인 스레드 에이전트 이름 |
+| `onElicitation` | `(request, { signal }) => Promise<ElicitationResult>` | `undefined` | MCP elicitation 요청 콜백. MCP 서버가 사용자 입력을 요청하고 이를 처리할 훅이 없을 때 호출. 미지정 시 미처리 elicitation 요청은 자동 거부 |
+| `agentProgressSummaries` | `boolean` | `false` | `true` 시 서브에이전트 진행 요약을 한 줄로 생성해 `task_progress` 이벤트의 `summary` 필드로 전달. 포그라운드/백그라운드 서브에이전트 모두에 적용 |
+| `forwardSubagentText` | `boolean` | `false` | 서브에이전트의 텍스트/사고 블록을 `parent_tool_use_id`가 설정된 assistant/user 메시지로 전달. 기본값은 서브에이전트의 `tool_use`/`tool_result` 블록만 방출 |
+| `additionalDirectories` | `string[]` | `[]` | Claude가 접근할 수 있는 추가 디렉토리 |
+| `taskBudget` | `{ total: number }` | `undefined` | (Alpha) API 측 태스크 토큰 예산. 설정 시 모델에게 남은 예산을 알려 도구 사용 속도 조절 및 한계 도달 전 마무리 유도 |
+| `toolAliases` | `Record<string, string>` | `undefined` | 내장 도구명을 MCP 도구명에 매핑. 예: `{ Bash: 'mcp__workspace__bash' }` → Claude가 내장 도구 대신 MCP 구현 호출 |
+| `planModeInstructions` | `string` | `undefined` | plan 모드용 커스텀 워크플로 지시. `permissionMode: 'plan'` 시 기본 plan-mode 워크플로 본문을 대체 |
+| `resumeSessionAt` | `string` | `undefined` | 특정 메시지 UUID 지점에서 세션 재개 |
+| `includeHookEvents` | `boolean` | `false` | 훅 라이프사이클 이벤트(`SDKHookStartedMessage`, `SDKHookProgressMessage`, `SDKHookResponseMessage`)를 메시지 스트림에 포함 |
+| `settings` | `string \| Settings` | `undefined` | 인라인 설정 객체 또는 설정 파일 경로. 우선순위의 flag-settings 레이어에 채워지며, 런타임에 `applyFlagSettings()`로 변경 가능 |
+| `loadTimeoutMs` | `number` | `60000` | (Alpha) `sessionStore.load()` / `sessionStore.listSubkeys()` 호출당 타임아웃(ms). `sessionStore` 미설정 시 무시 |
+| `sessionStoreFlush` | `'batched' \| 'eager'` | `'batched'` | (Alpha) `sessionStore` 플러시 모드. `sessionStore` 미설정 시 무시 |
+| `spawnClaudeCodeProcess` | `(options: SpawnOptions) => SpawnedProcess` | `undefined` | Claude Code 프로세스 스폰 커스텀 함수. VM/컨테이너/원격 환경에서 실행 시 사용 |
+| `executable` | `'bun' \| 'deno' \| 'node'` | 자동 감지 | 사용할 JavaScript 런타임 |
+| `executableArgs` | `string[]` | `[]` | 실행 파일에 전달할 인자 |
+| `title` | `string` | `undefined` | 세션 표시 제목. `resume`/`continue` 재개 시 저장된 제목이 우선 |
+| `allowDangerouslySkipPermissions` | `boolean` | `false` | 권한 우회 활성화. `permissionMode: 'bypassPermissions'` 사용 시 필수 |
+| `pathToClaudeCodeExecutable` | `string` | 번들 네이티브 바이너리에서 자동 추출 | Claude Code 실행 파일 경로. 옵션 의존성이 스킵되었거나 지원되지 않는 플랫폼일 때만 필요 |
 
 ### `startup()` — Pre-warm
 
@@ -219,6 +237,7 @@ for await (const message of warm.query("What files are here?")) {
 | `setMcpServers(servers)` | MCP 서버 동적 교체 (추가/제거/오류 결과 반환) |
 | `streamInput(stream)` | 스트리밍 입력 |
 | `stopTask(taskId)` | 백그라운드 태스크 중단 |
+| `applyFlagSettings(settings)` | 런타임에 세션의 flag-settings 레이어에 설정 병합 (스트리밍 입력 모드만). 전용 setter가 없는 설정을 세션 도중 변경할 때 사용. 다음 턴에 적용: `model`, `effortLevel`, `ultracode`, `permissions`, `hooks`, `skillOverrides`, `fastMode`, `awaySummaryEnabled`, `agent`. 시스템 프롬프트 옵션은 시작 시 1회 해결되므로 세션 중 변경 불가 |
 | `close()` | 쿼리 종료 및 프로세스 정리 |
 
 ### 메시지 타입 (30+)
@@ -265,7 +284,7 @@ type ThinkingConfig =
 
 ### Beta 기능 — context-1m-2025-08-07 retired
 
-`context-1m-2025-08-07` 베타는 **2026년 4월 30일부로 폐기**. Sonnet 4.5/Sonnet 4에서 전달해도 무효. 1M 컨텍스트를 사용하려면 Sonnet 4.6, Opus 4.6, Opus 4.7로 마이그레이션 (베타 헤더 불필요).
+`context-1m-2025-08-07` 베타는 **2026년 4월 30일부로 폐기**. Sonnet 4.5/Sonnet 4에서 전달해도 무효. 1M 컨텍스트를 사용하려면 Claude Sonnet 4.6, Claude Opus 4.6, Claude Opus 4.7, Claude Opus 4.8로 마이그레이션 (베타 헤더 불필요, 표준 가격 적용).
 
 ### ToolConfig
 
@@ -280,8 +299,19 @@ type ThinkingConfig =
 ```typescript
 import binPath from "@anthropic-ai/claude-agent-sdk-darwin-arm64/claude" with { type: "file" };
 import { extractFromBunfs } from "@anthropic-ai/claude-agent-sdk/extract";
+import { query } from "@anthropic-ai/claude-agent-sdk";
+
 const cliPath = extractFromBunfs(binPath); // 컴파일 외부에서는 입력 경로 그대로 반환
+
+for await (const message of query({
+  prompt: "Hello",
+  options: { pathToClaudeCodeExecutable: cliPath }, // 추출 경로를 query에 전달
+})) {
+  console.log(message);
+}
 ```
+
+`extractFromBunfs()`는 컴파일된 실행 파일의 가상 파일시스템에서 바이너리를 사용자별 임시 디렉토리로 복사해 실제 경로를 반환한다. 컴파일된 실행 파일 외부에서는 입력 경로를 그대로 반환하므로 동일 코드로 개발 환경 실행 가능.
 
 ### 메시지 타입 확인
 
@@ -363,12 +393,12 @@ async with ClaudeSDKClient() as client:
 | `model` | `str \| None` | 사용할 모델 |
 | `max_turns` | `int \| None` | 최대 턴 수 |
 | `max_budget_usd` | `float \| None` | 최대 비용 (USD) |
-| `effort` | `Literal["low", "medium", "high", "max"]` | 추론 노력 수준 |
+| `effort` | `Literal["low", "medium", "high", "xhigh", "max"] \| None` | 추론 노력 수준. `xhigh`는 Opus 4.8과 Opus 4.7에서만 확장 추론 지원 (다른 모델은 `high`로 폴백). 기본값 `None`(모델 기본값) |
 | `system_prompt` | `str \| SystemPromptPreset` | 시스템 프롬프트 |
 | `mcp_servers` | `dict[str, McpServerConfig]` | MCP 서버 설정 |
 | `agents` | `dict[str, AgentDefinition]` | 서브에이전트 정의 |
 | `hooks` | `dict[HookEvent, list[HookMatcher]]` | 훅 설정 |
-| `setting_sources` | `list[SettingSource] \| None` | 설정 소스 제어. 생략 시 아무 설정도 로드하지 않음 (Python SDK 기본값: `None`) |
+| `setting_sources` | `list[SettingSource] \| None` | 설정 소스 제어. 생략/`None` 시 CLI 기본값으로 user+project+local 모두 로드 (기본값: `None` = CLI defaults: all sources). 파일시스템 설정을 아예 로드하지 않으려면 빈 리스트 `setting_sources=[]`를 명시적으로 전달해야 함 (단, Python SDK 0.1.59 이하에서는 빈 리스트가 생략과 동일 취급되는 과거 버그가 있었으나 최신 버전에서는 수정되어 `[]`가 정상 동작함) |
 | `cwd` | `str \| Path` | 작업 디렉토리 |
 | `resume` | `str \| None` | 재개할 세션 ID |
 | `sandbox` | `SandboxSettings` | 샌드박스 설정 |
@@ -390,7 +420,7 @@ async with ClaudeSDKClient() as client:
 | --- | --- | --- |
 | `max_turns` / `maxTurns` | 최대 도구 사용 턴 수 | 제한 없음 |
 | `max_budget_usd` / `maxBudgetUsd` | 최대 비용 임계치 (USD) | 제한 없음 |
-| `effort` | 추론 노력 수준 | TS: `'high'`, Py: 모델 기본값 |
+| `effort` | 추론 노력 수준 | `Model default` (TS/Py 공통) |
 
 ### 노력 수준
 
@@ -399,7 +429,7 @@ async with ClaudeSDKClient() as client:
 | `low` | 최소 추론, 빠른 응답 | 파일 조회, 디렉토리 나열 |
 | `medium` | 균형 잡힌 추론 | 일반 편집, 표준 작업 |
 | `high` | 철저한 분석 | 리팩토링, 디버깅 |
-| `xhigh` | 확장된 추론 깊이 (TS만) | 코딩/에이전트 작업, Opus 4.7 권장 |
+| `xhigh` | 확장된 추론 깊이. Opus 4.8과 Opus 4.7에서 지원되며 다른 모델에서는 `high`로 폴백 (TS/Py 공통) | 코딩/에이전트 작업, Opus 4.8 및 Opus 4.7 권장 |
 | `max` | 최대 추론 깊이 | 심층 분석이 필요한 다단계 문제 |
 
 ### ResultMessage 하위타입
@@ -604,7 +634,7 @@ options = ClaudeAgentOptions(
 | `prompt` | Yes | 시스템 프롬프트 |
 | `tools` | No | 허용 도구 (생략 시 부모 상속) |
 | `disallowedTools` | No | 명시적으로 차단할 도구 (TS만) |
-| `model` | No | 모델 오버라이드 (`sonnet`, `opus`, `haiku`, `inherit` 또는 전체 모델 ID) |
+| `model` | No | 모델 오버라이드 (`fable`, `sonnet`, `opus`, `haiku`, `inherit` 등 alias 또는 전체 모델 ID). 생략/`inherit` 시 메인 모델 사용 |
 | `mcpServers` | No | 에이전트 전용 MCP 서버 (이름 참조 또는 인라인 설정) |
 | `skills` | No | 프리로드할 스킬 |
 | `initialPrompt` | No | 메인 스레드 에이전트 시 자동 제출될 첫 사용자 턴 |
@@ -613,6 +643,7 @@ options = ClaudeAgentOptions(
 | `memory` | No | 메모리 소스 (`user`, `project`, `local`) |
 | `effort` | No | 추론 노력 수준 (이름 또는 정수) |
 | `permissionMode` | No | 권한 모드 |
+| `criticalSystemReminder_EXPERIMENTAL` | No | (Experimental) 시스템 프롬프트에 추가되는 critical reminder |
 
 ---
 

@@ -1,6 +1,6 @@
 # 10. IDE 통합 (IDE Integrations)
 
-> **원문**: [Use Claude Code in VS Code](https://code.claude.com/docs/en/vs-code) | [JetBrains IDEs](https://code.claude.com/docs/en/jetbrains)
+> **원문**: [Use Claude Code in VS Code](https://code.claude.com/docs/en/vs-code) | [Use Claude Code with Chrome (beta)](https://code.claude.com/docs/en/chrome) | [JetBrains IDEs](https://code.claude.com/docs/en/jetbrains)
 > **기존**: [Add Claude Code to your IDE - Anthropic](https://docs.anthropic.com/en/docs/claude-code/ide-integrations)
 
 ---
@@ -9,6 +9,7 @@
 
 - [지원 IDE](#지원-ide)
 - [VS Code 확장](#vs-code-확장)
+- [Chrome 브라우저 자동화 (CLI)](#chrome-브라우저-자동화-cli)
 - [JetBrains 플러그인](#jetbrains-플러그인)
 - [보안 주의사항](#보안-주의사항)
 
@@ -47,7 +48,7 @@ VS Code 확장은 Claude Code의 네이티브 그래픽 인터페이스를 IDE�
 ### Prerequisites
 
 - VS Code 1.98.0 이상
-- Anthropic 계정 (확장 최초 실행 시 로그인). Amazon Bedrock, Google Vertex AI 등 서드파티 제공자를 사용하는 경우 [Use third-party providers](https://code.claude.com/docs/en/vs-code#use-third-party-providers)를 참조.
+- Anthropic 계정: paid Claude subscription (Pro, Max, Team, Enterprise) 또는 Claude Console 계정이면 되며 API 키는 필요 없다. 확장 최초 실행 시 로그인한다. Amazon Bedrock, Google Vertex AI, Microsoft Foundry 등 서드파티 제공자를 사용하는 경우 [Use third-party providers](https://code.claude.com/docs/en/vs-code#use-third-party-providers)를 참조.
 
 ### 확장 설치
 
@@ -101,6 +102,29 @@ Claude Code 패널 상단의 **Session history** 버튼을 클릭하면 대화 �
 #### Claude.ai 원격 세션 이어하기
 
 Claude Code on the web을 사용하는 경우, VS Code에서 해당 원격 세션을 바로 이어할 수 있다. 이 기능은 **Claude.ai Subscription**으로 로그인해야 하며, Anthropic Console 계정은 해당하지 않는다.
+
+#### 계정 및 사용량 확인 (Check account and usage)
+
+명령 메뉴에서 `/usage`를 실행하면 **Account & usage** 다이얼로그가 열린다. 로그인된 계정과 플랜, 그리고 현재 세션 및 주간 사용량 바와 각 제한이 리셋될 때까지 남은 시간을 보여준다. Requires Claude Code v2.1.174 or later.
+
+다이얼로그는 플랜 한도를 초과하게 만드는 요인도 분석하여 보여준다. 전체 사용량의 10% 이상을 차지하는 행위를 플래깅하며, 각 행위마다 절감 팁을 제공한다.
+
+| 플래깅 대상 행위 | 설명 |
+|------------------|------|
+| **Cache misses** | 캐시 적중률이 낮아 매 요청마다 컨텍스트를 재처리하는 세션 |
+| **Long context** | 컨텍스트 윈도우를 크게 사용하는 세션 |
+| **Subagent-heavy / highly parallel sessions** | 서브에이전트를 많이 띄우거나 병렬 세션이 많은 경우 |
+
+또한 attribution 테이블을 통해 각 요소가 사용량에 기여한 정도를 보여준다.
+
+| Attribution 기준 | 설명 |
+|------------------|------|
+| **Skill** | 활성화된 skill별 사용량 |
+| **Subagent** | 서브에이전트별 사용량 |
+| **Plugin** | 설치된 plugin별 사용량 |
+| **MCP server** | 연결된 MCP 서버별 사용량 |
+
+**Day / Week 토글**로 최근 24시간(Day)과 최근 7일(Week) 간의 사용량을 전환하여 볼 수 있다. 수치는 이 머신의 로컬 세션에서 근사치로 계산되므로, 다른 기기나 claude.ai에서의 사용량은 포함되지 않는다. 사용량 추적 및 절감에 대한 자세한 내용은 [Track your costs](https://code.claude.com/docs/en/costs)를 참조.
 
 #### 여러 대화 실행
 
@@ -174,6 +198,8 @@ Command Palette(`Cmd+Shift+P` / `Ctrl+Shift+P`)에서 "Claude Code"를 입력하
 | `session` | 새 대화 대신 이어할 세션 ID. 해당 workspace에 속한 세션이어야 함. 세션을 찾을 수 없으면 새 대화가 시작됨. 이미 탭에 열려 있으면 해당 탭에 포커스. |
 
 예시: `vscode://anthropic.claude-code/open?prompt=review%20my%20changes`
+
+터미널 세션을 VS Code 탭 대신 열려면 CLI의 `claude-cli://` handler를 사용한다. 자세한 내용은 [Launch sessions from links](https://code.claude.com/docs/en/cli-reference#launch-sessions-from-links)를 참조.
 
 ### Settings
 
@@ -269,7 +295,7 @@ Claude를 Chrome 브라우저에 연결하여 웹 앱 테스트, 콘솔 로그 �
 @browser go to localhost:3000 and check the console for errors
 ```
 
-첨부 메뉴를 열어 특정 브라우저 도구(새 탭 열기, 페이지 콘텐츠 읽기 등)를 선택할 수도 있다.
+첨부 메뉴를 열어 특정 브라우저 도구(새 탭 열기, 페이지 콘텐츠 읽기 등)를 선택할 수도 있다. Claude는 브라우저 작업용으로 새 탭을 열며 브라우저의 로그인 상태를 공유하므로, 이미 로그인한 사이트에 접근할 수 있다. 설정 방법과 전체 기능 목록, 트러블슈팅은 [Chrome 브라우저 자동화 (CLI)](#chrome-브라우저-자동화-cli) 섹션과 [Chrome 원문](https://code.claude.com/docs/en/chrome)을 참조.
 
 ### Git 연동
 
@@ -378,6 +404,87 @@ macOS Tahoe 이상에서 시스템 Game Overlay shortcut이 기본적으로 `Cmd
 
 ---
 
+## Chrome 브라우저 자동화 (CLI)
+
+Claude Code는 Claude in Chrome 브라우저 확장과 연동하여 CLI 또는 VS Code 확장에서 브라우저 자동화 기능을 제공한다. 코드를 빌드한 뒤 컨텍스트 전환 없이 브라우저에서 테스트하고 디버깅할 수 있다. Claude는 브라우저 작업용으로 새 탭을 열며 브라우저의 로그인 상태를 공유한다. 브라우저 액션은 실시간으로 보이는 Chrome 창에서 실행되며, 로그인 페이지나 CAPTCHA를 만나면 일시 정지하여 수동 처리를 요청한다.
+
+### Prerequisites
+
+- Google Chrome 또는 Microsoft Edge 브라우저
+- Claude in Chrome 확장 version 1.0.36 이상 (두 브라우저 모두 Chrome Web Store에서 설치)
+- Claude Code version 2.0.73 이상
+- 직접 Anthropic 플랜 (Pro, Max, Team, Enterprise)
+
+### CLI에서 시작하기
+
+언제든 `/chrome` 명령을 실행하면 연결 상태 확인, 권한 관리, 확장 재연결, 사용할 연결된 브라우저 선택이 가능하다. 브라우저 액션 시작 시 둘 이상의 브라우저가 연결되어 있으면 Claude가 하나를 선택하라고 안내한다.
+
+**Enabled by default**: 매 세션마다 `--chrome`을 전달하지 않으려면 `/chrome`을 실행하고 "Enabled by default"를 선택한다. VS Code 확장에서는 Chrome 확장이 설치되어 있으면 언제나 Chrome을 사용할 수 있으며 별도 플래그가 필요 없다.
+
+### 사이트 권한 관리
+
+사이트 수준 권한은 Chrome 확장에서 상속된다. Claude가 어느 사이트를 탐색·클릭·입력할 수 있는지 제어하려면 Chrome 확장 설정에서 권한을 관리한다.
+
+### Native messaging host 설정 파일
+
+Chrome 통합 최초 활성화 시 Claude Code가 native messaging host 설정 파일을 설치한다. Chrome은 시작 시 이 파일을 읽으므로, 처음 시도에서 확장이 감지되지 않으면 Chrome을 재시작하여 새 설정을 반영한다. 연결이 계속 실패하면 아래 경로에서 host 설정 파일 존재를 확인한다.
+
+**Chrome:**
+
+| 플랫폼 | 경로 |
+|--------|------|
+| macOS | `~/Library/Application Support/Google/Chrome/NativeMessagingHosts/com.anthropic.claude_code_browser_extension.json` |
+| Linux | `~/.config/google-chrome/NativeMessagingHosts/com.anthropic.claude_code_browser_extension.json` |
+| Windows | Windows Registry의 `HKCU\Software\Google\Chrome\NativeMessagingHosts\` 확인 |
+
+**Edge:**
+
+| 플랫폼 | 경로 |
+|--------|------|
+| macOS | `~/Library/Application Support/Microsoft Edge/NativeMessagingHosts/com.anthropic.claude_code_browser_extension.json` |
+| Linux | `~/.config/microsoft-edge/NativeMessagingHosts/com.anthropic.claude_code_browser_extension.json` |
+| Windows | Windows Registry의 `HKCU\Software\Microsoft\Edge\NativeMessagingHosts\` 확인 |
+
+### Troubleshooting (Chrome)
+
+#### 확장이 감지되지 않는 경우
+
+Claude Code의 setup-issues 라인에 `chrome`이 표시되면:
+
+1. `chrome://extensions`에서 Chrome 확장이 설치 및 활성화되어 있는지 확인
+2. `claude --version`으로 Claude Code를 최신으로 유지했는지 확인
+3. Chrome이 실행 중인지 확인
+4. `/chrome`을 실행하고 "Reconnect extension"을 선택하여 연결 재설정
+5. 문제가 지속되면 Claude Code와 Chrome 모두 재시작
+
+#### 브라우저가 응답하지 않는 경우
+
+1. 모달 다이얼로그(alert, confirm, prompt)가 페이지를 차단하고 있는지 확인. JavaScript 다이얼로그는 브라우저 이벤트를 차단하여 Claude가 명령을 수신하지 못하게 한다. 다이얼로그를 수동으로 닫은 뒤 Claude에게 계속하라고 지시.
+2. Claude에게 새 탭을 만들어 재시도하도록 요청
+3. `chrome://extensions`에서 Chrome 확장을 비활성화 후 재활성화하여 재시작
+
+#### 긴 세션 중 연결이 끊기는 경우
+
+Chrome 확장의 service worker가 장시간 세션 중 idle 상태가 되어 연결이 끊길 수 있다. 비활성 기간 후 브라우저 도구가 동작하지 않으면 `/chrome`을 실행하고 "Reconnect extension"을 선택.
+
+#### Windows 특정 이슈
+
+- **Named pipe 충돌 (EADDRINUSE)**: 다른 프로세스가 같은 named pipe를 사용 중이면 Claude Code를 재시작. Chrome을 사용 중일 수 있는 다른 Claude Code 세션을 종료.
+- **Native messaging host 에러**: native messaging host가 시작 시 충돌하면 Claude Code를 재설치하여 host 설정을 재생성.
+
+#### 일반 에러 메시지
+
+| 에러 | 원인 | 해결 |
+|------|------|------|
+| "Browser extension is not connected" | Native messaging host가 확장에 도달하지 못함 | Chrome과 Claude Code를 재시작한 뒤 `/chrome`으로 재연결 |
+| "Extension not detected" | Chrome 확장이 설치되지 않았거나 비활성화됨 | `chrome://extensions`에서 확장을 설치 또는 활성화 |
+| "No tab available" | 탭이 준비되기 전에 Claude가 액션을 시도 | Claude에게 새 탭을 만들어 재시도하도록 요청 |
+| "Receiving end does not exist" | 확장 service worker가 idle 상태가 됨 | `/chrome`을 실행하고 "Reconnect extension" 선택 |
+
+> 사이트 권한 관리, 전체 기능 목록, 트러블슈팅 등 자세한 내용은 [Chrome 원문](https://code.claude.com/docs/en/chrome) 참조.
+
+---
+
 ## JetBrains 플러그인
 
 Claude Code는 전용 플러그인을 통해 JetBrains IDE에 통합되며, 인터랙티브 diff 보기, 선택 컨텍스트 공유 등의 기능을 제공한다.
@@ -394,7 +501,15 @@ Claude Code는 전용 플러그인을 통해 JetBrains IDE에 통합되며, 인�
 
 ### 설치
 
-JetBrains Marketplace에서 Claude Code 플러그인을 찾아 설치한 후 IDE를 재시작한다.
+플러그인은 IDE 통합 터미널에서 `claude` 명령을 실행하고 여기에 연결된다. 자체 CLI 복사본을 번들하지 않으므로 두 부분(플러그인 + CLI)을 모두 설치해야 한다.
+
+1. JetBrains Marketplace에서 Claude Code 플러그인을 찾아 설치
+2. standalone CLI를 별도로 설치 (확장/플러그인이 `claude`를 PATH에 추가하지 않음)
+3. 설치 후 IDE 재시작
+
+`claude`가 IDE가 찾을 수 없는 곳에 설치된 경우, 플러그인의 Claude command 설정에서 전체 경로를 지정한다 (예: `/usr/local/bin/claude`, `npx @anthropic-ai/claude-code`).
+
+Claude Code는 paid Claude subscription (Pro, Max, Team, Enterprise) 또는 Claude Console 계정에서 작동하며 API 키가 필요 없다. 최초 `claude` 실행 시 로그인을 안내한다.
 
 ### 사용법
 

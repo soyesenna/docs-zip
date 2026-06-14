@@ -4,7 +4,7 @@
 >
 > **기존 문서**: [Common workflows - Anthropic](https://docs.anthropic.com/en/docs/claude-code/common-workflows)
 >
-> 이 문서는 공식 문서의 **Common workflows**와 **Best practices** 페이지를 기반으로 작성되었습니다.
+> 이 문서는 공식 문서의 **Common workflows**, **Best practices**, **Large codebases** 페이지를 기반으로 작성되었습니다.
 
 ---
 
@@ -49,6 +49,17 @@
   - [컨텍스트 적극적으로 관리](#컨텍스트-적극적으로-관리)
   - [대화 재개](#대화-재개)
 - [모노레포 및 대규모 코드베이스](#모노레포-및-대규모-코드베이스)
+  - [설정 옵션 요약](#설정-옵션-요약)
+  - [중첩 CLAUDE.md 파일](#중첩-claudemd-파일)
+  - [Sparse Worktrees](#sparse-worktrees)
+  - [패키지 간 접근 권한 부여](#패키지-간-접근-권한-부여)
+  - [읽기 제한 설정](#읽기-제한-설정)
+  - [코드 인텔리전스 플러그인으로 파일 읽기 줄이기](#코드-인텔리전스-플러그인으로-파일-읽기-줄이기)
+  - [세션 시작 시 올바른 플러그인 추천](#세션-시작-시-올바른-플러그인-추천)
+  - [Stop hook으로 CLAUDE.md 업데이트 제안](#stop-hook으로-claudemd-업데이트-제안)
+  - [미사용 스킬 식별](#미사용-스킬-식별)
+  - [모노레포 통합 예시 (Put it together)](#모노레포-통합-예시-put-it-together)
+  - [교차 패키지 변경 범위 지정 및 계획](#교차-패키지-변경-범위-지정-및-계획)
 
 ---
 
@@ -820,6 +831,7 @@ Claude Code는 모든 대화를 로컬에 저장하므로, 작업이 여러 번�
 | worktree에서 작업에 필요한 디렉토리만 체크아웃 | `worktree.sparsePaths` |
 | 형제 패키지나 다른 리포지토리에 접근 | `--add-dir` 또는 `additionalDirectories` |
 | 특정 영역에만 관련된 절차를 온디맨드로 로드 | 디렉토리별 skills |
+| 여러 디렉토리별 CLAUDE.md 파일을 모두가 설치하는 단일 컨벤션 세트로 대체 | 내부 마켓플레이스의 플러그인 |
 
 ### 중첩 CLAUDE.md 파일
 
@@ -836,6 +848,15 @@ monorepo/
     shared/
       CLAUDE.md                 # 공유 라이브러리 지시
 ```
+
+### 디렉토리별 CLAUDE.md vs path-scoped rules
+
+디렉토리별 `CLAUDE.md` 파일과 `.claude/rules/` 하위의 path-scoped rules는 모두 트리의 일부분에만 지시를 타겟팅할 수 있게 해줍니다. 차이는 파일 위치와 로딩 시점에 있습니다.
+
+| 접근 방식 | 파일 위치 | 로딩 시점 | 적합한 경우 |
+|-----------|-----------|-----------|-------------|
+| 디렉토리별 `CLAUDE.md` | 해당 디렉토리 내부, 코드와 함께 | 해당 디렉토리에서 시작 시 또는 Claude가 그곳의 파일을 읽을 때 온디맨드 | 디렉토리 소유자가 자체 컨벤션을 유지 관리; 지시가 코드와 함께 버전 관리됨 |
+| `.claude/rules/`의 path-scoped rule | 리포지토리 루트의 중앙 `.claude/` | Claude가 rule의 `paths:` glob에 매칭되는 파일을 다룰 때 | 모든 컨벤션을 한 곳에 두거나, 동일한 rule이 여러 흩어진 경로에 적용될 때 |
 
 ### Sparse Worktrees
 
@@ -873,11 +894,28 @@ monorepo/
 }
 ```
 
-또는 런타임에 `--add-dir` 플래그를 사용할 수도 있습니다:
+또는 런타임에 `--add-dir` 플래그(또는 `/add-dir` 명령)를 사용할 수도 있습니다:
 
 ```bash
 claude --add-dir ../shared
 ```
+
+어떤 방식으로 디렉토리를 추가하든 Claude는 그 디렉토리의 파일을 읽고 편집할 수 있습니다. 하지만 해당 디렉토리의 CLAUDE.md, `.claude/rules/` 파일, skills까지 로드되는지는 **추가한 방식**에 따라 다릅니다:
+
+| 추가 방식 | CLAUDE.md 및 rules 로드 | skills 로드 |
+|-----------|------------------------|-------------|
+| `additionalDirectories` 설정 | 로드 안 함 | 로드 안 함 |
+| `--add-dir` 플래그 또는 `/add-dir` 명령 | 아래 환경변수 설정 시에만 | 로드함 |
+
+`--add-dir` 또는 `/add-dir`로 추가한 디렉토리에서 CLAUDE.md 및 rules 파일까지 로드하려면 `CLAUDE_CODE_ADDITIONAL_DIRECTORIES_CLAUDE_MD` 환경변수를 설정하세요:
+
+```bash
+CLAUDE_CODE_ADDITIONAL_DIRECTORIES_CLAUDE_MD=1 claude --add-dir ../shared
+```
+
+이 환경변수는 `additionalDirectories` 설정에 나열된 디렉토리에는 영향을 주지 않습니다.
+
+이 영역에서 작업하는 모두가 필요한 형제 디렉토리라면 `additionalDirectories`를 `.claude/settings.json`에 커밋하세요. 개인 선택이나 일회성 접근에는 `.claude/settings.local.json`을 사용하거나 시작 시 `--add-dir`을 전달하세요.
 
 ### 읽기 제한 설정
 
@@ -895,6 +933,122 @@ claude --add-dir ../shared
   }
 }
 ```
+
+### 코드 인텔리전스 플러그인으로 파일 읽기 줄이기
+
+대규모 코드베이스에서 심볼이 정의되거나 사용되는 위치를 찾는 데 많은 파일 읽기와 grep 호출이 소모될 수 있습니다. Code intelligence 플러그인은 Claude를 언어 서버에 연결하여, 트리 전체를 스캔하는 대신 정의로 이동, 참조 찾기, 타입 에러 노출을 직접 수행할 수 있게 합니다.
+
+공식 마켓플레이스에서 TypeScript, Python, Go, Rust 등 일반적인 언어용 플러그인을 제공합니다. TypeScript 플러그인 설치 예시:
+
+```
+/plugin install typescript-lsp@claude-plugins-official
+```
+
+직접 설치하는 대신 리포지토리에서 작업하는 모두에게 플러그인을 활성화하려면, `enabledPlugins` project setting에 추가하세요.
+
+> Code intelligence 플러그인은 각 개발자 머신에 해당 언어의 언어 서버 바이너리가 필요합니다. 공식 마켓플레이스에서 설치하려면 마켓플레이스가 호스팅된 GitHub에 대한 네트워크 접근이 필요하며, 제한된 네트워크에서는 내부 Git 호스트나 로컬 경로에서 마켓플레이스를 추가하세요.
+
+이 설정은 `claudeMdExcludes`와 `Read` 거부 규칙과 함께 사용하기 좋습니다. 앞선 설정들은 무관한 콘텐츠를 컨텍스트에서 배제하고, code intelligence는 남은 파일을 Claude가 뒤지며 정의를 찾는 수고를 덜어줍니다.
+
+### 세션 시작 시 올바른 플러그인 추천
+
+컨벤션이 플러그인으로 옮겨가면, 트리의 낯선 부분에서 Claude를 시작하는 팀원은 그 영역의 소유자가 어떤 플러그인을 유지 관리하는지 알 신호가 없습니다. `SessionStart` hook이 이 간극을 메울 수 있습니다. hook이 stdout으로 출력하는 모든 내용은 첫 프롬프트 전에 Claude의 컨텍스트에 추가됩니다.
+
+예를 들어, hook 입력에서 시작 디렉토리를 읽어 리포지토리에 커밋된 경로-플러그인 맵에서 조회하고, Claude가 첫 응답에서 전달할 추천을 출력하는 스크립트를 작성할 수 있습니다.
+
+### Stop hook으로 CLAUDE.md 업데이트 제안
+
+CLAUDE.md 파일을 코드베이스와 모델 변화에 맞게 최신으로 유지하는 몇 가지 방법:
+
+- **Pull request에서 검토**: CLAUDE.md 편집을 다른 문서 변경과 동일하게 취급하여 컨벤션이 코드를 따라가게 합니다
+- **주요 모델 릴리스 이후 재검토**: 이전 모델의 한계를 우회하던 지시는 새 모델이 스스로 처리하면 오버헤드가 될 수 있습니다. 예를 들어 단일 파일 리팩터링을 강제하던 규칙은 그 한계가 사라지면 삭제할 수 있습니다
+- **업데이트를 제안하는 Stop hook 추가**: `Stop` hook은 Claude가 응답을 마칠 때 세션 transcript 경로를 받으므로, 스크립트가 세션을 검토하고 노출된 간극이 신선할 때 CLAUDE.md 업데이트를 제안할 수 있습니다
+
+### 미사용 스킬 식별
+
+OpenTelemetry logs exporter를 활성화하고 `OTEL_LOG_TOOL_DETAILS=1`을 설정하면 스킬 이름이 redaction 없이 그대로 기록되어 어떤 스킬이 사용되지 않는지 찾을 수 있습니다. `skill_activated` 이벤트는 모든 호출을 `skill.name` 속성에 기록하고, `invocation_trigger`는 명령, Claude, 중첩 스킬 중 무엇이 호출했는지 기록하여 통합하거나 폐기할 대상을 알려줍니다.
+
+### 모노레포 통합 예시 (Put it together)
+
+아래 통합 설정은 위 모노레포 레이아웃을 사용합니다. 동일한 파일이 대규모 단일 트리의 모든 하위 디렉토리에 적용됩니다. Project settings는 Claude를 시작한 디렉토리에서만 로드되므로, 각 하위 디렉토리의 `.claude/settings.json`은 루트 파일 위에 계층화되지 않고 자체 완결적이어야 합니다.
+
+아래는 `packages/api/`의 커밋된 per-area 설정으로, `worktree`, `additionalDirectories`, `Read` 거부 규칙을 `.claude/settings.json`에 커밋하여 `packages/api/`에서 작업하는 모든 개발자가 동일한 형제 접근, sparse 경로, 제외 규칙을 갖도록 합니다:
+
+`packages/api/.claude/settings.json`:
+
+```json
+{
+  "worktree": {
+    "sparsePaths": [
+      ".claude",
+      "packages/api",
+      "packages/shared"
+    ],
+    "symlinkDirectories": [
+      "node_modules"
+    ]
+  },
+  "permissions": {
+    "additionalDirectories": [
+      "../shared"
+    ],
+    "deny": [
+      "Read(./**/dist/**)",
+      "Read(./**/build/**)"
+    ]
+  }
+}
+```
+
+이 세션은 `packages/api/`에서 시작하므로 형제 패키지의 CLAUDE.md는 이미 스코프 밖이며, 여기서는 `claudeMdExcludes`가 필요하지 않습니다. 루트에서도 세션을 시작한다면 리포지토리 루트의 `.claude/settings.local.json`에 추가하세요.
+
+`additionalDirectories` 항목은 `packages/api/`에서 직접 Claude를 시작할 때 적용됩니다. 이 세션에서 생성된 worktree 내부에서는 작업 디렉토리가 worktree 루트이므로 이 설정 파일은 로드되지 않습니다. worktree 세션에서도 거부 규칙이 적용되도록 리포지토리 루트의 `.claude/settings.json`에 두 번째 사본이 필요합니다:
+
+```json
+{
+  "permissions": {
+    "deny": [
+      "Read(./**/dist/**)",
+      "Read(./**/build/**)"
+    ]
+  }
+}
+```
+
+설정 후 리포지토리 레이아웃:
+
+```
+monorepo/
+  CLAUDE.md
+  .claude/settings.json                           # worktree 세션용 거부 규칙
+  packages/
+    api/
+      CLAUDE.md
+      .claude/settings.json                       # worktree, additionalDirectories, 거부 규칙
+      .claude/skills/api-testing/SKILL.md
+    web/
+      CLAUDE.md
+      .claude/skills/component-patterns/SKILL.md
+    shared/
+      CLAUDE.md
+```
+
+이 설정으로 `packages/api/`에서 Claude를 시작하면:
+
+- 루트 CLAUDE.md와 `packages/api/CLAUDE.md`를 로드하고, `packages/web/CLAUDE.md`는 건너뜁니다
+- `packages/api/`와 `packages/shared/`의 파일을 읽고 편집할 수 있습니다
+- `packages/api/`의 `dist/`, `build/` 하위 빌드 출력 읽기를 건너뜁니다
+- api-testing skill을 온디맨드로 사용할 수 있습니다
+- `.claude/`, `packages/api/`, `packages/shared/`와 루트 수준 파일을 포함하는 worktree를 생성하며, 거부 규칙은 루트 설정 파일에서 worktree 전체에 적용됩니다
+
+### 교차 패키지 변경 범위 지정 및 계획
+
+위 설정은 Claude가 보는 것을 제어합니다. 단일 변경이 여러 패키지에 걸치는 경우(예: 공유 타입 업데이트와 그것을 사용하는 모든 호출 지점 업데이트), 작업의 범위 지정과 순서 지정 방식도 결과에 영향을 줍니다.
+
+교차 패키지 변경의 일관성을 유지하는 두 가지 기법:
+
+- **단일 세션에서 전체 변경을 전달**: 공유 편집과 호출 지점을 함께 넘기면 각 편집을 패키지별로 다시 도출하는 대신, 각 편집 배후의 결정이 일관하게 유지됩니다
+- **편집 전에 plan을 파일로 저장**: 먼저 계획을 세우고 Claude에게 리포지토리의 마크다운 파일로 작성하게 합니다. 긴 교차 패키지 세션은 도중에 컨텍스트를 압축하며, 대화 기록은 사라질 수 있어도 저장된 plan은 남습니다
 
 ---
 

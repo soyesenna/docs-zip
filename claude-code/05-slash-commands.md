@@ -1,8 +1,8 @@
 # 05. Skills
 
-> **참조**: [https://code.claude.com/docs/en/skills](https://code.claude.com/docs/en/skills)
->
-> **이전 참조**: [https://docs.anthropic.com/en/docs/claude-code/slash-commands](https://docs.anthropic.com/en/docs/claude-code/slash-commands)
+> **원문**: [https://code.claude.com/docs/en/skills](https://code.claude.com/docs/en/skills) | [https://code.claude.com/docs/en/commands](https://code.claude.com/docs/en/commands)
+
+> **참고**: 본문 주제는 Skills이며, 기존 `slash-commands` 공식 페이지는 제거되어 `code.claude.com/docs/en/commands`로 리디렉션됩니다. 파일 번호(05)는 유지됩니다.
 
 ---
 
@@ -24,7 +24,7 @@ Claude Code Skills는 **Agent Skills 개방 표준**을 따르며, 여러 AI 도
 
 ## 2. Bundled Skills
 
-Claude Code에는 모든 세션에서 사용할 수 있는 bundled skills가 포함되어 있습니다: `/code-review`, `/batch`, `/debug`, `/loop`, `/claude-api` 등. 대부분의 내장 명령어가 고정 로직을 직접 실행하는 것과 달리, bundled skills는 프롬프트 기반입니다. Claude에게 상세한 지시사항을 제공하고 도구를 사용해 작업을 오케스트레이션합니다. 다른 Skill과 동일한 방식으로 `/` 뒤에 Skill 이름을 입력하여 호출합니다.
+Claude Code에는 모든 세션에서 사용할 수 있는 bundled skills가 포함되어 있습니다: `/code-review`, `/batch`, `/debug`, `/loop`, `/claude-api` 등. **이 Skills들은 `disableBundledSkills` 설정으로 비활성화하지 않는 한 모든 세션에서 사용 가능합니다.** 대부분의 내장 명령어가 고정 로직을 직접 실행하는 것과 달리, bundled skills는 프롬프트 기반입니다. Claude에게 상세한 지시사항을 제공하고 도구를 사용해 작업을 오케스트레이션합니다. 다른 Skill과 동일한 방식으로 `/` 뒤에 Skill 이름을 입력하여 호출합니다.
 
 Bundled skills는 명령어 참조에서 **Skill**으로 표시되어 나열됩니다.
 
@@ -269,6 +269,64 @@ Skills는 동적 값을 위한 문자열 치환을 지원합니다.
 
 인덱스 인자는 셸 스타일 인용을 사용하므로, 여러 단어 값을 단일 인자로 전달하려면 따옴표로 감쌉니다. 예: `/my-skill "hello world" second`는 `$0`이 `hello world`, `$1`이 `second`로 확장됩니다.
 
+### 인자 전달 예제 (Pass Arguments to Skills)
+
+사용자와 Claude 모두 Skill 호출 시 인자를 전달할 수 있습니다. 인자는 `$ARGUMENTS` 플레이스홀더로 접근합니다.
+
+**번호 인자 예제 (`fix-issue`)**: 이 Skill은 GitHub 이슈를 번호로 수정합니다. `$ARGUMENTS` 플레이스홀더는 Skill 이름 뒤에 오는 내용으로 교체됩니다:
+
+```markdown
+---
+name: fix-issue
+description: Fix a GitHub issue
+disable-model-invocation: true
+---
+
+Fix GitHub issue $ARGUMENTS following our coding standards.
+
+1. Read the issue description
+2. Understand the requirements
+3. Implement the fix
+4. Write tests
+5. Create a commit
+```
+
+`/fix-issue 123`을 실행하면 Claude는 "Fix GitHub issue 123 following our coding standards…"를 수신합니다. Skill에 `$ARGUMENTS`가 포함되어 있지 않은데 인자와 함께 호출하면, Claude Code는 Skill 콘텐츠 끝에 `ARGUMENTS: <your input>`을 추가하여 입력한 내용을 Claude가 볼 수 있게 합니다.
+
+**다중 인자 예제 (`migrate-component`)**: 위치별로 개별 인자에 접근하려면 `$ARGUMENTS[N]` 또는 약어 `$N`을 사용합니다:
+
+```markdown
+---
+name: migrate-component
+description: Migrate a component from one framework to another
+---
+
+Migrate the $ARGUMENTS[0] component from $ARGUMENTS[1] to $ARGUMENTS[2].
+Preserve all existing behavior and tests.
+```
+
+`/migrate-component SearchBar React Vue`를 실행하면 `$ARGUMENTS[0]`이 `SearchBar`, `$ARGUMENTS[1]`이 `React`, `$ARGUMENTS[2]`가 `Vue`로 교체됩니다. 동일한 Skill을 `$N` 약어로 작성하면:
+
+```markdown
+---
+name: migrate-component
+description: Migrate a component from one framework to another
+---
+
+Migrate the $0 component from $1 to $2.
+Preserve all existing behavior and tests.
+```
+
+### 리터럴 `$` 이스케이프 규칙
+
+숫자, `ARGUMENTS`, 또는 선언된 인자 이름 앞에 리터럴 `$`를 포함하려면 (예: 산문에서 `$1.00`) 백슬래시로 이스케이프합니다: `\$1.00`. 다른 `$` 앞의 백슬래시는 변경되지 않고 그대로 남습니다. 토큰 바로 앞의 단일 백슬래시만 이스케이프로 동작합니다.
+
+| 입력 | 결과 | 설명 |
+|------|------|------|
+| `\$1.00` | `$1.00` | 백슬래시 하나로 `$` 이스케이프. `$1`이 인자로 확장되지 않음 |
+| `\\$1` | 백슬래시 두 개 + `$1` 확장값 | 백슬래시 두 개는 그대로 유지되고, `$1`은 여전히 인자 값으로 확장 |
+| `$1` | (첫 번째 인자 값) | 이스케이프 없으면 인자로 확장 |
+
 ```markdown
 ---
 name: session-logger
@@ -382,6 +440,37 @@ Skill이 호출되면 렌더링된 `SKILL.md` 콘텐츠가 단일 메시지로 �
 
 자동 압축(Auto-compaction)은 토큰 예산 내에서 호출된 Skills를 앞으로 전달합니다. 대화가 요약되면 Claude Code는 각 Skill의 가장 최근 호출을 요약 뒤에 다시 첨부하며, 각각의 처음 5,000 토큰을 유지합니다. 재첨부된 Skills는 25,000 토큰의 결합 예산을 공유합니다. Claude Code는 가장 최근에 호출된 Skill부터 이 예산을 채우므로, 한 세션에서 여러 Skill을 호출하면 오래된 Skill은 압축 후 완전히 삭제될 수 있습니다.
 
+Skill이 첫 응답 이후 더 이상 동작에 영향을 미치지 않는 것처럼 보이면, 보통 콘텐츠는 여전히 존재하며 모델이 다른 도구나 접근 방식을 선택하고 있는 것입니다. Skill의 `description`과 지시사항을 강화해 모델이 계속 우선적으로 사용하도록 하거나, **hooks를 사용해 동작을 결정론적으로 강제**하세요. Skill이 크거나 그 이후에 여러 Skill을 추가로 호출했다면, 압축 후 전체 콘텐츠를 복원하기 위해 **Skill을 다시 호출**하세요.
+
+---
+
+## 11.1 Skill에 대한 도구 사전 승인 (Pre-approve Tools for a Skill)
+
+`allowed-tools` 필드는 Skill 활성 중 나열된 도구에 권한을 부여하여, Claude가 승인 요청 없이 사용할 수 있게 합니다. **사용 가능한 도구를 제한하지는 않습니다**: 모든 도구는 여전히 호출 가능하며, 나열되지 않은 도구는 기존 권한 설정이 그대로 적용됩니다.
+
+프로젝트의 `.claude/skills/` 디렉토리에 체크인된 Skill의 경우, `allowed-tools`는 `.claude/settings.json`의 권한 규칙과 동일하게 **해당 폴더의 워크스페이스 신뢰 대화상자를 수락한 후에 적용**됩니다. 리포지토리를 신뢰하기 전에 프로젝트 Skill을 검토하세요. Skill이 자체적으로 광범위한 도구 접근 권한을 부여할 수 있기 때문입니다.
+
+이 Skill은 호출 시마다 Claude가 승인 없이 git 명령을 실행할 수 있게 합니다:
+
+```markdown
+---
+name: commit
+description: Stage and commit the current changes
+disable-model-invocation: true
+allowed-tools: Bash(git add *) Bash(git commit *) Bash(git status *)
+---
+```
+
+Skill 활성 중 Claude의 사용 가능 풀에서 도구를 제거하려면, frontmatter의 `disallowed-tools`에 나열합니다. 이 제한은 다음 메시지를 전송할 때 해제됩니다. 모든 Skill과 프롬프트에 걸쳐 도구를 차단하려면 권한 설정에 deny 규칙을 추가하세요.
+
+| 필드 | 동작 | 제한 범위 |
+|------|------|----------|
+| `allowed-tools` | 나열된 도구를 승인 프롬프트 없이 사용. 다른 도구는 기존 권한 설정 적용 | 툴 풀을 제한하지 않음 (every tool remains callable) |
+| `disallowed-tools` | Skill 활성 중 사용 가능 풀에서 제거. 다음 메시지 전송 시 해제 | Skill 활성 기간에만 적용 |
+| 권한 설정의 deny 규칙 | 모든 Skill/프롬프트에 걸쳐 차단 | 전역 적용 |
+
+> **주의**: 프로젝트 Skill은 워크스페이스 신뢰 대화상자 수락 전에는 `allowed-tools`가 적용되지 않습니다. 신뢰하기 전에 Skill 내용을 검토하세요.
+
 ---
 
 ## 12. 서브에이전트에서 Skill 실행
@@ -418,7 +507,9 @@ Research $ARGUMENTS thoroughly:
 
 ## 13. Claude의 Skill 접근 제한
 
-기본적으로 Claude는 `disable-model-invocation: true`가 설정되지 않은 모든 Skill을 호출할 수 있습니다. 세 가지 방법으로 제어할 수 있습니다.
+기본적으로 Claude는 `disable-model-invocation: true`가 설정되지 않은 모든 Skill을 호출할 수 있습니다. **`allowed-tools`를 정의한 Skill은 Skill 활성 중 승인 없이 Claude에게 해당 도구 접근 권한을 부여**하지만, 다른 모든 도구의 기준 승인 동작은 기존 권한 설정이 그대로 통제합니다. 또한 일부 내장 명령어는 Skill 도구를 통해서도 사용할 수 있습니다: `/init`, `/review`, `/security-review`가 포함됩니다. `/compact` 등 다른 내장 명령어는 Skill 도구로 사용할 수 없습니다.
+
+세 가지 방법으로 제어할 수 있습니다.
 
 **모든 Skill 비활성화**: `/permissions`에서 Skill 도구 거부:
 
@@ -440,7 +531,9 @@ Skill(deploy *)
 
 권한 구문: `Skill(name)`은 정확한 일치, `Skill(name *)`은 접두사 일치.
 
-**개별 Skill 숨기기**: frontmatter에 `disable-model-invocation: true` 추가.
+**개별 Skill 숨기기**: frontmatter에 `disable-model-invocation: true` 추가. 이렇게 하면 Skill이 Claude의 컨텍스트에서 완전히 제거됩니다.
+
+> **참고**: `user-invocable` 필드는 메뉴 공개 여부만 제어하며 Skill 도구 접근을 제어하지 않습니다. 프로그래밍 호출을 차단하려면 `disable-model-invocation: true`를 사용하세요.
 
 ### 설정에서 Skill 공개 오버라이드
 
@@ -541,6 +634,6 @@ This creates `codebase-map.html` in the current directory and opens it in your d
 
 ### Skill 설명이 잘릴 때
 
-Skill 설명은 컨텍스트에 로드되어 Claude가 사용 가능한 Skill을 알 수 있습니다. 모든 Skill 이름은 항상 포함되지만, Skill이 많으면 설명이 문자 예산에 맞춰 짧아져 Claude가 요청을 매칭하는 데 필요한 키워드가 제거될 수 있습니다. 예산은 모델의 컨텍스트 윈도우의 1%로 조정됩니다. 오버플로우 시 가장 적게 호출한 Skill의 설명이 먼저 삭제됩니다.
+Skill 설명은 컨텍스트에 로드되어 Claude가 사용 가능한 Skill을 알 수 있습니다. 모든 Skill 이름은 항상 포함되지만, Skill이 많으면 설명이 문자 예산에 맞춰 짧아져 Claude가 요청을 매칭하는 데 필요한 키워드가 제거될 수 있습니다. 예산은 모델의 컨텍스트 윈도우의 1%로 조정됩니다. 오버플로우 시 가장 적게 호출한 Skill의 설명이 먼저 삭제되므로, 실제 사용하는 Skill은 전체 텍스트를 유지합니다. **`/doctor`를 실행하여 예산이 오버플로우 중인지, 영향받는 Skill이 무엇인지 확인**하세요.
 
 예산을 늘리려면 `skillListingBudgetFraction` 설정 (예: `0.02` = 2%) 또는 `SLASH_COMMAND_TOOL_CHAR_BUDGET` 환경변수를 고정 문자 수로 설정. 다른 Skills의 예산을 확보하려면 `skillOverrides`에서 우선순위가 낮은 항목을 `"name-only"`로 설정. `description`과 `when_to_use` 텍스트는 예산과 관계없이 각 항목의 결합 텍스트가 1,536자로 제한됩니다. 이 제한은 `maxSkillDescriptionChars`로 구성 가능합니다.

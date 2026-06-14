@@ -9,7 +9,8 @@
 | 별칭 | 동작 |
 |------|------|
 | `default` | 모델 재정의를 지우고 계정 유형에 맞는 권장 모델로 되돌림. 모델 별칭 자체는 아님 |
-| `best` | 사용 가능한 가장 강력한 모델 사용 (현재 `opus`와 동일) |
+| `best` | 조직이 접근 권한을 가질 경우 Fable 5를 사용, 그렇지 않으면 최신 Opus 모델 사용 |
+| `fable` | 가장 어렵고 오래 걸리는 작업에 Claude Fable 5 사용 |
 | `sonnet` | 최신 Sonnet 모델 사용 (일상적인 코딩 작업) |
 | `opus` | 최신 Opus 모델 사용 (복잡한 추론 작업) |
 | `haiku` | 빠르고 효율적인 Haiku 모델 사용 |
@@ -61,7 +62,22 @@ claude --model opus
 
 Enterprise pay-as-you-go는 구독 시트가 아닌 사용량 기반 과금 Enterprise 조직을 의미함.
 
-Opus 사용량 한도에 도달하면 Sonnet으로 자동 폴백될 수 있음.
+Fable 5는 어떤 계정 유형에서도 기본 모델이 아님. Fable 5는 `/model fable`, `model` 설정, 또는 Fable 5가 사용 가능한 곳의 `best` 별칭으로 선택한 경우에만 사용됨. `/model`로 선택 시 사용자 설정에 선택된 모델로 저장되어, 모델을 변경하기 전까지 이후 세션도 Fable 5로 시작함.
+
+---
+
+## Work with Fable 5
+
+Claude Fable 5는 Claude Code에서 가장 능력 있는 모델이며, 단일 작업 세션보다 큰 작업에 적합함. 긴 자율 세션을 유지하고, 행동 전에 조사하며, 더 작은 모델보다 자주 자체 작업을 검증함.
+
+Fable 5는 기본 모델이 아님. `/model fable`로 선택. 안전 분류기(safety classifiers)가 플래그하는 요청 — 주로 사이버보안 및 생물학 도메인 — 은 자동 모델 폴백을 트리거함.
+
+Fable 5를 최대한 활용하는 팁:
+
+- **결과를 설명하고 단계는 위임**: 원하는 결과를 전달하고 경로를 계획하게 함. 해당 결과가 달성될 때까지 작업하게 하려면 goal을 설정.
+- **모호한 문제를 위임**: 근본 원인 조사, 장애 디버깅, 아키텍처 결정이 추가 조사와 검증이 빛을 발하는 영역.
+- **검증 알림 건너뛰기**: 더 적은 프롬프트로 자체 작업을 검증하므로, 테스트나 확인 알림은 보통 불필요.
+- **더 큰 작업으로 확대**: 평소라면 나누었을 작업을 맡김. 맥락을 잃지 않고 긴 세션을 유지함.
 
 ---
 
@@ -75,14 +91,39 @@ Opus 사용량 한도에 도달하면 Sonnet으로 자동 폴백될 수 있음.
 }
 ```
 
-`default` 옵션은 `availableModels`의 영향을 받지 않으며 항상 사용 가능.
+`availableModels`가 설정되면, 허용 목록은 사용자가 모델을 이름 지을 수 있는 모든 표면에 적용됨:
 
-완전한 모델 제어를 위한 3가지 설정 조합:
-- `availableModels`: 전환 가능한 모델 제한
-- `model`: 세션 시작 시 초기 모델 설정
-- `ANTHROPIC_DEFAULT_SONNET_MODEL` / `ANTHROPIC_DEFAULT_OPUS_MODEL` / `ANTHROPIC_DEFAULT_HAIKU_MODEL`: `default` 옵션이 해석되는 대상 제어
+- **메인 세션 모델**: `/model`, `--model` 플래그, `ANTHROPIC_MODEL` 환경변수
+- **서브에이전트 모델**: 서브에이전트 frontmatter의 `model` 필드, Agent 도구의 `model` 매개변수, `/agents`의 모델 피커, `CLAUDE_CODE_SUBAGENT_MODEL`
+- **어드바이저 모델**: 설정된 `advisorModel` 설정
+- **폴백 체인**: 폴백 모델 체인의 요소 중 목록 밖의 것은 삭제됨
 
-**Merge 동작**: `availableModels`가 여러 수준(예: 사용자 설정 + 프로젝트 설정)에서 설정된 경우 배열이 병합되고 중복 제거됨. 엄격한 허용 목록을 적용하려면 최우선 순위인 managed 또는 policy 설정에서 `availableModels`를 설정.
+`/model`로 차단된 모델로 전환은 거부되며, 차단된 `--model` 플래그 또는 `ANTHROPIC_MODEL` 값은 시작 시 요청된 모델과 대체된 모델 모두를 명시한 경고와 함께 대체되어 세션이 기본 모델로 시작함. 차단된 서브에이전트 또는 어드바이저 재정의는 요청을 실패시키는 대신 상속된 또는 기본 모델로 폴백.
+
+### 기본 모델 동작과 enforceAvailableModels
+
+기본적으로 모델 피커의 Default 옵션은 `availableModels`의 영향을 받지 않음. 사용자의 구독 티어에 기반한 시스템의 런타임 기본값으로 사용 가능한 상태로 유지됨.
+
+허용 목록을 Default 옵션까지 확장하려면, managed 또는 policy settings에서 비어 있지 않은 `availableModels` 목록과 함께 `enforceAvailableModels`를 `true`로 설정. 티어 기본값이 허용 목록에 없으면 Default는 티어 기본값 대신 첫 번째 허용된 항목으로 해석됨. Claude Code v2.1.175 이상 필요.
+
+빈 `availableModels` 배열(`[]`)은 enforcement를 발동시키지 않음. `availableModels: []`이더라도 `enforceAvailableModels` 값과 무관하게 사용자는 티어의 Default 모델로 Claude Code를 계속 사용할 수 있음.
+
+### 사용자가 실행할 모델 제어
+
+`model` 설정은 enforcement가 아닌 초기 선택임. 세션 시작 시 활성 모델을 설정하지만, 사용자는 여전히 `/model`을 열고 Default를 선택할 수 있으며, 이는 `model` 설정과 무관하게 티어의 시스템 기본값으로 해석됨.
+
+모델 환경을 완전히 제어하려면 다음 설정을 조합:
+
+- **`availableModels`**: 전환 가능한 명명된 모델 제한
+- **`enforceAvailableModels`**: `availableModels` 허용 목록을 Default 옵션까지 확장하여 Default가 목록 밖의 모델로 해석되지 않도록 함
+- **`model`**: 세션 시작 시 초기 모델 선택 설정
+- **`ANTHROPIC_DEFAULT_SONNET_MODEL`** / **`ANTHROPIC_DEFAULT_OPUS_MODEL`** / **`ANTHROPIC_DEFAULT_HAIKU_MODEL`** / **`ANTHROPIC_DEFAULT_FABLE_MODEL`**: Default 옵션 및 `sonnet`, `opus`, `haiku`, `fable` 별칭이 해석되는 대상 제어
+
+### Merge 동작
+
+`availableModels`가 사용자, 프로젝트, 로컬 설정에만 설정된 경우 배열은 해당 수준 간에 병합되고 중복 제거됨.
+
+`availableModels`가 managed 또는 policy settings에 설정된 경우, managed 또는 policy 값이 병합된 결과를 완전히 대체함: 사용자 또는 프로젝트 설정에서 추가된 항목은 이를 확장할 수 없음. managed 및 policy settings는 `enforceAvailableModels`에 대해서도 동일하게 하위 우선순위 값을 대체. Claude Code v2.1.175 기준, 엄격한 허용 목록을 적용하는 유일한 방법. 이전 버전은 managed 목록을 하위 우선순위 항목과 병합.
 
 ---
 
@@ -98,7 +139,76 @@ Bedrock Mantle 엔드포인트가 활성화된 경우, `availableModels`에서 `
 - **Plan 모드**: `opus` 사용 (복잡한 추론, 아키텍처 결정)
 - **실행 모드**: `sonnet`으로 자동 전환 (코드 생성, 구현)
 
-Plan 모드 Opus 단계는 표준 200K 컨텍스트 윈도우로 실행됨. 자동 1M 업그레이드는 `opus` 설정에만 적용되며 `opusplan`에는 확장되지 않음.
+Plan 모드 Opus 단계는 `opus` 모델 설정과 동일한 컨텍스트 윈도우를 사용함. Opus가 자동으로 1M 컨텍스트로 업그레이드되는 구독 티어에서는 `opusplan`도 Plan 모드에서 업그레이드를 받음. 자동 업그레이드 티어가 아닌 경우 두 단계 모두에 1M 컨텍스트를 강제하려면 모델을 `opusplan[1m]`으로 설정.
+
+`availableModels`가 Opus를 제외하는 경우, `opusplan`은 Plan 모드에서 전환하지 않고 Sonnet에 머무름. Sonnet이 제외되는 경우의 묵시적 Haiku-to-Sonnet Plan 모드 업그레이드에도 동일하게 적용됨.
+
+---
+
+## Fallback Model Chains (폴백 모델 체인)
+
+기본 모델이 과부하, 사용 불가, 또는 다른 재시도 불가능한 서버 오류를 반환할 때, Claude Code는 요청을 실패시키는 대신 폴백 모델로 전환할 수 있음. 인증, 빌링, 레이트리밋, 요청 크기, 전송 오류는 전환을 트리거하지 않으며, 일반 재시도 및 오류 처리를 따름.
+
+하나 이상의 폴백 모델을 구성하면 Claude Code가 순서대로 시도하며, 전환 시 알림을 표시함. 전환은 현재 턴에만 지속되므로, 다음 메시지는 기본 모델을 먼저 다시 시도함. 체인은 중복 제거 후 최대 3개 모델로 제한되며, 추가 항목은 무시됨.
+
+`--fallback-model` 플래그로 한 세션에 체인을 설정 (쉼표로 구분된 목록):
+
+```bash
+claude --fallback-model sonnet,haiku
+```
+
+세션 간 체인을 유지하려면 settings에 `fallbackModel`을 배열로 설정:
+
+```json
+{
+  "fallbackModel": ["claude-sonnet-4-6", "claude-haiku-4-5"]
+}
+```
+
+`--fallback-model` 플래그가 `fallbackModel` 설정보다 우선함. 각 요소는 모델 이름 또는 별칭을 받으며, `"default"`는 기본 모델로 확장됨. 두 가지 경우에 요소가 건너뛰어짐:
+
+- **사용 불가능한 모델**: 도달할 수 없는 모델(예: 설정에 고정된 은퇴한 모델)은 건너뛰고 다음 요소로 진행.
+- **허용 목록 밖**: `availableModels`가 허용하지 않는 요소는 체인을 읽을 때 삭제되어 시도되지 않음.
+
+---
+
+## Automatic Model Fallback (자동 모델 폴백)
+
+이 섹션은 Fable 5의 콘텐츠 기반 폴백을 다룸. 모델 과부하 또는 사용 불가 시의 가용성 기반 폴백은 Fallback model chains를 참조.
+
+Fable 5는 사이버보안 및 생물학 콘텐츠에 대해 안전 분류기(safety classifiers)와 함께 실행됨. 분류기가 요청을 플래그하면, Claude Code는 해당 요청을 기본 Opus 모델에서 재실행하고 트랜스크립트에 알림을 표시함: Anthropic API 및 LLM 게이트웨이 배포에서는 Opus 4.8, Claude Platform on AWS에서는 Opus 4.7.
+
+이후 세션은 해당 Opus 모델에서 계속됨. Fable 5로 돌아가려면 `/model fable` 실행.
+
+### 폴백 트리거 확인
+
+폴백은 특이한 것을 보내기 전인 세션의 첫 요청에서도 트리거될 수 있음. 첫 요청이 CLAUDE.md 콘텐츠 및 git status 같은 워크스페이스 컨텍스트를 전달하기 때문. 보안 또는 생물학 관련 자료를 포함한 저장소는 해당 컨텍스트만으로 분류기를 트리거할 수 있음.
+
+커스터마이징이 트리거인지 확인하려면 `claude --safe-mode`로 세션을 시작. 이는 CLAUDE.md, skills, MCP 서버, hooks 같은 커스터마이징을 비활성화함. Git status와 디렉토리 이름은 커스터마이징이 아니며 여전히 포함됨.
+
+### 전환 전 확인
+
+요청이 플래그될 때마다 자동 전환 대신 어떻게 처리할지 결정하려면, `/config`에서 "switch models when a message is flagged"를 끔. 플래그된 요청은 세션을 일시정지하고 두 옵션을 제공: Opus 모델로 전환, 또는 프롬프트를 편집하고 Fable 5에서 재시도.
+
+일부 경우는 다르게 동작:
+- 두 모델이 동일한 요청을 플래그하면, 프롬프트를 편집하고 재시도하거나 새 세션을 시작할 수 있음.
+- 모바일 Claude Code on the web 세션에서는 편집 및 재시도가 미지원. 모델을 전환하거나 데스크톱 브라우저/데스크톱 앱에서 세션을 계속.
+- 비대화형 모드 및 프롬프트를 표시할 수 없는 SDK 통합에서는 플래그된 요청이 거부로 턴을 종료함.
+
+### Bedrock, Vertex AI, Foundry에서 폴백 활성화
+
+Amazon Bedrock, Google Vertex AI, Microsoft Foundry에서 모델 ID는 프로바이더별이므로, 자동 폴백은 Claude Code가 관련된 두 모델을 모두 식별할 수 있을 때만 작동:
+
+- Claude Code가 현재 모델을 Fable 5로 인식해야 함: 모델 ID에 `claude-fable-5`가 포함되거나, `ANTHROPIC_DEFAULT_FABLE_MODEL` 값과 일치하거나, `modelOverrides`로 매핑됨.
+- 폴백 대상이 Opus 모델로 해석되어야 함: 설정된 경우 `ANTHROPIC_DEFAULT_OPUS_MODEL` 값, 그렇지 않으면 프로바이더의 모델 목록에 있는 Opus 4.8 항목.
+
+어느 한 모델이라도 식별할 수 없으면 Claude Code가 자동으로 전환하지 않음. 플래그된 요청은 거부 메시지로 끝나며, `/model`로 모델을 전환하고 재시도할 수 있음. 이 프로바이더에서 자동 폴백을 활성화하려면 `ANTHROPIC_DEFAULT_FABLE_MODEL`을 Fable 5 모델 ID로, `ANTHROPIC_DEFAULT_OPUS_MODEL`을 Opus 4.8 모델 ID로 설정.
+
+### 보안 연구 및 생물학 워크로드
+
+공격적 보안 또는 생물학 분야의 워크로드 — 침투 테스트, Capture the Flag(CTF) 연습, 생물학 인접 코드베이스 포함 — 는 자주 폴백을 트리거하며, 종종 첫 요청에서 발생. 실질적인 생물학 작업의 경우 거의 모든 요청이 재라우팅될 것으로 예상.
+
+이는 계정 플래그가 아닌 이 도메인에 대한 예상 라우팅임. 조직이 이 작업에 Fable급 기능이 필요한 경우 Anthropic 계정 팀에 신뢰할 수 있는 접근 프로그램(trusted access programs)에 대해 문의.
 
 ---
 
@@ -110,12 +220,15 @@ Effort level은 적응형 추론(adaptive reasoning)을 제어함. 모델이 각
 
 | 모델 | 지원 수준 |
 |------|-----------|
+| Fable 5 | `low`, `medium`, `high`, `xhigh`, `max` |
 | Opus 4.8, Opus 4.7 | `low`, `medium`, `high`, `xhigh`, `max` |
 | Opus 4.6, Sonnet 4.6 | `low`, `medium`, `high`, `max` |
 
 지원하지 않는 수준을 설정하면 해당 수준 이하에서 가장 높은 지원 수준으로 폴백됨. 예: Opus 4.6에서 `xhigh`는 `high`로 동작.
 
-**기본 effort**: Opus 4.8, Opus 4.6, Sonnet 4.6에서는 `high`. Opus 4.7에서는 `xhigh`.
+**기본 effort**: Fable 5, Opus 4.8, Opus 4.6, Sonnet 4.6에서는 `high`. Opus 4.7에서는 `xhigh`.
+
+Fable 5, Opus 4.8, 또는 Opus 4.7을 처음 실행하면, Claude Code는 이전에 다른 모델에 대해 다른 수준을 설정했더라도 해당 모델의 기본 effort를 적용함: Fable 5와 Opus 4.8에서는 `high`, Opus 4.7에서는 `xhigh`. 전환 후 다른 수준을 선택하려면 `/effort`를 다시 실행.
 
 ### 수준별 사용 가이드
 
@@ -123,7 +236,7 @@ Effort level은 적응형 추론(adaptive reasoning)을 제어함. 모델이 각
 |------|------|
 | `low` | 짧고 범위가 좁은, 지연에 민감한 작업 |
 | `medium` | 비용에 민감하고 약간의 지능 저하를 감수할 수 있는 작업 |
-| `high` | 토큰 사용량과 지능의 균형. Opus 4.8, Opus 4.6, Sonnet 4.6의 기본값 |
+| `high` | 토큰 사용량과 지능의 균형. Fable 5, Opus 4.8, Opus 4.6, Sonnet 4.6의 기본값 |
 | `xhigh` | 더 깊은 추론, 더 높은 토큰 소비. Opus 4.7의 기본값 |
 | `max` | 깊은 추론이지만 수확 체감 및 과도한 사고(overthinking) 가능성. 세션 전용 |
 | `ultracode` | Claude Code 설정으로, `xhigh`로 모델에 전송 + 동적 워크플로 오케스트레이션. 세션 전용 |
@@ -164,7 +277,9 @@ Effort level은 적응형 추론(adaptive reasoning)을 제어함. 모델이 각
 |------|-----------|
 | 현재 세션 토글 | macOS: `Option+T`, Windows/Linux: `Alt+T` |
 | 글로벌 기본값 | `/config` 실행 후 사고 모드 토글. `~/.claude/settings.json`에 `alwaysThinkingEnabled`로 저장 |
-| effort 무관 완전 비활성화 | `MAX_THINKING_TOKENS=0` 설정. 다른 값은 고정 생각 예산에서만 적용 |
+| effort 무관 완전 비활성화 | `MAX_THINKING_TOKENS=0` 설정. Anthropic API에서는 Fable 5를 제외하고 사고를 끔. 서드파티 프로바이더에서는 `thinking` 매개변수를 생략하며, 적응형 추론 모델은 여전히 사고할 수 있음. 다른 값은 고정 생각 예산에서만 적용 |
+
+Fable 5에서는 사고를 끌 수 없음. 세션 토글, `alwaysThinkingEnabled`, `MAX_THINKING_TOKENS=0`은 Fable 5에 효과가 없으며, Fable 5는 effort level에 기반해 각 단계에서 얼마나 사고할지 직접 결정함.
 
 사고 출력은 기본적으로 접힘. `Ctrl+O`로 verbose 모드를 토글하면 회색 이탤릭 텍스트로 추론을 볼 수 있음. 접히거나 편집된 상태에서도 모든 사고 토큰에 대해 과금됨. 전체 요약을 보려면 설정에 `showThinkingSummaries: true` 추가.
 
@@ -172,7 +287,7 @@ Effort level은 적응형 추론(adaptive reasoning)을 제어함. 모델이 각
 
 ## Extended Context (1M 컨텍스트)
 
-Opus 4.6 이상, Sonnet 4.6은 100만 토큰 컨텍스트 윈도우를 지원.
+Fable 5, Opus 4.6 이상, Sonnet 4.6은 100만 토큰 컨텍스트 윈도우를 지원.
 
 ### 플랜별 가용성
 
@@ -182,7 +297,7 @@ Opus 4.6 이상, Sonnet 4.6은 100만 토큰 컨텍스트 윈도우를 지원.
 | Pro | 사용량 크레딧 필요 | 사용량 크레딧 필요 |
 | API 및 pay-as-you-go | 전체 접근 | 전체 접근 |
 
-Max, Team, Enterprise 플랜에서 Opus는 추가 구성 없이 자동으로 1M 컨텍스트로 업그레이드됨. 이는 Team Standard와 Team Premium 시트 모두에 적용됨. Sonnet 1M은 모든 구독 플랜(Max 포함)에서 사용량 크레딧이 필요.
+Max, Team, Enterprise 플랜에서 Opus는 추가 구성 없이 자동으로 1M 컨텍스트로 업그레이드됨. 이는 Team Standard와 Team Premium 시트 모두에 적용됨. Anthropic API에서는 Fable 5, Opus 4.8, Opus 4.7이 항상 1M 윈도우로 실행됨. Sonnet 1M은 모든 구독 플랜(Max 포함)에서 사용량 크레딧이 필요.
 
 1M 컨텍스트는 200K 이상 토큰에도 표준 모델 가격이 적용됨.
 
@@ -371,6 +486,7 @@ Claude Code에서 캐시는 사실상 하나의 머신과 디렉토리에 한정
 | `DISABLE_PROMPT_CACHING_HAIKU` | Haiku만 비활성화 |
 | `DISABLE_PROMPT_CACHING_SONNET` | Sonnet만 비활성화 |
 | `DISABLE_PROMPT_CACHING_OPUS` | Opus만 비활성화 |
+| `DISABLE_PROMPT_CACHING_FABLE` | Fable만 비활성화 |
 
 ---
 
@@ -415,12 +531,13 @@ Claude Code의 컨텍스트 윈도우는 세션에 대한 모든 정보를 담�
 | 변수 | 설명 |
 |------|------|
 | `ANTHROPIC_MODEL` | 메인 세션에 사용할 모델 이름 |
+| `ANTHROPIC_DEFAULT_FABLE_MODEL` | `fable`에 사용할 모델이자, 서드파티 프로바이더에서 자동 모델 폴백 시 Claude Code가 Fable 5로 인식하는 모델 ID |
 | `ANTHROPIC_DEFAULT_OPUS_MODEL` | `opus` 별칭이 해석될 모델. opusplan의 Plan 모드에서도 사용 |
 | `ANTHROPIC_DEFAULT_SONNET_MODEL` | `sonnet` 별칭이 해석될 모델. opusplan의 실행 모드에서도 사용 |
 | `ANTHROPIC_DEFAULT_HAIKU_MODEL` | `haiku` 별칭 및 백그라운드 기능에 사용할 모델 |
 | `CLAUDE_CODE_SUBAGENT_MODEL` | 모든 서브에이전트 및 에이전트 팀에 사용할 모델. `inherit` 설정 시 일반 모델 해석 사용 |
 | `CLAUDE_CODE_EFFORT_LEVEL` | effort level 강제 설정. 모든 다른 방법보다 우선 |
-| `MAX_THINKING_TOKENS` | `0`으로 설정 시 확장 사고 완전 비활성화. 다른 값은 고정 생각 예산 모드에서만 적용 |
+| `MAX_THINKING_TOKENS` | `0`으로 설정 시 확장 사고 완전 비활성화(Fable 5는 제외). 다른 값은 고정 생각 예산 모드에서만 적용 |
 | `CLAUDE_CODE_DISABLE_ADAPTIVE_THINKING` | `1`로 설정 시 Opus 4.6, Sonnet 4.6에서 고정 생각 예산으로 되돌림 |
 | `CLAUDE_CODE_DISABLE_1M_CONTEXT` | `1`로 설정 시 1M 컨텍스트 변형 비활성화 |
 | `CLAUDE_CODE_DISABLE_FAST_MODE` | `1`로 설정 시 fast mode 전체 비활성화 |
@@ -428,8 +545,19 @@ Claude Code의 컨텍스트 윈도우는 세션에 대한 모든 정보를 담�
 | `DISABLE_PROMPT_CACHING_HAIKU` | Haiku만 캐싱 비활성화 |
 | `DISABLE_PROMPT_CACHING_SONNET` | Sonnet만 캐싱 비활성화 |
 | `DISABLE_PROMPT_CACHING_OPUS` | Opus만 캐싱 비활성화 |
+| `DISABLE_PROMPT_CACHING_FABLE` | Fable만 캐싱 비활성화 |
 | `ENABLE_PROMPT_CACHING_1H` | API 키/서드파티에서 1시간 TTL 선택 |
 | `FORCE_PROMPT_CACHING_5M` | 모든 인증에서 5분 TTL 강제 |
+| `ANTHROPIC_CUSTOM_MODEL_OPTION` | `/model` 피커에 기본 alias를 대체하지 않고 추가할 단일 커스텀 항목. LLM gateway `/v1/models` discovery가 비활성화되었거나 원하는 모델을 반환하지 않을 때 사용 |
+| `ANTHROPIC_CUSTOM_MODEL_OPTION_NAME` | 커스텀 모델의 `/model` 피커 표시 이름. 미설정 시 모델 ID가 기본값 |
+| `ANTHROPIC_CUSTOM_MODEL_OPTION_DESCRIPTION` | 커스텀 모델의 표시 설명. 미설정 시 `Custom model (<model-id>)`이 기본값 |
+| `CLAUDE_CODE_ENABLE_GATEWAY_MODEL_DISCOVERY` | `1`로 설정 시 LLM gateway의 `/v1/models` 엔드포인트에서 `/model` 피커를 자동으로 채움 |
+
+**설정 키**:
+
+| 설정 키 | 설명 |
+|---------|------|
+| `fallbackModel` | 폴백 모델 체인을 배열로 설정. `--fallback-model` 플래그가 우선 |
 
 > **참고**: `ANTHROPIC_SMALL_FAST_MODEL`은 `ANTHROPIC_DEFAULT_HAIKU_MODEL`로 대체되어 deprecated 됨.
 
@@ -467,7 +595,11 @@ export ANTHROPIC_DEFAULT_OPUS_MODEL='claude-opus-4-8'
 export ANTHROPIC_DEFAULT_OPUS_MODEL='claude-opus-4-8[1m]'
 ```
 
-`[1m]` 접미사는 `opus` 및 `sonnet` 별칭의 모든 사용에 1M 컨텍스트를 적용. `opusplan`의 Plan 모드 Opus 단계는 200K로 유지됨.
+`[1m]` 접미사는 `opus` 및 `sonnet` 별칭의 모든 사용에 1M 컨텍스트를 적용하며, `opusplan`의 Plan 모드 Opus 단계도 포함.
+
+- Claude Code는 프로바이더에 모델 ID를 보내기 전에 접미사를 제거함.
+- `[1m]`은 기본 모델이 1M 컨텍스트를 지원할 때만 추가.
+- 접미사는 모델이 아닌 변수별로 읽힘. Bedrock, Vertex, Foundry에서 한 변수에 `[1m]`이 없는 모델 ID는 다른 변수가 동일한 모델에 접미사를 설정하더라도 200K 컨텍스트를 사용.
 
 ### 커스텀 모델 옵션 추가
 
@@ -505,7 +637,7 @@ export ANTHROPIC_CUSTOM_MODEL_OPTION_DESCRIPTION="Custom deployment routed throu
 | `ANTHROPIC_DEFAULT_OPUS_MODEL_DESCRIPTION` | 고정된 Opus 모델의 `/model` 피커 표시 설명. 미설정 시 `Custom Opus model`이 기본값 |
 | `ANTHROPIC_DEFAULT_OPUS_MODEL_SUPPORTED_CAPABILITIES` | 고정된 Opus 모델이 지원하는 기능의 쉼표로 구분된 목록 |
 
-동일한 `_NAME`, `_DESCRIPTION`, `_SUPPORTED_CAPABILITIES` 접미사가 `ANTHROPIC_DEFAULT_SONNET_MODEL`, `ANTHROPIC_DEFAULT_HAIKU_MODEL`, `ANTHROPIC_CUSTOM_MODEL_OPTION`에도 사용 가능.
+동일한 `_NAME`, `_DESCRIPTION`, `_SUPPORTED_CAPABILITIES` 접미사가 `ANTHROPIC_DEFAULT_SONNET_MODEL`, `ANTHROPIC_DEFAULT_HAIKU_MODEL`, `ANTHROPIC_DEFAULT_FABLE_MODEL`, `ANTHROPIC_CUSTOM_MODEL_OPTION`에도 사용 가능.
 
 Claude Code는 모델 ID를 알려진 패턴과 매칭하여 effort level, 확장 사고 등의 기능을 활성화함. Bedrock ARN이나 커스텀 배포 이름 같은 프로바이더별 ID는 종종 이 패턴과 매칭되지 않아 지원 기능이 비활성화됨. `_SUPPORTED_CAPABILITIES`를 설정하여 Claude Code에 해당 모델이 실제로 지원하는 기능을 알릴 수 있음:
 

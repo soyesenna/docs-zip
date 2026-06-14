@@ -1,6 +1,6 @@
 # 07. MCP 통합 (Model Context Protocol)
 
-> **원문**: [https://code.claude.com/docs/en/mcp](https://code.claude.com/docs/en/mcp) | [https://code.claude.com/docs/en/mcp-quickstart](https://code.claude.com/docs/en/mcp-quickstart)
+> **원문**: [https://code.claude.com/docs/en/mcp](https://code.claude.com/docs/en/mcp) | [https://code.claude.com/docs/en/mcp-quickstart](https://code.claude.com/docs/en/mcp-quickstart) | [https://code.claude.com/docs/en/managed-mcp](https://code.claude.com/docs/en/managed-mcp)
 > **이전**: [https://docs.anthropic.com/en/docs/claude-code/mcp](https://docs.anthropic.com/en/docs/claude-code/mcp)
 
 ---
@@ -153,7 +153,7 @@ v2.1.121부터 초기 연결 시에도 동일한 백오프가 적용됩니다. �
 
 MCP 서버가 세션에 직접 메시지를 푸시하여 CI 결과, 모니터링 알림, 채팅 메시지 등 외부 이벤트에 Claude가 반응할 수 있습니다. 서버가 `claude/channel` 기능을 선언하고, 시작 시 `--channels` 플래그로 활성화합니다.
 
-서버별 `timeout`은 도구 호출당 하드 월클락 제한이며, 서버의 진행 알림이 이를 연장하지 않습니다. 1000 미만의 값은 무시되고 `MCP_TOOL_TIMEOUT` 또는 기본값(약 28시간)으로 대체됩니다. HTTP 및 SSE 서버의 경우 요청별 첫 번째 바이트 예산은 최소 60초입니다.
+서버별 `timeout`은 도구 호출당 하드 월클락 제한이며, 서버의 진행 알림이 이를 연장하지 않습니다. 1000 미만의 값은 무시되고 `MCP_TOOL_TIMEOUT` 또는 기본값(약 28시간)으로 대체됩니다. v2.1.162 이전에는 1000 미만의 값이 1초로 floor 처리되었습니다. HTTP 및 SSE 서버의 경우 요청별 첫 번째 바이트 예산은 최소 60초입니다.
 
 ---
 
@@ -180,7 +180,25 @@ claude mcp add-json my-api \
 
 ## 6. Claude Desktop에서 MCP 서버 가져오기
 
-Claude Desktop에서 이미 MCP 서버를 구성한 경우, Claude Code로 가져올 수 있습니다. Claude Desktop의 `claude_desktop_config.json`에 있는 서버 구성을 Claude Code에서 사용 가능한 형식으로 변환하여 추가합니다.
+Claude Desktop(별도의 데스크톱 채팅 앱)에서 이미 MCP 서버를 구성한 경우, 그 구성을 Claude Code CLI로 가져올 수 있습니다. macOS 또는 WSL에서 다음 명령어를 실행하면 `claude_desktop_config.json`의 서버 구성을 읽어와 Claude Code에 추가합니다:
+
+```bash
+claude mcp add-from-claude-desktop
+```
+
+> 이 명령어는 macOS와 WSL에서만 지원됩니다.
+
+### 다른 서피스에서 연결하기 (Connect from other surfaces)
+
+`claude mcp` CLI 외에도, 모든 Claude Code 서피스에서 MCP 서버에 연결할 수 있습니다:
+
+| 서피스 | 연결 방식 |
+|--------|-----------|
+| **Claude Code desktop app** | Connectors UI에서 서버 추가 |
+| **Claude Desktop chat app** | 위 `claude mcp add-from-claude-desktop`으로 CLI로 복사 (macOS/WSL) |
+| **VS Code** | "Connect to external tools with MCP" 참고 |
+| **Claude Code on the web** | 저장소의 `.mcp.json` 파일을 읽음 (".mcp.json 직접 편집" 참고) |
+| **Claude.ai** | claude.ai/customize/connectors에서 추가한 커넥터가 해당 계정으로 로그인 시 CLI에 자동 로드됨 ("Claude.ai 커넥터에서 MCP 서버 사용" 참고) |
 
 ---
 
@@ -452,11 +470,40 @@ MCP 서버를 개발하는 경우, 도구의 `tools/list` 응답 항목에 `_met
 
 ## 13. 엔터프라이즈 MCP 설정
 
-조직에서 MCP 서버를 중앙 집중식으로 제어할 수 있습니다. IT 관리자가 승인된 MCP 서버를 배포하고, 사용자가 임의로 서버를 추가하지 못하도록 제한할 수 있습니다.
+조직에서 MCP 서버를 중앙 집중식으로 제어할 수 있습니다. 기본적으로 Claude Code를 실행하는 누구나 원하는 MCP 서버에 연결할 수 있습니다. Anthropic은 Anthropic Directory에 추가하기 전 커넥터를 listing criteria에 따라 검토하지만, MCP 서버를 보안 감사하거나 관리하지는 않습니다. 관리자는 고정된 승인 세트를 배포하는 것부터 MCP를 완전히 비활성화하는 것까지 조직 내에서 실행되는 서버를 제한할 수 있습니다.
+
+### 패턴 선택 (Choose a pattern)
+
+Claude Code는 다양한 제어 수준을 지원합니다. 각 패턴은 아래 두 가지 메커니즘 중 하나 이상을 사용합니다: 고정 세트 배포를 위한 `managed-mcp.json`, 사용자가 구성한 서버 필터링을 위한 `allowedMcpServers`/`deniedMcpServers`.
+
+| 패턴 | 동작 | 구성 |
+|------|------|------|
+| **Disable MCP** |어디에서도 서버가 로드되지 않음 | 빈 server map의 `managed-mcp.json` |
+| **Fixed deployment** | 모든 사용자가 동일한 서버를 받으며 다른 서버 추가 불가 | 원하는 서버를 포함한 `managed-mcp.json` |
+| **Approved catalog** | 승인된 서버 목록을 게시하고 사용자가 원하는 것을 추가하며 그 외는 차단 | `allowedMcpServers` + `allowManagedMcpServersOnly: true` |
+| **Plugin servers only** | 플러그인에서 제공되는 서버만 허용되며 사용자가 직접 추가 불가 | `strictPluginOnlyCustomization`에 `mcp` 포함 |
+| **Soft allowlist** | 사용자가 자체 설정에서 확장할 수 있는 허용 목록 적용 | `allowManagedMcpServersOnly` 없이 `allowedMcpServers` |
+| **Denylist only** | 알려진 위험 서버를 차단하고 나머지는 허용 | `deniedMcpServers` |
+| **No restrictions** | 사용자가 무엇이든 추가 가능 | 관리형 MCP 구성을 배포하지 않음 |
 
 ### managed-mcp.json 설정
 
-시스템 관리자가 관리 설정 파일과 함께 엔터프라이즈 MCP 설정 파일을 배포합니다.
+`managed-mcp.json` 파일을 배포하면 Claude Code는 해당 파일에 정의된 서버만 로드합니다. 사용자는 플러그인 제공 서버를 포함하여 다른 MCP 서버를 추가, 수정 또는 사용할 수 없습니다. 또한 이 파일은 별도로 허용하지 않는 한 claude.ai 커넥터를 억제합니다.
+
+두 가지 다른 설정이 관리 세트를 추가로 필터링할 수 있습니다:
+
+- `allowedMcpServers`와 `deniedMcpServers`는 관리 서버에도 적용되므로, 이를 통과하지 못하는 관리 서버는 로드되지 않습니다.
+- 사용자 자신의 `deniedMcpServers`는 사용자 설정에서 병합되므로 사용자가 관리 서버를 스스로 차단할 수 있습니다.
+
+`managed-mcp.json`은 독립 실행형 파일이므로 서버 관리 설정을 통해 전달할 수 없습니다. 관리자 권한으로 시스템 경로에 쓸 수 있는 모든 프로세스가 배포할 수 있습니다. 대규모 환경에서는 일반적으로 macOS의 Jamf나 구성 프로파일, Windows의 Group Policy 또는 Intune, Linux의 fleet management 도구를 통해 배포합니다. Claude Code는 다음 경로 중 하나에서 파일을 찾습니다:
+
+| 플랫폼 | 경로 |
+|--------|------|
+| macOS | `/Library/Application Support/ClaudeCode/managed-mcp.json` |
+| Linux 및 WSL | `/etc/claude-code/managed-mcp.json` |
+| Windows | `C:\Program Files\ClaudeCode\managed-mcp.json` |
+
+파일은 project `.mcp.json` 파일과 동일한 형식을 사용합니다:
 
 ```json
 {
@@ -474,12 +521,40 @@ MCP 서버를 개발하는 경우, 도구의 `tools/list` 응답 항목에 `_met
       "command": "/usr/local/bin/company-mcp-server",
       "args": ["--config", "/etc/company/mcp-config.json"],
       "env": {
-        "COMPANY_API_URL": "https://internal.company.com"
+        "COMPANY_API_URL": "https://internal.example.com"
       }
     }
   }
 }
 ```
+
+#### 사용자별 자격 증명으로 인증
+
+머신의 모든 사용자가 이 파일을 읽을 수 있으므로 `env` 블록에 API 키나 자격 증명을 저장하지 마세요. 대신 다음 중 하나로 사용자별 자격 증명을 전달하세요:
+
+- `${VAR}` 확장으로 각 사용자의 환경에서 비밀값 읽기
+- OAuth 또는 사용자별 헤더로 각 사용자가 본인으로 인증
+- 연결 시점에 자격 증명을 생성하는 `headersHelper`
+
+#### MCP 완전 비활성화
+
+빈 server map을 포함한 `managed-mcp.json`을 배포하면 모든 MCP 서버를 차단할 수 있습니다:
+
+```json
+{
+  "mcpServers": {}
+}
+```
+
+사용자는 `/mcp`에서 MCP 서버를 볼 수 없으며, `claude mcp add`는 엔터프라이즈 정책 오류로 실패합니다. 이전에 구성된 서버는 다음 세션 시작 시 경고 없이 로드가 중지됩니다.
+
+#### 관리 세트와 함께 claude.ai 커넥터 허용 (`allowAllClaudeAiMcps`, v2.1.149+)
+
+`managed-mcp.json`을 배포하면 기본적으로 claude.ai 커넥터가 억제됩니다. 여기에는 관리자가 claude.ai 관리 콘솔에서 조직에 구성한 커넥터도 포함됩니다. `managed-mcp.json`의 서버와 함께 이 커넥터들을 로드하려면 관리 설정 소스에 `"allowAllClaudeAiMcps": true`를 설정합니다. Claude Code v2.1.149 이상이 필요합니다.
+
+이 설정을 활성화하면 Claude Code는 `managed-mcp.json`이 배포되지 않은 것과 동일한 claude.ai 커넥터를 로드합니다. 허용 목록과 차단 목록은 여전히 해당 커넥터에 적용되므로 `deniedMcpServers`으로 특정 커넥터를 차단할 수 있습니다. 이 설정은 claude.ai 커넥터에만 영향을 미치며, 플러그인 제공 서버는 계속 억제됩니다.
+
+Claude Code는 이 설정을 관리자 제어 정책 계층에서만 읽습니다: server-managed settings, MDM 배포 plist 또는 HKLM 레지스트리 키, 시스템 `managedsettings.json` 파일. 사용자 또는 프로젝트 설정에 두면 효과가 없으므로 사용자가 독점 제어로 억제된 커넥터를 다시 활성화할 수 없습니다.
 
 ---
 
@@ -570,6 +645,24 @@ MCP 서버를 개발하는 경우, 도구의 `tools/list` 응답 항목에 `_met
 | `undefined` (기본값) | 차단되는 서버 없음 |
 | 빈 배열 `[]` | 차단되는 서버 없음 |
 | 항목 목록 | 지정된 서버가 모든 스코프에서 명시적으로 차단됨 |
+
+### 허용 목록을 관리 설정으로만 제한 (`allowManagedMcpServersOnly`)
+
+관리 허용 목록만 적용되도록 하려면 관리 설정 파일에 `allowManagedMcpServersOnly`를 설정합니다:
+
+```json
+{
+  "allowManagedMcpServersOnly": true,
+  "allowedMcpServers": [
+    { "serverUrl": "https://api.githubcopilot.com/*" },
+    { "serverUrl": "https://*.internal.example.com/*" }
+  ]
+}
+```
+
+`allowManagedMcpServersOnly`가 `true`이면 user, project, local 설정의 허용 목록은 무시되고 관리 허용 목록만 적용됩니다. 차단 목록은 모든 소스에서 계속 병합되므로 사용자는 항상 서버를 스스로 차단할 수 있습니다.
+
+> 이 설정은 관리 설정 소스(server-managed settings, `managed-settings.json`, MDM 프로파일, 레지스트리 등)에 둘 때만 효과가 있으며 다른 곳에서는 의미가 없습니다.
 
 ### 우선순위 규칙
 
@@ -939,7 +1032,7 @@ Claude Code에서 추가한 서버는 동일한 URL을 가리키는 claude.ai �
 
 ---
 
-## 21. MCP Elicitation (유도 요청에 응답)
+## 21. MCP Elicitation (유도 요청에 응답, v2.1.76+)
 
 MCP 서버는 작업 중 사용자에게 구조화된 입력을 요청(유도)할 수 있습니다. 서버가 단독으로 얻을 수 없는 정보가 필요할 때, Claude Code는 대화형 대화상자를 표시하고 사용자의 응답을 서버에 다시 전달합니다. 별도의 구성이 필요하지 않으며, 서버가 요청하면 유도 대화상자가 자동으로 나타납니다.
 
